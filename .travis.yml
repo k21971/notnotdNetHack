@@ -1,6 +1,0 @@
-language: c
-script: make
-sudo: false
-compiler:
-  - clang
-  - gcc
