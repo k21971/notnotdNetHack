@@ -753,11 +753,6 @@ curses_choose_character(void)
                 if (validspecies(flags.initrole, flags.initrace, flags.initgend, i))
                     n++;
             }
-            if (n == 0) {
-                for (i = 0; i < ROLE_SPECIES; i++)
-                    if (validspecies(flags.initrole, flags.initrace, flags.initgend, i))
-                        n++;
-            }
 
             choices = (const char **) alloc(sizeof (char *) * (n + 1));
             pickmap = (int *) alloc(sizeof (int) * (n + 1));
@@ -768,6 +763,7 @@ curses_choose_character(void)
                 }
             }
             choices[n] = (const char *) 0;
+	    pickmap[n] = 0;
             /* Permit the user to pick, if there is more than one */
             if (n > 1)
                 sel =

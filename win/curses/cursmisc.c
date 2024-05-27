@@ -9,6 +9,7 @@
 #include "dlb.h"
 
 #include <ctype.h>
+#include <limits.h>
 
 /* Misc. curses interface functions */
 
@@ -587,18 +588,19 @@ in int form. */
 int
 curses_get_count(int first_digit)
 {
-    long current_count = first_digit;
+    int current_count = first_digit;
     int current_char;
 
     current_char = curses_read_char();
 
     while (isdigit(current_char)) {
-        current_count = (current_count * 10) + (current_char - '0');
-        if (current_count > LARGEST_INT) {
-            current_count = LARGEST_INT;
+        if (ckd_mul(&current_count, current_count, 10)) {
+            current_count = INT_MAX;
+        } else if (ckd_add(&current_count, current_count, current_char - '0')) {
+            current_count = INT_MAX;
         }
 
-        pline("Count: %ld", current_count);
+        pline("Count: %d", current_count);
         current_char = curses_read_char();
     }
 

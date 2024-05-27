@@ -1258,10 +1258,11 @@ getobj(register const char *let, register const char *word)
 		      otyp != DWARVISH_HELM &&
 		      otyp != DROVEN_CLOAK &&
 		      otyp != POWER_ARMOR &&
-			  otyp != GNOMISH_POINTY_HAT &&
-			  otmp->oartifact != ART_AEGIS &&
-			  otmp->oartifact != ART_RED_CORDS_OF_ILMATER
-			  ) || 
+		      otyp != GNOMISH_POINTY_HAT &&
+		      otmp->oartifact != ART_AEGIS &&
+		      otmp->oartifact != ART_RED_CORDS_OF_ILMATER &&
+		      otmp->oartifact != ART_GREAT_CLAWS_OF_URDLEN
+		      ) ||
 		     (otmp->oclass == GEM_CLASS && !is_graystone(otmp) && !(otmp->otyp == ROCK)
 				&& otyp != CATAPSI_VORTEX && otyp != ANTIMAGIC_RIFT
 				&& otyp != VITAL_SOULSTONE && otyp != SPIRITUAL_SOULSTONE

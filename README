@@ -2,7 +2,8 @@ To read about notnotdNetHack, see the included changelog (changelog-nndnh.txt)
 
 To chat about notnotdNetHack, visit IRC here: https://web.libera.chat/?channel=##nethack-variants
 
-You can't play notnotdNetHack online using SSH or HTTPS:
+You can play notnotdNetHack online using SSH or HTTPS:
+* https://www.hardfought.org/nethack/ (servers in USA, UK, and AUS)
 * if other servers decide to host notnotdNetHack, they will be listed here: https://nethackwiki.com/wiki/Public_server
 
 Setting up notnotdNetHack:

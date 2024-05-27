@@ -1773,11 +1773,12 @@ do_look_letter(glyph_t sym, boolean from_screen, boolean quick, boolean force_de
 
 	/* Finally, return our explanation. */
 	if (found) {
+		flags.verbose = save_verbose;
 		return out_str;
 	}
     } while (from_screen && !quick && ans != LOOK_ONCE);
 
-	flags.verbose = save_verbose;
+    flags.verbose = save_verbose;
 
     return 0;
 }

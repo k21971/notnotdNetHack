@@ -11325,6 +11325,7 @@ m_initinv(register struct monst *mtmp, int mkobjflags, int faction, boolean good
 				if (In_mines_quest(&u.uz)) {
 				/* cm: Gnomes in dark mines have candles lit. */
 				    otmp = mksobj(GNOMISH_POINTY_HAT, mkobjflags);
+				    otmp->objsize = MZ_SMALL;
 				    (void) mpickobj(mtmp, otmp);
 					if (!levl[mtmp->mx][mtmp->my].lit) {
 						begin_burn(otmp);

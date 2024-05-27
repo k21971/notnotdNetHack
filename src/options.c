@@ -119,7 +119,7 @@ static struct Bool_Opt
 #endif
 	{"menucolors", &iflags.use_menu_color, FALSE, SET_IN_GAME},
 	{"menucolor_regex", &iflags.menucolor_regex, TRUE, SET_IN_FILE},
-	{"menu_glyphs", &iflags.use_menu_glyphs, FALSE, SET_IN_GAME},
+	{"menu_glyphs", &iflags.use_menu_glyphs, TRUE, SET_IN_GAME},
 #ifdef WIZARD
 	/* for menu debugging only*/
 	{"menu_tab_sep", &iflags.menu_tab_sep, FALSE, SET_IN_GAME},
