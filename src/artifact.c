@@ -828,8 +828,8 @@ select_gift_artifact(aligntyp alignment)
 				|| (m == ART_HOLY_MOONLIGHT_SWORD)
 				));
 
-			/* avoid boots for chiropterans */
-			skip_if(Race_if(PM_CHIROPTERAN) && objects[a->otyp].oc_class == ARMOR_CLASS && objects[a->otyp].oc_armcat == ARM_BOOTS);
+			/* avoid boots for chiropterans and salamanders */
+			skip_if((Race_if(PM_CHIROPTERAN) || Race_if(PM_SALAMANDER)) && objects[a->otyp].oc_class == ARMOR_CLASS && objects[a->otyp].oc_armcat == ARM_BOOTS);
 
 			/* avoid gloves, boots, shirts, and suits for octopodes */
 			skip_if(Race_if(PM_OCTOPODE) && objects[a->otyp].oc_class == ARMOR_CLASS &&
