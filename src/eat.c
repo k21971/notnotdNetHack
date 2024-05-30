@@ -2737,7 +2737,7 @@ doeat(void)		/* generic "eat" command funtion (see cmd.c) */
 			return 0;
 	}	
 	
-	if(uandroid && !Race_if(PM_INCANTIFIER)){
+	if(free_android(youracedata) && !Race_if(PM_INCANTIFIER)){
 		pline("Though you may look human, you run on magical energy, not food.");
 		pline("Use #monster to rest and recover.");
 		return MOVE_CANCELLED;

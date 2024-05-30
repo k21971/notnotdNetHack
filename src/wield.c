@@ -179,7 +179,7 @@ ready_weapon(
 		 * say "weapon in hand", thus this kludge.
 		 */
 			if (!quietly) {
-				long dummy = wep->owornmask;
+				long long dummy = wep->owornmask;
 				wep->owornmask |= W_WEP;
 				prinv((char *)0, wep, 0L);
 				wep->owornmask = dummy;
@@ -410,7 +410,7 @@ dowieldquiver(void)
 		You("cannot ready that!");
 		return MOVE_CANCELLED;
 	} else {
-		long dummy;
+		long long dummy;
 
 
 		/* Check if it's the secondary weapon */
@@ -434,7 +434,7 @@ dowieldquiver(void)
 }
 /* use to re-wield a returned thrown weapon */
 void
-rewield(struct obj *obj, long slot)
+rewield(struct obj *obj, long long slot)
 {
 	switch (slot) {
 	case W_WEP:
@@ -923,7 +923,7 @@ welded(register struct obj *obj)
 void
 weldmsg(register struct obj *obj)
 {
-	long savewornmask;
+	long long savewornmask;
 
 	savewornmask = obj->owornmask;
 	Your("%s %s welded to your %s!",

@@ -399,7 +399,7 @@ xattacky(struct monst *magr, struct monst *mdef, int tarx, int tary)
 	struct permonst * pd = youdef ? youracedata : mdef->data;
 	int result = 0;		/* result from current attack */
 	int allres = 0;		/* cumulative results from all attacks; needed for passives */
-	long slot;
+	long long slot;
 
 	/* set notonhead */
 	notonhead = (tarx != x(mdef) || tary != y(mdef));
@@ -9324,7 +9324,7 @@ xmeleehurty(
 			/* 1/10 chance of stealing items */
 			if (!rn2(10)){
 				struct obj *otmp2, **minvent_ptr;
-				long unwornmask = 0L;
+				long long unwornmask = 0LL;
 
 				/* Don't steal worn items, and downweight wielded items */
 				if ((otmp2 = mdef->minvent) != 0) {
@@ -16029,7 +16029,7 @@ void * vpointer,			/* additional /whatever/, type based on hmoncode. */
 					obj_extract_self(otmp); //wornmask is cleared by splitobj
 				}
 				else{
-					long unwornmask;
+					long long unwornmask;
 					if ((unwornmask = otmp->owornmask) != 0L) {
 						mdef->misc_worn_check &= ~unwornmask;
 					}
@@ -17203,7 +17203,7 @@ xpassivey(
 	int subout[SUBOUT_ARRAY_SIZE] = {0};
 	int tohitmod = 0;
 	int res[4];
-	long slot = 0L;
+	long long slot = 0LL;
 	struct obj * otmp;
 	boolean usedmask = FALSE;		/* whether a message has been printed about a lillend using a mask to make passive attacks */
 	struct attack * passive;
@@ -17533,7 +17533,7 @@ xpassivehity(
 {
 	int newres;
 	int dmg;
-	long slot = 0L;
+	long long slot = 0LL;
 	struct monst * mtmp = (struct monst *)0;
 	boolean youagr = (magr == &youmonst);
 	boolean youdef = (mdef == &youmonst);

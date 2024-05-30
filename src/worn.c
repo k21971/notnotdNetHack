@@ -365,7 +365,7 @@ get_item_property_list(int *property_list, struct obj *obj, int otyp)
 
 /* Updated to use the extrinsic and blocked fields. */
 void
-setworn(register struct obj *obj, long mask)
+setworn(register struct obj *obj, long long mask)
 {
 	register const struct worn *wp;
 	register struct obj *oobj;
@@ -2590,7 +2590,7 @@ light_damage(void * arg, long timeout)
 	} else if (obj->where == OBJ_MINVENT && obj->owornmask) {
 		struct obj *armor = which_armor(obj->ocarry, W_ARMC);
 		int armpro = 0;
-		long unwornmask;
+		long long unwornmask;
 		struct monst *mtmp;
 		x = obj->ocarry->mx;
 		y = obj->ocarry->my;

@@ -2773,8 +2773,8 @@ fill_pit(int x, int y)
 
 int
 float_down(
-	long hmask,
-	long emask     /* might cancel timeout */)
+	long long hmask,
+	long long emask)     /* might cancel timeout */
 {
 	register struct trap *trap = (struct trap *)0;
 	d_level current_dungeon_level;

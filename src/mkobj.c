@@ -2341,7 +2341,7 @@ void
 set_material(struct obj *obj, int mat)
 {
 	struct monst *owner = 0;
-	long mask = 0;
+	long long mask = 0;
 	int oldmat = obj->obj_material;
 
 	if(mat == obj->obj_material) return; //Already done!
@@ -3249,7 +3249,7 @@ void
 obj_extract_and_unequip_self(struct obj *obj)
 {
 	struct monst *mon;
-	long unwornmask;
+	long long unwornmask;
 	if (obj->where == OBJ_MINVENT) {
 		mon = obj->ocarry;
 		obj_extract_self(obj);

@@ -2473,7 +2473,7 @@ mon_wield_item(register struct monst *mon)
 }
 
 void
-setmwielded(register struct monst *mon, register struct obj *obj, long slot)
+setmwielded(register struct monst *mon, register struct obj *obj, long long slot)
 {
 	if (!obj) return;
 	/* silently unwield the weapon if it's already wielded */

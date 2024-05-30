@@ -849,7 +849,7 @@ void
 adjabil(int oldlevel, int newlevel)
 {
 	register const struct innate *abil, *rabil, *sabil;
-	long mask = FROMEXPER;
+	long long mask = FROMEXPER;
 
 	// set default values
 	abil = 0;

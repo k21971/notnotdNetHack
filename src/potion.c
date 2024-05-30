@@ -279,7 +279,7 @@ boolean
 make_hallucinated(
 	long xtime,	/* nonzero if this is an attempt to turn on hallucination */
 	boolean talk,
-	long mask	/* nonzero if resistance status should change by mask */)
+	long long mask)	/* nonzero if resistance status should change by mask */
 {
 	long old = HHallucination;
 	boolean changed = 0;

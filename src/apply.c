@@ -5737,7 +5737,7 @@ use_doll(struct obj *obj)
 				else mtmp = m_at(u.ux + u.dx, u.uy + u.dy);
 				if(mtmp){
 					struct obj *otmp;
-					long unwornmask;
+					long long unwornmask;
 					//Note: unlike normal theft, you are never petrified by a stolen item because the doll is doing it.
 					if(!Blind) pline("The black-clad doll steals %s possessions.", s_suffix(mon_nam(mtmp)));
 					while ((otmp = mtmp->minvent) != 0) {
@@ -8478,7 +8478,7 @@ doapply(void)
 		if (!otmp || otmp->oartifact) break;
 		switch(otmp->otyp){
 			case ROCK:
-				obj_extract_self(otmp);
+				obj_extract_and_unequip_self(otmp);
 				otmp = poly_obj(otmp,BULLET);
 				otmp = hold_another_object(otmp, u.uswallow ?
 						   "Oops!  %s out of your reach!" :
@@ -8492,7 +8492,7 @@ doapply(void)
 							   (const char *)0);
 			break;
 			case SILVER_SLINGSTONE:
-				obj_extract_self(otmp);
+				obj_extract_and_unequip_self(otmp);
 				otmp = poly_obj(otmp,SILVER_BULLET);
 				otmp->quan *= 2;
 				otmp->owt = weight(otmp);
@@ -8508,7 +8508,7 @@ doapply(void)
 							   (const char *)0);
 			break;
 			case FLINT:
-				obj_extract_self(otmp);
+				obj_extract_and_unequip_self(otmp);
 				otmp = poly_obj(otmp,SHOTGUN_SHELL);
 				otmp = hold_another_object(otmp, u.uswallow ?
 						   "Oops!  %s out of your reach!" :
@@ -8522,7 +8522,7 @@ doapply(void)
 							   (const char *)0);
 			break;
 			case LOADSTONE:
-				obj_extract_self(otmp);
+				obj_extract_and_unequip_self(otmp);
 				otmp = poly_obj(otmp,ROCKET);
 				otmp = hold_another_object(otmp, u.uswallow ?
 						   "Oops!  %s out of your reach!" :
@@ -8536,7 +8536,7 @@ doapply(void)
 							   (const char *)0);
 			break;
 			case BULLET:
-				obj_extract_self(otmp);
+				obj_extract_and_unequip_self(otmp);
 				otmp = poly_obj(otmp,SHOTGUN_SHELL);
 				otmp = hold_another_object(otmp, u.uswallow ?
 						   "Oops!  %s out of your reach!" :
@@ -8550,7 +8550,7 @@ doapply(void)
 							   (const char *)0);
 			break;
 			case SHOTGUN_SHELL:
-				obj_extract_self(otmp);
+				obj_extract_and_unequip_self(otmp);
 				otmp = poly_obj(otmp,BULLET);
 				otmp = hold_another_object(otmp, u.uswallow ?
 						   "Oops!  %s out of your reach!" :

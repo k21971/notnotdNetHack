@@ -2144,7 +2144,7 @@ seffects(struct obj *sobj)
 			} 
 			if(!confused) u.wimage = 0;
 		    for (obj = invent; obj; obj = obj->nobj) {
-			long wornmask;
+			long long wornmask;
 #ifdef GOLDOBJ
 			/* gold isn't subject to cursing and blessing */
 			if (obj->oclass == COIN_CLASS) continue;

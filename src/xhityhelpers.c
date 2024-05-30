@@ -431,7 +431,7 @@ void
 steal_it(struct monst *mdef, struct attack *mattk)
 {
 	struct obj *otmp, *stealoid, **minvent_ptr;
-	long unwornmask;
+	long long unwornmask;
 	int petrifies = FALSE;
 	char kbuf[BUFSZ];
 	boolean mi_only = is_chuul(youracedata);
@@ -988,10 +988,10 @@ hurtmarmor(struct monst *mdef, int attk, boolean candestroy)
  * Returns types of armor needed to prevent specified attack from touching its target
  *   ex) gloves makes claw attacks not touch a cockatrice
  */
-long
+long long
 attk_protection(int aatyp)
 {
-	long w_mask = 0L;
+	long long w_mask = 0LL;
 
 	switch (aatyp) {
 	case AT_NONE:
@@ -1057,11 +1057,11 @@ attk_protection(int aatyp)
  * Returns equipment slot that would be hitting the defender
  *   ex) silver gloves make punches do silver-searing damage
  */
-long
+long long
 attk_equip_slot(struct monst *mon, int aatyp)
 {
 	/* some worn armor may be involved depending on the attack type */
-	long slot = 0L;
+	long long slot = 0LL;
 	switch (aatyp)
 	{
 		/* gloves */
@@ -1113,7 +1113,7 @@ attk_equip_slot(struct monst *mon, int aatyp)
 boolean
 badtouch(struct monst *magr, struct monst *mdef, struct attack *attk, struct obj *weapon)
 {
-	long slot = attk_protection(attk->aatyp);
+	long long slot = attk_protection(attk->aatyp);
 	boolean youagr = (magr == &youmonst);
 
 	if (/* not using a weapon -- assumes weapons will only be passed if making a weapon attack */
@@ -1165,7 +1165,7 @@ badtouch(struct monst *magr, struct monst *mdef, struct attack *attk, struct obj
 boolean
 safe_attack(struct monst *magr, struct monst *mdef, struct attack *attk, struct obj *weapon, struct permonst *pa, struct permonst *pd)
 {
-	long slot = attk_protection(attk->aatyp);
+	long long slot = attk_protection(attk->aatyp);
 	boolean youagr = (magr == &youmonst);
 
 	/* if there is no defender, it's safe */
@@ -2118,7 +2118,7 @@ android_braindamage(int dmg, struct monst *magr, struct monst *mdef, boolean vis
 	int extra_damage = 0;
 	boolean petrifies = FALSE;
 	struct obj *otmp, *otmp2;
-	long unwornmask;
+	long long unwornmask;
 	switch(rnd(12)){
 		case 1:
 			duration = dmg <= 2 ? dmg+1 : dmg*10;

@@ -1906,7 +1906,7 @@ loot_mon(struct monst *mtmp, int *passed_info, boolean *prev_loot)
 		&& (mtmp->mtame || (urole.ldrnum == PM_OLD_FORTUNE_TELLER && mtmp->mpeaceful && quest_faction(mtmp)))
 	){
 	if((otmp = pick_creatures_armor(mtmp, passed_info))){
-	long unwornmask;
+	long long unwornmask;
 		if (nolimbs(youracedata)) {
 		    You_cant("do that without limbs."); /* not body_part(HAND) */
 		    return MOVE_CANCELLED;

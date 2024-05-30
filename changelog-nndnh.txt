@@ -26,6 +26,7 @@ Octopode race
 	No cold resistance, stone resistance, or unbreathing
 		Still gets poison resistance, sick resistance (XL1), stealth (XL5), shock resistance (XL10), and fire resistance (XL15)
 	Has see invisible, r'lyehian sight, and can fly from the start because parasitized android monsters can
+	Has to eat and can eat normally (but still has to sleep as well)
 More brand base types unbanned
 	Rakuyo, crow talon, crow quill, crystal sword, mirrorblade. Runeswords are still banned because of messaging.
 Wizards learn their special spells at level 14

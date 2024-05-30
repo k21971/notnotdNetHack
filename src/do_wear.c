@@ -1229,7 +1229,7 @@ Ring_on(register struct obj *obj)
 static void
 Ring_off_or_gone(register struct obj *obj, boolean gone)
 {
-    long mask = (obj->owornmask & W_RING);
+    long long mask = (obj->owornmask & W_RING);
     int old_attrib, which;
 
     takeoff_mask &= ~mask;

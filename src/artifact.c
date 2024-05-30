@@ -918,7 +918,7 @@ add_oprop(struct obj *obj, int oprop)
 	
 	switch(obj->where){
 		case OBJ_INVENT:{
-			long mask = obj->owornmask;
+			long long mask = obj->owornmask;
 			setnotworn(obj);
 			obj->oproperties[(oprop-1)/32] |= (0x1L << ((oprop-1)%32));
 			setworn(obj, mask);
@@ -945,7 +945,7 @@ remove_oprop(struct obj *obj, int oprop)
 
 	switch(obj->where){
 		case OBJ_INVENT:{
-			long mask = obj->owornmask;
+			long long mask = obj->owornmask;
 			setnotworn(obj);
 			obj->oproperties[(oprop-1)/32] &= ~(0x1L << ((oprop-1)%32));
 			setworn(obj, mask);
@@ -2511,7 +2511,7 @@ get_spear_prop(struct obj *otmp)
 	}
 }
 void
-set_spear_intrinsic(struct obj *otmp, boolean on, long wp_mask)
+set_spear_intrinsic(struct obj *otmp, boolean on, long long wp_mask)
 {
 	struct obj *point = otmp->cobj;
 	//pline("wp_mask is %ld",wp_mask);
@@ -2539,7 +2539,7 @@ set_spear_intrinsic(struct obj *otmp, boolean on, long wp_mask)
  * unworn/unwielded/dropped.  Pickup/drop only set/reset the W_ART mask.
  */
 void
-set_artifact_intrinsic(struct obj *otmp, boolean on, long wp_mask)
+set_artifact_intrinsic(struct obj *otmp, boolean on, long long wp_mask)
 {
 	long long *mask = 0;
 	register const struct artifact *oart = get_artifact(otmp);
@@ -3762,7 +3762,7 @@ voidPen_hit(
 		if(youattack){
 			if(dieroll == 1){
 				struct obj *otmp2;
-				long unwornmask = 0L;
+				long long unwornmask = 0LL;
 
 				/* Don't steal worn items, and downweight wielded items */
 				if((otmp2 = mdef->minvent) != 0) {
@@ -6452,7 +6452,7 @@ special_weapon_hit(
 		if (youagr){
 			if (mdef->minvent && (Role_if(PM_PIRATE) || !rn2(10))){
 				struct obj *otmp2;
-				long unwornmask = 0L;
+				long long unwornmask = 0LL;
 
 				/* Don't steal worn items, and downweight wielded items */
 				if ((otmp2 = mdef->minvent) != 0) {
@@ -7749,7 +7749,7 @@ special_weapon_hit(
 			if (youagr){
 				if (mdef->minvent){
 					struct obj *otmp2;
-					long unwornmask = 0L;
+					long long unwornmask = 0LL;
 
 					/* Don't steal worn items, and downweight wielded items */
 					if ((otmp2 = mdef->minvent) != 0) {
@@ -9430,7 +9430,7 @@ arti_invoke(struct obj *obj)
 			} 
 			if(Confusion == 0) u.wimage = 0;
 		    for (otmp = invent; otmp; otmp = otmp->nobj) {
-			long wornmask;
+			long long wornmask;
 #ifdef GOLDOBJ
 			/* gold isn't subject to cursing and blessing */
 			if (otmp->oclass == COIN_CLASS) continue;
@@ -12081,7 +12081,7 @@ arti_invoke(struct obj *obj)
         case SNARE_WEAPONS:{
 			struct monst *mtmp;
 			struct obj *otmp, *nobj;
-			long unwornmask;
+			long long unwornmask;
 			You("throw the snare into the air!");
 			for(mtmp = fmon; mtmp; mtmp = mtmp->nmon){
 				if(couldsee(mtmp->mx, mtmp->my) && !mtmp->mpeaceful && !resist(mtmp, WEAPON_CLASS, 0, NOTELL)){

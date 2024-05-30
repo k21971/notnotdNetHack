@@ -28,7 +28,7 @@ extern void autoquiver(void);
 static boolean takenfromyourinv = FALSE;	/* tracks if a projectile originated in your pack. used to track MAD_TALONS */
 static boolean u_was_twoweap;
 static boolean u_was_swallowed;
-static long old_wep_mask;
+static long long old_wep_mask;
 
 /* Keep ammo pointer sane whilst multishotting.
  * If merging ammo into a new stack, pass the new stack into merge (otherwise leave as null)

@@ -2238,7 +2238,7 @@ seduce_effect(struct monst *mon, int effect_num)
 boolean
 msteal_m(struct monst *magr, struct monst *mdef, struct attack *attk, int *result)
 {
-	const long equipmentmask = ~(W_WEP|W_SWAPWEP);
+	const long long equipmentmask = ~(W_WEP|W_SWAPWEP);
 	boolean seduct_type;
 	struct obj * otmp = 0;
 	boolean vis = canspotmon(mdef) || canspotmon(magr);
@@ -2343,7 +2343,7 @@ msteal_m(struct monst *magr, struct monst *mdef, struct attack *attk, int *resul
 		if (otmp) {
 			int delay = 0;
 			if(seduce && (otmp->owornmask&(W_ARM|W_ARMU))){
-				long unwornmask;
+				long long unwornmask;
 				//Stealing everything
 				// minvent_ptr = &mdef->minvent;
 				// while ((otmp = *minvent_ptr) != 0)

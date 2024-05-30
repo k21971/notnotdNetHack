@@ -198,7 +198,7 @@ merged(struct obj **potmp, struct obj **pobj)
 
 		/* fixup for `#adjust' merging wielded darts, daggers, &c */
 		if (obj->owornmask && carried(otmp)) {
-		    long wmask = otmp->owornmask | obj->owornmask;
+		    long long wmask = otmp->owornmask | obj->owornmask;
 
 		    /* Both the items might be worn in competing slots;
 		       merger preference (regardless of which is which):
@@ -212,7 +212,7 @@ merged(struct obj **potmp, struct obj **pobj)
 		    else if (wmask & W_SWAPWEP) wmask = W_SWAPWEP;
 		    else if (wmask & W_QUIVER) wmask = W_QUIVER;
 		    else {
-			impossible("merging strangely worn items (%lx)", wmask);
+			impossible("merging strangely worn items (%llx)", wmask);
 			wmask = otmp->owornmask;
 		    }
 		    if ((otmp->owornmask & ~wmask) != 0L) setnotworn(otmp);
