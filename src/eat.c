@@ -4623,7 +4623,7 @@ floorfood(	/* get food from floor or pack */
 		Sprintf(qbuf, "There is a bear trap here (%s); eat it?",
 			(u.utrap && u.utraptype == TT_BEARTRAP) ?
 				"holding you" : "armed");
-		if ((c = yn(qbuf)) == 'y') {
+		if ((c = yn_function(qbuf,ynqchars,'n')) == 'y') {
 		    u.utrap = u.utraptype = 0;
 		    deltrap(ttmp);
 		    return mksobj(BEARTRAP, NO_MKOBJ_FLAGS);
@@ -4640,7 +4640,7 @@ floorfood(	/* get food from floor or pack */
 		else
 		    Sprintf(qbuf, "There are %ld gold pieces here; eat them?",
 			    gold->quan);
-		if ((c = yn(qbuf)) == 'y') {
+		if ((c = yn_function(qbuf,ynqchars,'n')) == 'y') {
 		    return gold;
 		} else if (c == 'q') {
 		    return (struct obj *)0;
@@ -4658,7 +4658,7 @@ floorfood(	/* get food from floor or pack */
 				otense(otmp, "are"),
 				doname(otmp), verb,
 				(otmp->quan == 1L) ? "it" : "one");
-			if((c = yn(qbuf)) == 'y')
+			if((c = yn_function(qbuf,ynqchars,'n')) == 'y')
 				return(otmp);
 			else if(c == 'q')
 				return((struct obj *) 0);

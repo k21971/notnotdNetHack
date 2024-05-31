@@ -5330,7 +5330,7 @@ corpse_chance(
 				struct monst *mtmp, *mtmp2;
 				if(mon->mcan){
 					char buf[BUFSZ];
-					Sprintf(buf, "%s croaks out a horse shriek.", Monnam(mon)); //Monnam and mon_nam share a buffer and can't be used on the same line.
+					Snprintf(buf, BUFSZ, "%s croaks out a hoarse shriek.", Monnam(mon)); //Monnam and mon_nam share a buffer and can't be used on the same line.
 					pline("%s  It seems %s has a sore throat!", buf, mon_nam(mon));
 					return FALSE;
 				}
