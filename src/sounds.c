@@ -6999,8 +6999,9 @@ P_MAX_SKILL(int p_skill)
 #define EARTH_SKILL(skl) (skl == P_BARE_HANDED_COMBAT || skl == P_ATTACK_SPELL || skl == P_HEALING_SPELL || skl == P_CLERIC_SPELL || skl == P_SHURIKEN)
 #define CHAOS_SKILL(skl) (skl == P_TWO_HANDED_SWORD || skl == P_ESCAPE_SPELL)
 
-#define INCR_MAXSKILL	maxskill = min(max(P_BASIC, maxskill + 1), p_skill == P_BARE_HANDED_COMBAT ? P_GRAND_MASTER : P_EXPERT)
-#define INCR_CURSKILL	OLD_P_SKILL(p_skill) == P_ISRESTRICTED ? curskill+=2 : curskill++;
+#define INCR_SKILL(typ)	typ = min(max(P_BASIC, typ + 1), p_skill == P_BARE_HANDED_COMBAT ? P_GRAND_MASTER : P_EXPERT)
+#define INCR_MAXSKILL	INCR_SKILL(maxskill)
+#define INCR_CURSKILL	INCR_SKILL(curskill)
 
 
 int
