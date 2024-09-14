@@ -5161,7 +5161,7 @@ otyp_hit(
 
 	/*Handle spearpoint hits here*/
 	if(is_tipped_spear(otmp) && otmp->cobj){
-		if(!rn2(10) && !objects[otmp->cobj->otyp].oc_name_known)
+		if(youagr && !rn2(10) && !objects[otmp->cobj->otyp].oc_name_known)
 			objects[otmp->cobj->otyp].oc_name_known = 1;
 		switch(otmp->cobj->otyp){
 			case CITRINE:

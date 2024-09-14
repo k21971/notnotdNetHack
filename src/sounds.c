@@ -7051,6 +7051,13 @@ P_MAX_SKILL_CORE(int p_skill, boolean inc_penalties)
 		maxskill = max(maxskill - delta, P_UNSKILLED);
 	}
 	
+	if(maxskill>P_EXPERT && p_skill != P_BARE_HANDED_COMBAT && p_skill != P_TWO_WEAPON_COMBAT){
+		maxskill = P_EXPERT;
+	}
+	else if(maxskill>P_GRAND_MASTER){
+		maxskill = P_GRAND_MASTER;
+	}
+
 	return maxskill;
 }
 
@@ -7138,6 +7145,13 @@ P_SKILL_CORE(int p_skill, boolean inc_penalties)
 		curskill = max(curskill - delta, P_UNSKILLED);
 	}
 
+	if(curskill>P_EXPERT && p_skill != P_BARE_HANDED_COMBAT && p_skill != P_TWO_WEAPON_COMBAT){
+		curskill = P_EXPERT;
+	}
+	else if(curskill>P_GRAND_MASTER){
+		curskill = P_GRAND_MASTER;
+	}
+	
 	return curskill;
 }
 

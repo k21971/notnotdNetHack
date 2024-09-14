@@ -5,6 +5,8 @@
 /* various code that was replicated in *main.c */
 
 #include <math.h>
+#include <time.h>
+#include <errno.h>
 #include "hack.h"
 #include "artifact.h"
 #include "xhity.h"
@@ -48,6 +50,20 @@ static void invisible_twin_act(struct monst *);
 
 
 extern const int monstr[];
+
+/* gosleep(): no more than 100 inputs per second */
+int gosleep(void)
+{
+    struct timespec ts = {0, 10*1000*1000};
+    // struct timespec ts = {1, 0};
+    int res;
+
+    do {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
 
 static void
 digcrater(struct monst *mtmp)
@@ -1544,6 +1560,7 @@ moveloop(void)
 	// printBodies();
 	// printSanAndInsight();
     for(;;) {/////////////////////////MAIN LOOP/////////////////////////////////
+	if (!iflags.debug_fuzzer) gosleep();
     hpDiff = u.uhp;
 	get_nh_event();
 #ifdef POSITIONBAR

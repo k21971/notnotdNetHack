@@ -33,4 +33,4 @@
     (format t "/*~3d*/ ~d /* should be MAX_RADIUS+1; used to terminate range loops -dlc */~%};~%"
             absolute-index max-radius)))
 
-(print-circle-data (make-circle-data 32))
+(print-circle-data (make-circle-data 33))
