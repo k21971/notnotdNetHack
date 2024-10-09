@@ -13528,7 +13528,6 @@ void * vpointer,			/* additional /whatever/, type based on hmoncode. */
 	static struct permonst *warnedptr = 0;
 
 	static char killerbuf[BUFSZ];		/* only for use with killer */
-	memset(killerbuf, 0, sizeof(killerbuf));
 
 	char buf[BUFSZ];
 
