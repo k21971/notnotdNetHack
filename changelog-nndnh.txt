@@ -106,3 +106,4 @@ New option: QUERYTYPE
 		QUERYTYPE=yn "^Are you sure you want to cast that spell at yourself\?$"
 		# Reset everything to default
 		#QUERYTYPE=default ".*"
+#swim works when flying/water-walking if you are able to survive underwater

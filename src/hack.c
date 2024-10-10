@@ -1919,11 +1919,11 @@ spoteffects(boolean pick)
 			goto stillinwater;
 		else if (Levitation)
 			You("pop out of the water like a cork!");
-		else if (Flying)
+		else if (Flying && !Underwater)
 			You("fly out of the water.");
 		else if (uarmf && uarmf->oartifact == ART_FROST_TREADS)
 			You("climb stairs of ice out of the water.");
-		else if (Wwalking)
+		else if (Wwalking && !Underwater)
 			You("slowly rise above the surface.");
 		else
 			goto stillinwater;
