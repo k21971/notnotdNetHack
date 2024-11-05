@@ -2993,7 +2993,7 @@ inv_weight(void)
 	   retained in u.ugold in order to keep the status line accurate; we
 	   mustn't add its weight in twice under that circumstance */
 	wt = (otmp && otmp->oclass == COIN_CLASS) ? 0 :
-		(int)((u.ugold + 50L) / 100L);
+		gold_weight(u.ugold);
 #endif
 	if(u.utats & TAT_CROESUS) wt = 0;
 	while (otmp) {
@@ -3003,7 +3003,7 @@ inv_weight(void)
 		if (!is_boulder(otmp) || !(throws_rocks(youracedata) || u.sealsActive&SEAL_YMIR))
 #else
 		if (otmp->oclass == COIN_CLASS && !(u.utats&TAT_CROESUS))
-			wt += (int)(((long)otmp->quan + 50L) / 100L);
+			wt += gold_weight(u.ugold);
 		else if (!is_boulder(otmp) || !(throws_rocks(youracedata) || u.sealsActive&SEAL_YMIR))
 #endif
 			wt += otmp->owt;

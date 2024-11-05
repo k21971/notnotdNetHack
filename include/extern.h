@@ -1469,6 +1469,7 @@ extern void maybe_set_material(struct obj *, int);
 extern void rand_interesting_obj_material(struct obj *);
 extern void set_material(struct obj *, int);
 extern void set_material_gm(struct obj *, int);
+extern int gold_weight(long);
 extern int weight(struct obj *);
 extern struct obj *mkgold(long,int,int);
 extern struct obj *mkgold_core(long,int,int,boolean);
