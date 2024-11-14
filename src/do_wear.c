@@ -415,6 +415,7 @@ Helmet_on(void)
 	case HARMONIUM_HELM:
 	case HELM_OF_BRILLIANCE:
 	case SUNLIGHT_MAGGOT:
+	case STRIPED_HAT:
 		break;
 	case CORNUTHAUM:
 		/* people think marked wizards know what they're talking
@@ -535,6 +536,7 @@ Helmet_off(void)
 	case ORCISH_HELM:
 	case HARMONIUM_HELM:
 	case SUNLIGHT_MAGGOT:
+	case STRIPED_HAT:
 	    break;
 	case DUNCE_CAP:
 	    flags.botl = 1;

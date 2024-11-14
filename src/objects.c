@@ -729,6 +729,8 @@ HELM(("shemagh", "headscarf"), /*Needs encyc entry*//*Needs tile*/
 		0, 0,  0, 0, 5,   5, 10, 0, 0, CLOTH, CLR_WHITE, O_MATSPEC(UNIDED)),
 HELM(("faceless helm"), /*Needs encyc entry*//*Needs tile*/
 		1, 0,  0, 2, 30, 300, 8, 5, 0, BONE, CLR_GRAY, O_MATSPEC(IDED)),
+HELM(("striped hat", (char *)0, "hat"), /*Needs encyc entry*/
+		1, 0,  0, 0,  3,   2, 10, 0, 0, CLOTH, CLR_GRAY),
 
 /* With shuffled appearances... */
 HELM(("helmet", "plumed helmet"), /* circlet */

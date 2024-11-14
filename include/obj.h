@@ -1330,6 +1330,7 @@ struct obj {
 			 || otmp->otyp == DUNCE_CAP \
 			 || otmp->otyp == WAR_HAT \
 			 || otmp->otyp == SHEMAGH \
+			 || otmp->otyp == STRIPED_HAT \
 			 || otmp->otyp == find_gcirclet() \
 			)
 #define arm_blocks_upper_body(onum)		(objects[onum].oc_dtyp&UPPER_TORSO_DR)

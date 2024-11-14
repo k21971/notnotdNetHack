@@ -647,8 +647,10 @@ u_entered_shop(register char *enterstring)
 	    verbalize("Invisible customers are not welcome!");
 	    return;
 	}
-	/* Visible striped prison shirt */
-	if ((uarmu && (uarmu->otyp == STRIPED_SHIRT)) && !(uarm && arm_blocks_upper_body(uarm->otyp)) && !uarmc && strcmp(shkname(shkp), "Izchak") != 0) {
+	/* Visible striped prison shirt or hat */
+	if (((uarmh && uarmh->otyp == STRIPED_HAT)
+	     || ((uarmu && uarmu->otyp == STRIPED_SHIRT) && !(uarm && arm_blocks_upper_body(uarm->otyp)) && !uarmc))
+	    && strcmp(shkname(shkp), "Izchak") != 0) {
 	    eshkp->pbanned = TRUE;
 	}
 

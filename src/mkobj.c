@@ -2055,6 +2055,7 @@ material_list(struct obj *obj)
 	case HAWAIIAN_SHIRT:
 	case HAWAIIAN_SHORTS:
 	case STRIPED_SHIRT:
+	case STRIPED_HAT:
 	case ICHCAHUIPILLI:
 	case RUFFLED_SHIRT:
 	case VICTORIAN_UNDERWEAR:

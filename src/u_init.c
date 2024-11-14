@@ -914,6 +914,8 @@ static struct inv_sub { short race_pm, item_otyp, subs_otyp; } inv_subs[] = {
     // Chiropteran substitutions
     { PM_CHIROPTERAN,           HIGH_BOOTS,   GAUNTLETS  },
     { PM_CHIROPTERAN,           LOW_BOOTS,    GLOVES  },
+    // Octopode substitutions
+    { PM_OCTOPODE,	STRIPED_SHIRT,	STRIPED_HAT	},
     { NON_PM,	STRANGE_OBJECT,		STRANGE_OBJECT	      }
 };
 
@@ -3380,6 +3382,9 @@ ini_inv(register struct trobj *trop)
 			    obj->quan = 1L;
 			}
             if (obj->otyp == STRIPED_SHIRT ) {
+                obj->cursed = TRUE;
+            }
+	    if (obj->otyp == STRIPED_HAT ) {
                 obj->cursed = TRUE;
             }
             if (obj->otyp == STRAITJACKET ) {

@@ -19,7 +19,7 @@ Octopode race
 		Creates a radius 5 magenta ink cloud centered on you, which:
 			Blinds non-octopode monsters with eyes for 8 turns and while they remain in the cloud
 			Blocks monsters within from using scent
-			Has a 1/20 chance of recolouring piece of worn armour to magenta each turn,
+			Has a 1/20 chance of recolouring a piece of worn armour to magenta each turn,
 				resisted by being waterproof or being an octopode
 (Parasitized) Android Illithanachronounbinder
 	Not nonliving (the parasite is alive)
@@ -107,3 +107,6 @@ New option: QUERYTYPE
 		# Reset everything to default
 		#QUERYTYPE=default ".*"
 #swim works when flying/water-walking if you are able to survive underwater
+New item: striped hat
+	Same effects as a striped shirt (except it's worse because it can't be hidden)
+	Octopode convicts start with it instead of a striped shirt
