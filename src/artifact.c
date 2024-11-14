@@ -8620,12 +8620,84 @@ scorpion_upgrade_menu(struct obj *obj)
 	return MOVE_STANDARD;
 }
 
+static boolean
+invoke_on_cooldown(struct obj *obj, const struct artifact *oart){
+	if(is_lightsaber(obj) && obj->cobj && obj->oartifact == obj->cobj->oartifact)
+		obj = obj->cobj;
+	boolean on = oart->inv_prop <= LAST_PROP && (u.uprops[oart->inv_prop].extrinsic & W_ARTI);
+	return obj->age > monstermoves && !(
+		oart->inv_prop == FIRE_SHIKAI ||
+		oart->inv_prop == SEVENFOLD ||
+		oart->inv_prop == ANNUL ||
+		oart->inv_prop == ILLITHID ||
+		oart->inv_prop == ALTMODE ||
+		oart->inv_prop == LORDLY ||
+		oart->inv_prop == DETESTATION ||
+		oart->inv_prop == THEFT_TYPE ||
+		oart->inv_prop == GITH_ART
+		|| oart->inv_prop == ZERTH_ART
+		|| oart->inv_prop == AMALGUM_ART
+		|| oart->inv_prop == SCORPION_UPGRADES
+		|| on
+	);
+}
+
+static struct obj *
+do_invoke_menu(void){
+	struct obj *otmp;
+	struct artifact *oart;
+	winid tmpwin;
+	int n, how;
+	char buf[BUFSZ];
+	menu_item *selected;
+	anything any, anyvoid;
+	long cooldown;
+
+	tmpwin = create_nhwindow(NHW_MENU);
+	start_menu(tmpwin);
+	any.a_void = 0;		/* zero out all bits */
+	anyvoid.a_void = 0;		/* zero out all bits */
+
+	Sprintf(buf, "Invokable Objects:");
+	add_menu(tmpwin, NO_GLYPH, &any, 0, 0, ATR_BOLD, buf, MENU_UNSELECTED);
+	for(otmp = invent; otmp; otmp = otmp->nobj){
+		oart = (struct artifact *) 0;
+		if(is_invokable_otyp(otmp->otyp) || (otmp->oartifact && (oart = get_artifact(otmp)) && oart->inv_prop)){
+			if(oart && invoke_on_cooldown(otmp, oart)){
+				cooldown = otmp->age - monstermoves;
+				if(is_lightsaber(otmp) && otmp->cobj && otmp->oartifact == otmp->cobj->oartifact)
+					cooldown = otmp->cobj->age - monstermoves;
+				Sprintf(buf, "%3ld %s", cooldown, doname(otmp));
+				add_menu(tmpwin, NO_GLYPH, &anyvoid,
+					0, 0, ATR_NONE, buf,
+					MENU_UNSELECTED);
+			} else{
+				Sprintf(buf, "%s", doname(otmp));
+			any.a_obj = otmp;	/* must be non-zero */
+			add_menu(tmpwin, NO_GLYPH, &any,
+				otmp->invlet, 0, ATR_NONE, buf,
+				MENU_UNSELECTED);
+			}
+		}
+	}
+	end_menu(tmpwin, "Choose which object to invoke");
+
+	how = PICK_ONE;
+	n = select_menu(tmpwin, how, &selected);
+	destroy_nhwindow(tmpwin);
+	return (n > 0) ? selected[0].item.a_obj : (struct obj *) 0;
+}
+
 int
 doinvoke(void)
 {
     register struct obj *obj;
 
-    obj = getobj(invoke_types, "invoke");
+    if(!carrying_invokable_object()){
+	You("have nothing to invoke.");
+	return 0;
+    }
+    obj = do_invoke_menu();
     if (!obj) return 0;
     if (obj->oartifact && !touch_artifact(obj, &youmonst, FALSE)) return 1;
 	if(is_lightsaber(obj) && obj->cobj && obj->oartifact == obj->cobj->oartifact)
@@ -8679,20 +8751,7 @@ arti_invoke(struct obj *obj)
 
     if(oart->inv_prop > LAST_PROP) {
 	/* It's a special power, not "just" a property */
-	if(obj->age > monstermoves && !(
-		oart->inv_prop == FIRE_SHIKAI ||
-		oart->inv_prop == SEVENFOLD ||
-		oart->inv_prop == ANNUL ||
-		oart->inv_prop == ILLITHID ||
-		oart->inv_prop == ALTMODE || 
-		oart->inv_prop == LORDLY ||
-		oart->inv_prop == DETESTATION ||
-		oart->inv_prop == THEFT_TYPE ||
-		oart->inv_prop == GITH_ART
-		|| oart->inv_prop == ZERTH_ART
-		|| oart->inv_prop == AMALGUM_ART
-		|| oart->inv_prop == SCORPION_UPGRADES
-	)) {
+	if(invoke_on_cooldown(obj, oart)) {
 	    /* the artifact is tired :-) */
 		if(obj->oartifact == ART_FIELD_MARSHAL_S_BATON){
 			You_hear("the sounds of hurried preparation.");

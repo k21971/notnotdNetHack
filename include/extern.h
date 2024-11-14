@@ -1170,6 +1170,7 @@ extern char carrying_readable_weapon(void);
 extern char carrying_readable_tool(void);
 extern char carrying_readable_armor(void);
 extern struct obj *carrying_art(int);
+extern char carrying_invokable_object(void);
 extern boolean have_lizard(void);
 extern struct obj *o_on(unsigned int,struct obj *);
 extern boolean obj_here(struct obj *,int,int);

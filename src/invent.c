@@ -888,6 +888,24 @@ carrying_art(register int artnum)
 	return((struct obj *) 0);
 }
 
+static char
+is_invokable_object(struct obj *otmp){
+	struct artifact *oart;
+	return is_invokable_otyp(otmp->otyp) || (otmp->oartifact && (oart = get_artifact(otmp)) && oart->inv_prop);
+}
+
+char
+carrying_invokable_object(void)
+{
+	struct obj *otmp;
+
+	for(otmp = invent; otmp; otmp = otmp->nobj){
+		if(is_invokable_object(otmp))
+			return TRUE;
+	}
+	return FALSE;
+}
+
 const char *
 currency(long amount)
 {
@@ -2441,12 +2459,8 @@ itemactions(struct obj *obj)
 		     "Unequip this equipment", MENU_UNSELECTED);
 	}
 	/* V: invoke, rub, or break */
-	any.a_void = (void *)doinvoke;
-	if ((obj->otyp == FAKE_AMULET_OF_YENDOR && !obj->known) ||
-			obj->oartifact || objects[obj->otyp].oc_unique ||
-			(obj->otyp == RIN_WISHES && objects[obj->otyp].oc_name_known && (obj->owornmask & W_RING)) ||
-			(obj->otyp == CANDLE_OF_INVOCATION && obj->lamplit) ||
-			obj->otyp == MIRROR) /* wtf NetHack devteam? */
+	any.a_void = (void *)doparticularinvoke;
+	if (is_invokable_object(obj))
 		add_menu(win, NO_GLYPH, &any, 'V', 0, ATR_NONE,
 				"Try to invoke a unique power of this object", MENU_UNSELECTED);
 	/* w: hold in hands, works on everything but with different
@@ -2557,6 +2571,12 @@ itemactions(struct obj *obj)
 		destroy_nhwindow(datawin);
 		return 0;
 	}
+
+	/* The getobj hack won't work for invoking, so we have to call
+	    doparticular invoke with an argument instead.*/
+	if(feedback_fn == (void *)doparticularinvoke)
+		return (*(((int (*)(struct obj *)) feedback_fn)))(obj);
+
 	/* In most cases, we can just set getobj's result directly.
 	   (This works even for commands that take no arguments, because
 	   they don't call getobj at all. */
