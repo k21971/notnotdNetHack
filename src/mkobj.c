@@ -1570,7 +1570,7 @@ mksobj(int otyp, int mkflags)
 
 		/* your quest tends to be stocked with things that fit you */
 		if (quest_equipment(otmp) && !otmp->oartifact) {
-			otmp->objsize = (&mons[urace.malenum])->msize;
+			otmp->objsize = permonst_of(urace.malenum, get_template(&youmonst))->msize;
 			if (otmp->oclass == ARMOR_CLASS){
 				set_obj_shape(otmp, mons[urace.malenum].mflagsb);
 			}

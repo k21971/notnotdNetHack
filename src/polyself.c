@@ -32,7 +32,7 @@ init_uasmon(void)
 void
 set_uasmon(void)
 {
-	set_mon_data(&youmonst, u.umonnum);
+	set_mon_data(&youmonst, (flags.female && urace.femalenum != NON_PM) ? urace.femalenum : urace.malenum);
 }
 
 /** Returns true if the player monster is genocided. */

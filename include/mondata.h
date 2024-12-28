@@ -82,12 +82,14 @@
 
 #define is_alabaster_mummy(ptr)	((ptr)->mtyp == PM_ALABASTER_MUMMY)
 
+#define is_leprechaun(ptr) ((ptr)->mtyp == PM_LEPRECHAUN)
+
 #define is_ent(ptr) ((ptr)->mtyp == PM_ENT)
 
 #define is_ent_species(ptr, species) (is_ent(ptr) && u.ent_species == species)
 
 #define is_ancient_body_ent(ptr, species) (is_ent(ptr) && (species == ENT_ASH || species == ENT_BLUEGUM || species == ENT_ELM  \
-		|| species == ENT_LOCUST || species == ENT_METHUSELAH || species == ENT_REDWOOD)) 
+		|| species == ENT_LOCUST || species == ENT_METHUSELAH || species == ENT_REDWOOD || species == ENT_YGGDRASIL)) 
 
 #define is_ancient_knowledge_ent(ptr, species) (is_ent(ptr) && (species == ENT_ELDER || species == ENT_OAK || species == ENT_WILLOW \
 		|| species == ENT_YEW))
@@ -102,11 +104,11 @@
 		|| species == ENT_BLUEGUM || species == ENT_CHESTNUT || species == ENT_DOGWOOD || species == ENT_ELDER \
 		|| species == ENT_ELM || species == ENT_GINKGO || species == ENT_LARCH || species == ENT_LOCUST \
 		|| species == ENT_MAGNOLIA || species == ENT_MAPLE || species == ENT_MIMOSA || species == ENT_OAK \
-		|| species == ENT_POPLAR || species == ENT_WILLOW))
+		|| species == ENT_POPLAR || species == ENT_WILLOW || species == ENT_YGGDRASIL))
 
 #define is_fast_healing_ent(ptr, species) (is_ent(ptr) && (species == ENT_ASH || species == ENT_BEECH || species == ENT_BIRCH \
 		|| species == ENT_CEDAR || species == ENT_ELDER || species == ENT_ELM || species == ENT_FIR || species == ENT_LARCH \
-		|| species == ENT_GINKGO || species == ENT_MAPLE || species == ENT_OAK || species == ENT_YEW))
+		|| species == ENT_GINKGO || species == ENT_MAPLE || species == ENT_OAK || species == ENT_YEW || species == ENT_YGGDRASIL))
 
 #define is_powerful_build_ent(ptr, species) (is_ent(ptr) && (species == ENT_BLUEGUM || species == ENT_CHESTNUT || species == ENT_GINKGO \
 		|| species == ENT_LOCUST || species == ENT_MAGNOLIA || species == ENT_OAK || species == ENT_REDWOOD))

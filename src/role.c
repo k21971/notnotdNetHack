@@ -66,7 +66,7 @@ struct Role roles[] = {
 	PM_SARA__THE_LAST_ORACLE, PM_TROOPER, NON_PM,
 	NON_PM, NON_PM, NON_PM, NON_PM,
 	ART_ANNULUS,
-	MA_HUMAN|MA_DWARF|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_CLOCK|MA_GNOME|MA_REPTILIAN|MA_ETHEREAL, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_DWARF|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_CLOCK|MA_GNOME|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_NEUTRAL|ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{  12, 10,  7, 10,  10,  7 },
@@ -171,7 +171,7 @@ struct Role roles[] = {
 	PM_SOLDIER_ANT, PM_MALKUTH_SEPHIRAH, S_RODENT, S_SPIDER,
 	ART_IRON_SPOON_OF_LIBERATION,
 	// ART_IRON_BALL_OF_LIBERATION,
-	MA_HUMAN|MA_DWARF|MA_GNOME|MA_ORC|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_FEY|MA_REPTILIAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_DWARF|MA_GNOME|MA_ORC|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_FEY|MA_REPTILIAN|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{  10,  7,  7,  7, 13,  6 },
@@ -382,7 +382,7 @@ struct Role roles[] = {
 	PM_MAYOR_CUMMERBUND, PM_PIRATE_BROTHER, PM_BLACKBEARD_S_GHOST,
 	PM_SKELETAL_PIRATE, PM_SOLDIER, S_RODENT, S_ELEMENTAL, /* Ghost pirates, soldiers, rats in the food stores, and the occasional storm*/
 	ART_TREASURY_OF_PROTEUS,
-	MA_HUMAN|MA_ELF|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ELF|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_CHAOTIC|ROLE_NEUTRAL,
 	/* Str Int Wis Dex Con Cha */
 	{  10,  7, 7,  10, 10,  7 },
@@ -410,7 +410,7 @@ struct Role roles[] = {
 	PM_MASTER_OF_THIEVES, PM_THUG, PM_MASTER_ASSASSIN,
 	PM_LEPRECHAUN, PM_GUARDIAN_NAGA, S_NYMPH, S_NAGA,
 	ART_MASTER_KEY_OF_THIEVERY,
-	MA_HUMAN|MA_ORC|MA_VAMPIRE|MA_ELF|MA_DRAGON|MA_ANIMAL|MA_REPTILIAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ORC|MA_VAMPIRE|MA_ELF|MA_DRAGON|MA_ANIMAL|MA_REPTILIAN|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{   7,  7,  7, 10,  7,  6 },
@@ -563,7 +563,7 @@ struct Role roles[] = {
 	PM_NEFERET_THE_GREEN, PM_APPRENTICE, PM_DARK_ONE,
 	PM_VAMPIRE_BAT, PM_XORN, S_BAT, S_WRAITH,
 	ART_EYE_OF_THE_AETHIOPICA,
-	MA_HUMAN|MA_ELF|MA_GNOME|MA_ORC|MA_VAMPIRE|MA_DRAGON|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ELF|MA_GNOME|MA_ORC|MA_VAMPIRE|MA_DRAGON|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_NEUTRAL|ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{   7, 10,  7,  7,  7,  7 },
@@ -853,6 +853,20 @@ const struct Race races[] = {
 	NORMALNIGHTVIS
 	//Note: Bonus to all spells.
 },
+{	"leprechaun", "leprechaunic", "leprechaundum", "Lep",
+	{0, 0},
+	PM_LEPRECHAUN, NON_PM, PM_HUMAN_MUMMY, PM_LEPRECHAUN,
+	ROLE_MALE|ROLE_FEMALE | ROLE_CHAOTIC,
+	MA_DEMIHUMAN, 0, MA_GNOME|MA_DWARF,
+	/*    Str     Int Wis Dex Con Cha */
+	{      3,      3,  3,  3,  3,  3 },
+	{ 16,  25, 16, 18, 18, 20 },
+	/* Init   Lower  Higher */
+	{  2, 0,  2, 0,  0, 2 },	/* Hit points */
+	{  1, 0,  1, 0,  1, 0 },	/* Energy */
+	NIGHTVISION2, 
+	SPE_DETECT_TREASURE, -10
+},
 {	"orc", "orcish", "orcdom", "Orc",
 	{0, 0},
 	PM_ORC, NON_PM, PM_ORC_MUMMY, PM_ORC,
@@ -1048,6 +1062,7 @@ const struct Species species[] = {
 	{"spruce", ENT_SPRUCE, ENT_SPECIES},
 	{"willow", ENT_WILLOW, ENT_SPECIES},
 	{"yew", ENT_YEW, ENT_SPECIES},
+	{"yggdrasil", ENT_YGGDRASIL, ENT_SPECIES},
 	{"white", AD_COLD, DRAGON_SPECIES},
 	{"red", AD_FIRE, DRAGON_SPECIES},
 	{"orange", AD_SLEE, DRAGON_SPECIES},
@@ -1332,7 +1347,12 @@ validspecies(int rolenum, int racenum, int gendnum, int speciesnum)
 	if (speciesnum < 0 || speciesnum >= ROLE_SPECIES)
 		return FALSE; 
 	if(races[racenum].malenum == PM_ENT){
-		return species[speciesnum].type == ENT_SPECIES;
+		if(species[speciesnum].type == ENT_SPECIES){
+			if(roles[rolenum].malenum == PM_ANACHRONONAUT)
+				return species[speciesnum].value == ENT_YGGDRASIL;
+			return species[speciesnum].value != ENT_YGGDRASIL;
+		}
+		return FALSE;
 	} else if(races[racenum].malenum == PM_HALF_DRAGON){
 		if(species[speciesnum].type != DRAGON_SPECIES)
 			return FALSE;	
@@ -1377,7 +1397,6 @@ validdescendant(int rolenum)
 			|| roles[rolenum].malenum == PM_ANACHRONOUNBINDER
 		));
 }
-
 
 int
 randspecies(int rolenum, int racenum, int gendnum)
@@ -2789,7 +2808,7 @@ give_ascension_trophy(void)
 		achieve.trophies |= HALF_ASC;
 	else if(Race_if(PM_YUKI_ONNA))
 		achieve.trophies |= YUKI_ASC;
-	if(Race_if(PM_SALAMANDER) || Race_if(PM_ETHEREALOID) || Race_if(PM_ENT) || Race_if(PM_OCTOPODE))
+        if(Race_if(PM_SALAMANDER) || Race_if(PM_ETHEREALOID) || Race_if(PM_ENT) || Race_if(PM_LEPRECHAUN) || Race_if(PM_OCTOPODE))
 		achieve.new_races = 1;
 	int i;
 	int keys = 0;

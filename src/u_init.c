@@ -140,6 +140,18 @@ static struct trobj Anachrononaut_Eth[] = {
 	{ MASK, 0, TOOL_CLASS, 1, 0 },
 	{ 0, 0, 0, 0, 0 }
 };
+static struct trobj Anachrononaut_Ent[] = {
+	{ FORCE_CLUB,  3, WEAPON_CLASS, 1, 0 },
+	{ SHOCK_MORTAR,  3, WEAPON_CLASS, 1, 0 },
+	{ BODYGLOVE, 0, ARMOR_CLASS, 1, 0 },
+	{ ARMORED_BOOTS, 0, ARMOR_CLASS, 1, 0 },
+	{ GAUNTLETS, 0, ARMOR_CLASS, 1, 0 },
+	{ HELMET, 0, ARMOR_CLASS, 1, 0 },
+	{ ELVEN_TOGA, 0, ARMOR_CLASS, 1, 0 },
+	{ RIN_SHOCK_RESISTANCE,  0, RING_CLASS, 1, 0 },
+	{ POWER_PACK, 0, TOOL_CLASS, 10, 0 },
+	{ 0, 0, 0, 0, 0 }
+};
 static struct trobj Anachrononaut_Inc[] = {
 	{ LIGHTSABER,  3, WEAPON_CLASS, 1, 0 },
 	{ ELVEN_TOGA, 1, ARMOR_CLASS, 1, 0 },
@@ -1722,6 +1734,9 @@ set_ent_species(void){
 		case ENT_WILLOW:
 			HWeldproof |= FROMRACE;
 		break;
+		case ENT_YGGDRASIL:
+			set_template(&youmonst, YGGDRASIL);
+		break;
 	}
 	if(is_coniferous_ent(youracedata, u.ent_species))
 		HCold_resistance |= FROMRACE;
@@ -2000,7 +2015,12 @@ u_init(void)
 
 	/* set nvrange */
 	u.nv_range   =  urace.nv_range;
+	
 
+	/* Need to do this early because it might change your body size */
+	if(Race_if(PM_ENT)){
+		set_ent_species();
+	}
 
 	/*** Role-specific initializations ***/
 	switch (Role_switch) {
@@ -2048,6 +2068,7 @@ u_init(void)
 		else if(Race_if(PM_GNOME)) ini_inv(Anachrononaut_Gno);
 		else if(Race_if(PM_SALAMANDER)) ini_inv(Anachrononaut_Sal);
 		else if(Race_if(PM_ETHEREALOID)) ini_inv(Anachrononaut_Eth);
+		else if(Race_if(PM_ENT)) ini_inv(Anachrononaut_Ent);
 		else if(Race_if(PM_ANDROID)){
 			if(!flags.female) ini_inv(Anachrononaut_Mal_Clk);
 			else ini_inv(Anachrononaut_Fem_Clk);
@@ -2578,6 +2599,14 @@ u_init(void)
 	case PM_CLOCKWORK_AUTOMATON:
 		ini_inv(Key);
     break;
+	case PM_LEPRECHAUN:
+		#ifndef GOLDOBJ
+			u.ugold += 2000; 
+			u.ugold0 += 2000;
+		#else
+			u.umoney0 += 2000;
+		#endif
+	break;
 
 	case PM_INCANTIFIER:
 		skill_up(Skill_I);
@@ -2888,6 +2917,15 @@ u_init(void)
 	while (inv_weight() > 0) {
 		if (adjattrib(A_STR, 1, TRUE)) continue;
 		if (adjattrib(A_CON, 1, TRUE)) continue;
+		if (Race_if(PM_LEPRECHAUN)){
+			#ifndef GOLDOBJ
+				u.ugold += 100; 
+				u.ugold0 += 100;
+			#else
+				u.umoney0 += 100;
+			#endif
+			continue;
+		}
 		/* only get here when didn't boost strength or constitution */
 		break;
 	}
@@ -3002,9 +3040,6 @@ u_init(void)
 				break;
 
 		}
-	}
-	if(Race_if(PM_ENT)){
-		set_ent_species();
 	}
 	u.clk_material = COPPER;
 	if(Race_if(PM_CLOCKWORK_AUTOMATON)){
@@ -3139,6 +3174,13 @@ ini_inv(register struct trobj *trop)
 				obj->oerodeproof = 1;
 				obj->rknown = 1;
 			}
+			if(Role_if(PM_ANACHRONONAUT) && Race_if(PM_ENT) && (obj->oclass == ARMOR_CLASS || obj->oclass == WEAPON_CLASS) && obj->otyp != SHOCK_MORTAR){ 
+				if(hard_mat(objects[obj->otyp].oc_material)){
+					set_material_gm(obj, WOOD);
+					obj->oerodeproof = 1;
+					obj->rknown = 1;
+				}
+			}
 			if(Role_if(PM_ANACHRONONAUT) && Race_if(PM_ETHEREALOID) && obj->otyp == MASK)
 				obj->corpsenm = PM_ETHEREALOID;
 			if(obj->otyp == HEAVY_MACHINE_GUN && Role_if(PM_ANACHRONONAUT) && Race_if(PM_DWARF)){
@@ -3157,10 +3199,7 @@ ini_inv(register struct trobj *trop)
 			if(obj->otyp == SCALE_MAIL && Role_if(PM_ANACHRONONAUT)){
 				set_material_gm(obj, COPPER);
 			}
-			if(obj->otyp == GAUNTLETS && Role_if(PM_ANACHRONONAUT)){
-				set_material_gm(obj, COPPER);
-			}
-			if((obj->otyp == HELMET || obj->otyp == ARMORED_BOOTS) && Role_if(PM_ANACHRONONAUT) && Race_if(PM_HALF_DRAGON)){
+			if((obj->otyp == HELMET || obj->otyp == ARMORED_BOOTS || obj->otyp == GAUNTLETS) && Role_if(PM_ANACHRONONAUT) && Race_if(PM_HALF_DRAGON)){
 				set_material_gm(obj, COPPER);
 			}
 			if((obj->otyp == HELMET || obj->otyp == POWER_ARMOR || obj->otyp == KNUCKLE_DUSTERS) && Role_if(PM_ANACHRONONAUT) && Race_if(PM_GNOME)){
@@ -3390,7 +3429,7 @@ ini_inv(register struct trobj *trop)
             if (obj->otyp == STRAITJACKET ) {
                 obj->cursed = TRUE;
             }
-	    if((obj->oclass == SPBOOK_CLASS || obj->oclass == POTION_CLASS || obj->oclass == WAND_CLASS) && youracedata->msize < MZ_MEDIUM)
+	    if((obj->oclass == SPBOOK_CLASS || obj->oclass == POTION_CLASS || obj->oclass == WAND_CLASS || obj->oclass == TOOL_CLASS) && youracedata->msize < MZ_MEDIUM)
 		set_obj_size(obj, youracedata->msize);
             if (obj->otyp == AMULET_OF_NULLIFY_MAGIC && Role_if(PM_MADMAN) ) {
                 obj->cursed = TRUE;
@@ -3477,6 +3516,9 @@ ini_inv(register struct trobj *trop)
 		}
 		
 		if(Role_if(PM_ANACHRONONAUT) && Race_if(PM_ETHEREALOID) && obj->otyp == RIN_PROTECTION && !uleft){
+			setworn(obj, W_RINGL);
+		}
+		if(Role_if(PM_ANACHRONONAUT) && Race_if(PM_ENT) && obj->otyp == RIN_SHOCK_RESISTANCE && !uleft){
 			setworn(obj, W_RINGL);
 		}
 		

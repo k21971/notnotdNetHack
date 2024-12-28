@@ -1073,7 +1073,7 @@ carry_count(
     *wt_after  = wt;
 
     /* special case the iron ball here, it actually improves carrycap */
-    if (wt < 0 || obj->oartifact == ART_IRON_BALL_OF_LEVITATION)
+    if (wt < 0 || obj->oartifact == ART_IRON_BALL_OF_LEVITATION || (is_gold && Race_if(PM_LEPRECHAUN)))
 	return count;
 
     /* see how many we can lift */
@@ -1327,13 +1327,13 @@ pickup_object(
 	    long iw = (long)max_capacity() - GOLD_WT(u.ugold);
 	    long gold_capacity = GOLD_CAPACITY(iw, u.ugold);
 
-	    if (gold_capacity <= 0L) {
+	    if (gold_capacity <= 0L && !Race_if(PM_LEPRECHAUN)) {
 		pline(
 	       "There %s %ld gold piece%s %s, but you cannot carry any more.",
 		      otense(obj, "are"),
 		      obj->quan, plur(obj->quan), where);
 		return 0;
-	    } else if (gold_capacity < count) {
+	    } else if (gold_capacity < count && !Race_if(PM_LEPRECHAUN)) {
 		You("can only %s %s of the %ld gold pieces lying %s.",
 		    telekinesis ? "acquire" : "carry",
 		    gold_capacity == 1L ? "one" : "some", obj->quan, where);

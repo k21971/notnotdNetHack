@@ -548,7 +548,6 @@ extern char *Aptrnam(struct permonst *);
 extern char *a_monnam(struct monst *);
 extern char *a_ptrnam(struct permonst *);
 extern char *mon_nam_too(struct monst *, struct monst *);
-extern const char *get_ent_species(int);
 extern char *getDrowHouse(long);
 extern char *distant_monnam(struct monst *,int,char *);
 extern const char *rndmonnam(void);
@@ -694,6 +693,7 @@ extern void impact_drop(struct obj *,xchar,xchar,xchar,boolean);
 
 extern int zap_raygun(struct obj *,int, int);
 extern int zap_flamethrower(struct obj *,int, int);
+extern int zap_mortar(struct obj *,int, int, coord *);
 extern void hurtle(int,int,int,boolean,boolean);
 extern void mhurtle(struct monst *,int,int,int,boolean);
 extern int hero_breaks(struct obj *,xchar,xchar,boolean);

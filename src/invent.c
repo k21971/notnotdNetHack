@@ -2575,7 +2575,7 @@ itemactions(struct obj *obj)
 	/* The getobj hack won't work for invoking, so we have to call
 	    doparticular invoke with an argument instead.*/
 	if(feedback_fn == (void *)doparticularinvoke)
-		return (*(((int (*)(struct obj *)) feedback_fn)))(obj);
+		return (*(((int (*)(struct obj *)) feedback_fn)))(obj);	
 
 	/* In most cases, we can just set getobj's result directly.
 	   (This works even for commands that take no arguments, because
@@ -2657,7 +2657,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 	/* Object classes currently with no special messages here: amulets. */
 	if (olet == WEAPON_CLASS || (olet == TOOL_CLASS && oc.oc_skill) || otyp == HEAVY_IRON_BALL || olet == GEM_CLASS || has_artidmg) {
 		int mask = attack_mask(obj, otyp, oartifact, &youmonst);
-		boolean otyp_is_blaster = (otyp == CARCOSAN_STING || otyp == HAND_BLASTER || otyp == ARM_BLASTER || otyp == MASS_SHADOW_PISTOL || otyp == CUTTING_LASER || otyp == RAYGUN);
+		boolean otyp_is_blaster = (otyp == CARCOSAN_STING || otyp == HAND_BLASTER || otyp == ARM_BLASTER || otyp == MASS_SHADOW_PISTOL || otyp == CUTTING_LASER || otyp == RAYGUN || otyp == SHOCK_MORTAR);
 		boolean otyp_is_launcher = (((oc.oc_skill >= P_BOW && oc.oc_skill <= P_CROSSBOW) || otyp == ATLATL) && !otyp_is_blaster);
 		/* armor and rings don't have meaningful base damage, but can have artifact bonus damage */
 		boolean artidmg_only = olet == ARMOR_CLASS || olet == RING_CLASS;

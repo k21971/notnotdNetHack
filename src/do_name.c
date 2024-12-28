@@ -941,6 +941,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == SKELIFIED) 		Sprintf(buf2, "%s's skeleton", buf);
 		else if (full && template == CRYSTALFIED)		Sprintf(buf2, "%s's vitrean", buf);
 		else if (full && template == WHISPERING)		Sprintf(buf2, "%s's whispers", buf);
+		else if (full && template == YGGDRASIL)		Sprintf(buf2, "%s's yggdrasil", buf);
 		else if (full && template == MINDLESS) 			Sprintf(buf2, "%s's husk", buf);
 		else if (full && template == FRACTURED)			Sprintf(buf2, "%s the Witness of the Fracture", buf);
 		else if (full && template == ILLUMINATED)		Sprintf(buf2, "%s the Illuminated", buf);
@@ -969,6 +970,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == SKELIFIED)			Sprintf(buf2, "%s skeleton", buf);
 		else if (full && template == CRYSTALFIED)		Sprintf(buf2, "%s vitrean", buf);
 		else if (full && template == WHISPERING)		Sprintf(buf2, "%s whispers", buf);
+		else if (full && template == YGGDRASIL)		Sprintf(buf2, "%s yggdrasil", buf);
 		else if (full && template == MINDLESS)			Sprintf(buf2, "%s husk", buf);
 		else if (full && template == FRACTURED)			Sprintf(buf2, "fractured %s", buf);
 		else if (full && template == ILLUMINATED)		Sprintf(buf2, "illuminated %s", buf);
@@ -1594,64 +1596,6 @@ mon_nam_too(struct monst *mon, struct monst *other_mon)
 	if (mon == &youmonst)
 		return "you";
 	return mon_nam(mon);
-}
-
-const char *
-get_ent_species(int species)
-{
-	switch(species){
-		case ENT_ASH:
-			return "ash";
-		case ENT_BEECH:
-			return "beech";
-		case ENT_BIRCH:
-			return "birch";
-		case ENT_BLUEGUM:
-			return "bluegum";
-		case ENT_CEDAR:
-			return "cedar";
-		case ENT_CHESTNUT:
-			return "chestnut";
-		case ENT_CYPRESS:
-			return "cypress";
-		case ENT_DOGWOOD:
-			return "dogwood";
-		case ENT_ELDER:
-			return "elder";
-		case ENT_ELM:
-			return "elm";
-		case ENT_FIR:
-			return "fir";
-		case ENT_GINKGO:
-			return "gingko";
-		case ENT_LARCH:
-			return "larch";
-		case ENT_LOCUST:
-			return "locust";
-		case ENT_MAGNOLIA:
-			return "magnolia";
-		case ENT_MAPLE:
-			return "maple";
-		case ENT_MIMOSA:
-			return "mimosa";
-		case ENT_METHUSELAH:
-			return "methuselah";
-		case ENT_OAK:
-			return "oak";
-		case ENT_POPLAR:
-			return "poplar";
-		case ENT_REDWOOD:
-			return "redwood";
-		case ENT_SPRUCE:
-			return "spruce";
-		case ENT_WILLOW:
-			return "willow";
-		case ENT_YEW:
-			return "yew";
-		default:
-			return "strange";
-	}
-
 }
 
 char *

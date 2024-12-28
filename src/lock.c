@@ -891,7 +891,7 @@ doopen_indir(int x, int y)
 	    return MOVE_INSTANT;
 	}
 
-	if(verysmall(youracedata)) {
+	if(verysmall(youracedata) && !is_leprechaun(youracedata)) {
 	    pline("You're too small to pull the door open.");
 	    return MOVE_CANCELLED;
 	}
