@@ -121,7 +121,13 @@
  * #define MAX_NR_OF_PLAYERS 6
  */
 
-
+/*
+ * Limits the game to at most 100 inputs per second, and command
+ * repeats to 200.  This should be enabled on hardfought to avoid the
+ * high CPU usage kill script, but not when playing locally or CPU
+ * usage is properly limited with cgroups.
+ */
+/* #define LIMIT_IPS */
 
 /*
  * Section 3:	Definitions that may vary with system type.
