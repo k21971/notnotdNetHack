@@ -120,6 +120,15 @@ active_glyph(long int thought)
 		return TRUE;
 	return FALSE;
 }
+
+/* returns TRUE if <thought> is "equipped" whether active or not */
+boolean
+known_glyph(long int thought)
+{
+	if (u.thoughts&thought)
+		return TRUE;
+	return FALSE;
+}
 /* returns TRUE if <thought> would have been active at old insight/sanity values */
 boolean
 was_active_glyph(long int thought, int oldinsight, int oldsanity)

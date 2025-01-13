@@ -261,11 +261,14 @@
 #define AD_MADF		169 /* Madness fire */
 #define AD_FATK		170 /* Force target to attack */
 #define AD_INK		171 /* Octopode ink */
+#define AD_DRHP		172 /* Drains bonus HP */
+#define AD_PUSH		173 /* Push target away */
+#define AD_LICK		174 /* Pull target, immobalize target, cold touch, acid touch */
 
 //#define AD_AHAZU	116 /*  */
 //Amon is a headbutt (AT_BUTT/AD_PHYS)
 //Chupoclops is a poisonous bite (AT_BITE/AD_DRST)
-#define AD_DUNSTAN	172
+#define AD_DUNSTAN	175
 #define AD_IRIS		AD_DUNSTAN+1
 #define AD_NABERIUS	AD_DUNSTAN+2
 #define AD_OTIAX	AD_DUNSTAN+3

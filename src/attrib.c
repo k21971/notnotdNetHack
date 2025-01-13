@@ -136,6 +136,12 @@ const struct innate {
 		     {	20, &(HPoison_resistance), "hardy", "" },
 		     {	 0, 0, 0, 0 } },
 
+	unh_abil[] = { {	 1, &(HStealth), "", "" },
+		     {   7, &(HFast), "quick", "slow" },
+		     {  14, &(HDrain_resistance), "full of vigor","not so vigorous" },
+		     {  21, &(HSearching), "perceptive", "" },
+		     {	 0, 0, 0, 0 } },
+
 	val_abil[] = { {	 1, &(HCold_resistance), "", "" },
 		     {	 1, &(HStealth), "", "" },
 		     {   7, &(HFast), "quick", "slow" },
@@ -285,10 +291,15 @@ adjattrib(
 	    }
 	} else {
 	    if (ABASE(ndx) <= ATTRMIN(ndx)) {
-			if(ndx == A_WIS && u.wimage >= 10){
+			if(ndx == A_WIS && u.wimage >= 10 && !Blind){
 				int temparise = u.ugrave_arise;
 				pline("The image of the weeping angel is taking over your body!");
 				u.ugrave_arise = PM_WEEPING_ANGEL;
+				if (!u.uconduct.killer){
+					//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+					IMPURITY_UP(u.uimp_murder)
+					IMPURITY_UP(u.uimp_bloodlust)
+				}
 				done(WEEPING);
 				u.ugrave_arise = temparise;
 			} else if(u.umorgul
@@ -488,6 +499,10 @@ exercise(int i, boolean inc_or_dec)
 	if(umechanoid) return;
 	/* no physical exercise while polymorphed; the body's temporary */
 	if (Upolyd && i != A_WIS && i != A_INT) return;
+
+	//Prevent abuse.
+	if(check_preservation(PRESERVE_PREVENT_ABUSE) && !inc_or_dec)
+		return;
 
 	if(abs(AEXE(i)) < AVAL) {
 		/*
@@ -903,6 +918,7 @@ adjabil(int oldlevel, int newlevel)
 	case PM_ROGUE:          abil = rog_abil;	break;
 	case PM_SAMURAI:        abil = sam_abil;	break;
 	case PM_TOURIST:        abil = tou_abil;	break;
+	case PM_UNDEAD_HUNTER:   abil = unh_abil;	break;
 	case PM_VALKYRIE:       abil = val_abil;	break;
 	case PM_WIZARD:         abil = wiz_abil;	break;
 	default:                abil = 0;		break;
@@ -977,6 +993,9 @@ adjabil(int oldlevel, int newlevel)
 					if((Race_if(PM_ANDROID)  || Race_if(PM_PARASITIZED_ANDROID)) && mask == FROMRACE)
 						pline("%s", abil->gainstr);
 					else You_feel("%s!", abil->gainstr);
+					if(abil->ability == &(HStone_resistance)){ //Are we pointing to the stone res field?
+						fix_petrification();
+					}
 				}
 			}
 		} else if (oldlevel >= abil->ulevel && newlevel < abil->ulevel) {
@@ -1241,7 +1260,7 @@ calc_total_maxhp(void)
 		hp = &u.uhp;
 		hpmax = &u.uhpmax;
 		hprolled = &u.uhprolled;
-		hpcap = 24 + 2*maxhp(1);
+		hpcap = 24 + maxhp(1) + ulev*12;
 	}
 	
 	if(uhpbonus > 0){
@@ -1251,6 +1270,11 @@ calc_total_maxhp(void)
 		if(active_glyph(CLOCKWISE_METAMORPHOSIS)){
 			rawmax *= 1.3;
 			hpcap *= 1.3;
+		}
+		/*Calculate Eyes *before* the max bonus is determined*/
+		if(active_glyph(ROTTEN_EYES)){
+			rawmax *= 1.05;
+			hpcap *= 1.05;
 		}
 		
 		maxbonus = hpcap - rawmax;
@@ -1271,6 +1295,11 @@ calc_total_maxhp(void)
 		if(active_glyph(CLOCKWISE_METAMORPHOSIS)){
 			rawmax *= 1.3;
 			hpcap *= 1.3;
+		}
+
+		if(active_glyph(ROTTEN_EYES)){
+			rawmax *= 1.05;
+			hpcap *= 1.05;
 		}
 		
 		if(u.uhpmultiplier)
@@ -1325,6 +1354,7 @@ acurr(int x, struct monst *mon)
 	struct obj *armg = (is_player ? uarmg : which_armor(mon, W_ARMG));
 	struct obj *arms = (is_player ? uarms : which_armor(mon, W_ARMS));
 	struct obj *armh = (is_player ? uarmh : which_armor(mon, W_ARMH));
+	struct obj *belt = (is_player ? ubelt : which_armor(mon, W_BELT));
 	struct obj *wep = (is_player ? uwep : MON_WEP(mon));
 	struct obj *swapwep = (is_player ? uswapwep : MON_SWEP(mon));
     const struct artifact *oart = (struct artifact *) 0;
@@ -1395,6 +1425,7 @@ acurr(int x, struct monst *mon)
 			if(tmp > 18) tmp = STR19(tmp);
 		}
 		if ((armg && (armg->otyp == GAUNTLETS_OF_POWER || (armg->otyp == IMPERIAL_ELVEN_GAUNTLETS && check_imp_mod(armg, IEA_GOPOWER)))) || 
+			(belt && belt->otyp == BELT_OF_POWER) ||
 			(wep &&((wep->oartifact == ART_SCEPTRE_OF_MIGHT) || 
 					 (wep->oartifact == ART_PEN_OF_THE_VOID && wep->ovar1&SEAL_YMIR && mvitals[PM_ACERERAK].died > 0) ||
 					 (oart && (oart->inv_prop == GITH_ART || oart->inv_prop == ZERTH_ART || oart->inv_prop == AMALGUM_ART) && artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_POWER) ||
@@ -1406,7 +1437,8 @@ acurr(int x, struct monst *mon)
 			(swapwep && swapwep->oartifact == ART_OGRESMASHER) ||
 			(arms && arms->oartifact == ART_GOLDEN_KNIGHT) ||
 			(u.sealsActive&SEAL_YMIR)
-		) return(STR19(25));
+		) return((belt && belt->otyp == BELT_OF_WEAKNESS) ? 14 : STR19(25));
+		else if(belt && belt->otyp == BELT_OF_WEAKNESS) return 3;
 		else return((schar)((tmp >= STR19(25)) ? STR19(25) : (tmp <= 3) ? 3 : tmp));
 	} else if (x == A_CON) {
 		if (
@@ -1442,7 +1474,21 @@ acurr(int x, struct monst *mon)
 		if (armh && armh->otyp == DUNCE_CAP) return(6);
 		else if(is_player && u.sealsActive&SEAL_HUGINN_MUNINN) return 25;
 	}
-	return((schar)((tmp >= 25) ? 25 : (tmp <= 3) ? 3 : tmp));
+	//Clamp
+	int max = 25;
+	if(x == A_INT || x == A_WIS){
+		tmp -= u.mental_scores_down/3;
+		if(preservation_count() > 5)
+			max -= 2;
+		else if(preservation_count() > 2)
+			max -= 1;
+		if(parasite_count() > 5)
+			max -= 2;
+		else if(parasite_count() > 2)
+			max -= 1;
+		if(max < 3) max = 3;
+	}
+	return((schar)((tmp >= max) ? max : (tmp <= 3) ? 3 : tmp));
 
 }
 
@@ -1465,7 +1511,7 @@ change_usanity(int delta, boolean check)
 		pline("Sanity change: %d + %d", u.usanity, delta);
 	u.usanity += delta;
 	if(!u.umadness && u.usanity < 50)
-		u.usanity = 50;
+		u.usanity = min(starting_sanity, 50);
 	else if(u.usanity < 0)
 		u.usanity = 0;
 	if(u.usanity > 100)
@@ -1859,7 +1905,7 @@ you_inflict_madness(struct monst *mon)
 				mon->seenmadnesses |= madflag;
 				if(d(2,u.ulevel) >= mon->m_lev){
 					if(u.specialSealsActive&SEAL_YOG_SOTHOTH){
-						yog_credit(mon->m_lev);
+						yog_credit(mon->m_lev, FALSE);
 					}
 					if(madflag == MAD_DELUSIONS
 					 || madflag == MAD_REAL_DELUSIONS
@@ -1982,6 +2028,7 @@ adjalign(register int n)
 	register int newalign = u.ualign.record + n;
 
 	if(n < 0) {
+		IMPURITY_UP(u.uimp_bloodlust)
 		if(newalign < u.ualign.record)
 			u.ualign.record = newalign;
 		if(u.ualign.record > ALIGNLIM)
@@ -2004,16 +2051,19 @@ unSetFightingForm(int fform)
 	if (fform >= FIRST_LS_FFORM && fform <= LAST_LS_FFORM){
 		first = FIRST_LS_FFORM;
 		last = LAST_LS_FFORM;
-	} else if (fform >= FIRST_KNI_FFORM && fform <= LAST_KNI_FFORM){
-		first = FIRST_KNI_FFORM;
-		last = LAST_KNI_FFORM;
+	} else if (fform >= FIRST_BASIC_KNI_FFORM && fform <= LAST_BASIC_KNI_FFORM){
+		first = FIRST_BASIC_KNI_FFORM;
+		last = LAST_BASIC_KNI_FFORM;
+	} else if (fform >= FIRST_ADV_KNI_FFORM && fform <= LAST_ADV_KNI_FFORM){
+		first = FIRST_ADV_KNI_FFORM;
+		last = LAST_ADV_KNI_FFORM;
 	} else {
 		first = 0;
-		last = FFORM_LISTSIZE*32;
+		last = FFORM_LISTSIZE*16;
 	}
 
-	/* this code assumes that each batch of 32 fighting forms are mutually exclusive, but not with other batches of 32 */
-	for(i=first/32; i <= last/32; i++)
+	/* this code assumes that each batch of 16 fighting forms are mutually exclusive, but not with other batches of 16 */
+	for(i=first/16; i <= last/16; i++)
 		u.fightingForm[i] = 0L;
 
 }
@@ -2021,9 +2071,9 @@ unSetFightingForm(int fform)
 void
 setFightingForm(int fform)
 {
-	/* this code assumes that each batch of 32 fighting forms are mutually exclusive, but not with other batches of 32 */
+	/* this code assumes that each batch of 16 fighting forms are mutually exclusive, but not with other batches of 16 */
 	unSetFightingForm(fform);
-	u.fightingForm[(fform-1)/32] |= (0x1L << ((fform-1)%32));
+	u.fightingForm[(fform-1)/16] |= (0x1L << ((fform-1)%16));
 }
 
 boolean
@@ -2035,7 +2085,7 @@ activeFightingForm(int fform)
 boolean
 activeMentalEdge(int fform)
 {
-	return (artinstance[ART_SILVER_SKY].GithStyle == fform && !blockedMentalEdge(fform));
+	return ((artinstance[ART_SILVER_SKY].GithStyle & (1 << fform)) != 0 && !blockedMentalEdge(fform));
 }
 
 boolean
@@ -2055,7 +2105,7 @@ selectedFightingForm(int fform)
 		return TRUE; //Found no fighting forms, return TRUE
 	}
 	
-	return !!(u.fightingForm[(fform-1)/32] & (0x1L << ((fform-1)%32)));
+	return !!(u.fightingForm[(fform-1)/16] & (0x1L << ((fform-1)%16)));
 }
 
 int
@@ -2093,7 +2143,10 @@ getFightingFormSkill(int fform)
 			return P_GREAT_WEP;
 		break;
 		case FFORM_HALF_SWORD:
-			return P_HALF_SWORD;
+			return P_GENERIC_KNIGHT_FORM;
+		break;
+		case FFORM_POMMEL:
+			return P_GENERIC_KNIGHT_FORM;
 		break;
 		case FFORM_KNI_SACRED:
 			return P_KNI_SACRED;
@@ -2128,6 +2181,7 @@ nameOfFightingForm(int fform)
 		case FFORM_SHIELD_BASH:	return "Shield Bash";
 		case FFORM_GREAT_WEP:	return "Great Weapon Fighting";
 		case FFORM_HALF_SWORD:	return "Half-sword style";
+		case FFORM_POMMEL:	return "Pommeling style";
 		case FFORM_KNI_SACRED:	return "Sacred style";
 		case FFORM_KNI_RUNIC:	return "Runic style";
 		case FFORM_KNI_ELDRITCH:return "Eldritch style";
@@ -2197,8 +2251,11 @@ blockedFightingForm(int fform)
 		case FFORM_HALF_SWORD:
 			return !(uwep && uwep->otyp == LONG_SWORD && !uarms && !(u.twoweap && !bimanual(uwep, youracedata)));
 		/* require longsword*/
+		case FFORM_POMMEL:
+			return !(uwep && uwep->otyp == LONG_SWORD);
+		/* require longsword*/
 		case FFORM_KNI_RUNIC:
-			return !(uwep && uwep->otyp == LONG_SWORD && FightingFormSkillLevel(fform) > P_ISRESTRICTED);
+			return !(uwep && is_runic_form_sword(uwep) && FightingFormSkillLevel(fform) > P_ISRESTRICTED);
 		/* requires shield */
 		case FFORM_SHIELD_BASH:
 			return (!uarms);
@@ -2275,6 +2332,11 @@ check_brainlessness(const char *reason)
 		Your("last thought fades away.");
 		killer = reason;
 		killer_format = KILLED_BY;
+		if (!u.uconduct.killer){
+			//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+			IMPURITY_UP(u.uimp_murder)
+			IMPURITY_UP(u.uimp_bloodlust)
+		}
 		done(DIED);
 		/* lifesaved; arbitrarily boost intelligence */
 		ABASE(A_INT) = ATTRMIN(A_INT) + 2;

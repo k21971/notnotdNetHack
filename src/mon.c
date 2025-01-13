@@ -464,11 +464,11 @@ make_corpse(register struct monst *mtmp)
 	    case PM_ORACLE:
 		if (mtmp->mrevived) {
 			if (canseemon(mtmp))
-			   pline("%s recently regrown eyes crumble to dust.",
+			   pline("%s recently returned eyes vanish once more.",
 				s_suffix(Monnam(mtmp)));
 		} else {
 			if (canseemon(mtmp))
-			   pline("%s eyes crumble to dust.",
+			   pline("%s eyes vanish.",
 				s_suffix(Monnam(mtmp)));
 		}
 		goto default_1;
@@ -1056,21 +1056,15 @@ make_corpse(register struct monst *mtmp)
 			obj->corpsenm = PM_PARASITIC_MIND_FLAYER;
 			fix_object(obj);
 		break;
-	    case PM_BRAINBLOSSOM_PATCH:
+	    case PM_BRAINBLOSSOM_PATCH:{
+			struct trap *ttmp = t_at(x, y);
 			obj = mksobj_at(BRAINROOT, x, y, MKOBJ_NOINIT);
-			if(obj)
+			if(obj && !(ttmp && (ttmp->ttyp == PIT || ttmp->ttyp == SPIKED_PIT || ttmp->ttyp == HOLE))){
 				bury_an_obj(obj);
+			}
 			obj = (struct obj *)0;
 			goto default_1;
-		break;
-	    case PM_DANCING_BLADE:
-			obj = mksobj_at(TWO_HANDED_SWORD, x, y, MKOBJ_NOINIT);
-			obj->blessed = TRUE;
-			obj->cursed = FALSE;
-			obj->spe = 7;
-			obj->objsize = MZ_LARGE;
-			fix_object(obj);
-		break;
+		}break;
 	    case PM_IRON_GOLEM:
 			obj = mksobj_at(PLATE_MAIL, x, y, MKOBJ_NOINIT);
 			set_material_gm(obj, IRON);
@@ -1709,6 +1703,10 @@ mcalcmove(struct monst *mon)
 		mmove = max(mmove-(u.ulevel/10+1),1);
 	}
 	if(In_fog_cloud(mon)) mmove = max(mmove/3, 1);
+	if(mon->mfell > 0){
+		mmove = (mmove + mon->mfell)/mon->mfell;
+		mon->mfell = 0;
+	}
 	return mmove;
 }
 
@@ -1789,6 +1787,41 @@ timeout_problems(struct monst *mtmp)
 	    (void) newcham(mtmp, NON_PM, FALSE, FALSE);
 	were_change(mtmp);
 
+	if((quest_status.time_doing_quest >= UH_QUEST_TIME_2 || (quest_status.time_doing_quest >= UH_QUEST_TIME_1 && !Is_qhome(&u.uz)))
+		&& In_quest(&u.uz)
+		&& Role_if(PM_UNDEAD_HUNTER)
+		&& !(mvitals[PM_MOON_S_CHOSEN].died)
+		&& (mtmp->mfaction == QUEST_FACTION || mtmp->mfaction == CITY_FACTION || quest_status.leader_m_id == mtmp->m_id)
+	){
+		if((Is_qlocate(&u.uz) && (quest_status.time_doing_quest >= UH_QUEST_TIME_2 || (!rn2((UH_QUEST_TIME_2-quest_status.time_doing_quest)/200) && couldsee(mtmp->mx, mtmp->my))))
+			|| (!Is_qlocate(&u.uz) && (quest_status.time_doing_quest >= UH_QUEST_TIME_4 || (!rn2((UH_QUEST_TIME_4-quest_status.time_doing_quest)/200) && couldsee(mtmp->mx, mtmp->my))))
+		){
+			set_faction(mtmp, MOON_FACTION);
+			if(mtmp->mtyp == PM_VICAR_AMALIA){
+				if(quest_status.time_doing_quest >= UH_QUEST_TIME_3){
+					(void) newcham(mtmp, PM_VICAR_WOLF, FALSE, TRUE);
+					quest_status.got_quest = TRUE;
+					quest_status.leader_is_dead = TRUE;
+					mtmp->mstrategy &= ~STRAT_WAITMASK;
+					quest_status.leader_m_id = 0;
+					if(!mtmp->mtame){
+						set_faction(mtmp, MOON_FACTION);
+						mtmp->mpeaceful = 0;
+						set_malign(mtmp);
+					}
+				}
+			}
+			else {
+				(void) newcham(mtmp, PM_WEREWOLF, FALSE, TRUE);
+				if(!mtmp->mtame){
+					set_faction(mtmp, MOON_FACTION);
+					mtmp->mpeaceful = 0;
+					set_malign(mtmp);
+				}
+			}
+		}
+	}
+
 	if(mtmp->mtyp == PM_IKSH_NA_DEVA && !mtmp->mcan && mtmp->mhp*2 < mtmp->mhpmax && !rn2(4) && !hates_holy_mon(mtmp))
 		emit_healing(mtmp);
 		
@@ -1819,6 +1852,8 @@ timeout_problems(struct monst *mtmp)
 	    mtmp->mcanmove = 1;
 	if (mtmp->mfleetim && !--mtmp->mfleetim)
 	    mtmp->mflee = 0;
+	if (mtmp->mequipping)
+	    mtmp->mequipping--;
 }
 
 
@@ -1915,8 +1950,13 @@ movemon(void)
 	}
 	arc = maxtheta - mintheta;
 	
+	if(u.specialSealsActive&SEAL_LIVING_CRYSTAL)
+		average_dogs();
 	//Current Movement Loop///////////////////////////////////////////////////
     for(mtmp = fmon; mtmp; mtmp = nmtmp) {
+	if (flags.run_timers){
+		run_timers();
+	}
 	/* check that mtmp wasn't migrated by previous mtmp's actions */
 	if (!(mtmp->mx || mtmp->my)) {
 		/* uh oh -- it looks like mtmp is marked as on migrating_mons. Confirm. */
@@ -1941,8 +1981,14 @@ movemon(void)
 	/* Find a monster that we have not treated yet.	 */
 	if(DEADMONSTER(mtmp))
 	    continue;
-	if(u.specialSealsActive&SEAL_LIVING_CRYSTAL)
-		average_dogs();
+	if(mtmp->mlast_movement != monstermoves){
+		mtmp->mprev_dir.x = 0;
+		mtmp->mprev_dir.y = 0;
+	}
+	if(mtmp->mlstmv != monstermoves){
+		mtmp->mprev_attk.x = 0;
+		mtmp->mprev_attk.y = 0;
+	}
 	if(mtmp->m_insight_level > u.uinsight
 	  || (mtmp->mtyp == PM_WALKING_DELIRIUM && BlockableClearThoughts)
 	  || (mtmp->mtyp == PM_STRANGER && !quest_status.touched_artifact)
@@ -1981,6 +2027,7 @@ movemon(void)
 	if(mtmp->mstdy > 0) mtmp->mstdy -= 1; //monster is moving, reduce studied level
 	else if(mtmp->mstdy < 0) mtmp->mstdy += 1; //monster is moving, reduce protection level
 
+	if(mtmp->mopen) mtmp->mopen--;
 	//Weeping angel step 3
 	if(is_weeping(mtmp->data)){
 		mtmp->mvar2 &= 0x1L; //clear higher order bits, first bit is whether it should generate a swarm when you return
@@ -2125,6 +2172,9 @@ movemon(void)
 
 	if (minliquid(mtmp)) continue;
 	if (spire_fall_mon(mtmp)) continue;
+
+	if(u.specialSealsActive&SEAL_LIVING_CRYSTAL)
+		average_dogs();
 
 	/* continue if the monster died fighting */
 	if (!mtmp->iswiz && !is_blind(mtmp)) {
@@ -2736,6 +2786,7 @@ max_mon_load(register struct monst *mtmp)
 	struct obj *bodyarmor;
 	struct obj *underarmor;	
 	struct obj *boots;	
+	struct obj *belt;	
 	// long carcap = 25L*(acurrstr((int)(mtmp->mstr)) + mtmp->mcon) + 50L;
 	long carcap;
 	gloves = which_armor(mtmp, W_ARMG);
@@ -2743,6 +2794,7 @@ max_mon_load(register struct monst *mtmp)
 	bodyarmor = which_armor(mtmp, W_ARM);
 	underarmor = which_armor(mtmp, W_ARMU);
 	boots = which_armor(mtmp, W_ARMF);
+	belt = which_armor(mtmp, W_BELT);
 	
 	if(gloves && (gloves->otyp == GAUNTLETS_OF_POWER || (gloves->otyp == IMPERIAL_ELVEN_GAUNTLETS && check_imp_mod(gloves, IEA_GOPOWER)))){
 		carcap = 25L*(25L + 11L) + 50L;
@@ -2770,6 +2822,15 @@ max_mon_load(register struct monst *mtmp)
 		carcap = (carcap * (long)mdat->cwt / WT_HUMAN);
 	
 	if (carcap > maxload) carcap = maxload;
+
+	if (belt && belt->otyp == BELT_OF_CARRYING){
+		if(belt->blessed)
+			carcap += carcap/4;
+		else if(belt->cursed)
+			carcap -= carcap/4;
+		else
+			carcap += carcap/8;
+	}
 
 	static int hboots = 0;
 	if (!hboots) hboots = find_hboots();
@@ -2858,7 +2919,7 @@ mon_can_see_mon(struct monst *looker, struct monst *lookie)
 		//may still be able to feel target adjacent
 	}
 	
-	if(looker->mtyp == PM_DANCING_BLADE){
+	if(looker->mtyp == PM_DANCING_BLADE && looker->mvar_suryaID){
 		struct monst *surya;
 		for(surya = fmon; surya; surya = surya->nmon) if(surya->m_id == looker->mvar_suryaID) break;
 		if(surya){
@@ -3012,7 +3073,7 @@ mon_can_see_you(struct monst *looker)
 		//may still be able to feel target adjacent
 	}
 	
-	if(looker->mtyp == PM_DANCING_BLADE){
+	if(looker->mtyp == PM_DANCING_BLADE && looker->mvar_suryaID){
 		struct monst *surya;
 		for(surya = fmon; surya; surya = surya->nmon) if(surya->m_id == looker->mvar_suryaID) break;
 		if(surya && mon_can_see_you(surya)) return TRUE;
@@ -3021,6 +3082,12 @@ mon_can_see_you(struct monst *looker)
 	}
 	
 	if(Aggravate_monster) return TRUE;
+	
+	if(Withering_stake
+		&& (quest_status.time_doing_quest >= UH_QUEST_TIME_2 || mvitals[PM_MOON_S_CHOSEN].died)
+		&& (looker->data->mflagsa&MA_ANIMAL || looker->data->mflagsa&MA_DEMIHUMAN || looker->data->mflagsa&MA_WERE)
+	)
+		return TRUE;
 	
 	/* 1/8 chance to stumble onto adjacent targets. Ish. */
 	if(distmin(looker->mx,looker->my,u.ux,u.uy) <= 1 && !rn2(8))
@@ -3233,7 +3300,6 @@ mfndpos(
 {
 	struct permonst *mdat = mon->data;
 	struct monst *witw = 0;
-	struct monst *madjacent = 0;
 	register xchar x,y,nx,ny;
 	register int cnt = 0;
 	register uchar ntyp;
@@ -3252,12 +3318,6 @@ mfndpos(
 	
 	if(mdat->mtyp == PM_DEEP_SEA_TENTACLE){
 		for(witw = fmon; witw; witw = witw->nmon) if(witw->mtyp == PM_ARCHIPELAGO_ANCIENT) break;
-	}
-	
-	if(mdat->mtyp == PM_DANCING_BLADE){
-		for(madjacent = fmon; madjacent; madjacent = madjacent->nmon)
-			if(madjacent->mtyp == PM_SURYA_DEVA && madjacent->m_id == mon->mvar_suryaID)
-				break;
 	}
 	
 	x = mon->mx;
@@ -3356,9 +3416,6 @@ nexttry:
 			onlineu(nx, ny) && (lined_up(mon) || !rn2(4))) continue;
 		if(witw && dist2(nx, ny, witw->mx, witw->my) > 32 && 
 			dist2(nx, ny, witw->mx, witw->my) >= dist2(mon->mx, mon->my, witw->mx, witw->my)) continue;
-		if(madjacent && distmin(nx, ny, madjacent->mx, madjacent->my) > 1 && 
-			dist2(nx, ny, madjacent->mx, madjacent->my) >= dist2(mon->mx, mon->my, madjacent->mx, madjacent->my) &&
-			!(m_at(nx, ny) && distmin(nx, ny, madjacent->mx, madjacent->my) <= 2)) continue;
 		if(mdat->mtyp == PM_HOOLOOVOO
 			&& (IS_ROCK(levl[mon->mx][mon->my].typ) && space_adjacent(mon->mx,mon->my))
 			&& !(IS_ROCK(levl[nx][ny].typ) && space_adjacent(nx,ny))
@@ -3622,11 +3679,19 @@ mm_grudge(
 	if (magr->mstrategy & STRAT_WAITMASK) {
 		return 0L;
 	}
-	if(magr->mtyp == PM_ELVEN_WRAITH){
+	if(magr->mtyp == PM_ELVEN_WRAITH || magr->mtyp == PM_SILVERFIRE_SHADOW_S_WRAITH){
 		if(magr->mvar_elfwraith_target == (long) mdef->m_id)
 			return ALLOW_M | ALLOW_TM;
 		else
 			return 0L;
+	}
+	// Respect wards
+	if (actual && onscary(mdef->mx, mdef->my, magr)) {
+		return 0L;
+	}
+	// Don't focus-down steeds
+	if (actual && mdef == u.usteed) {
+		return 0L;
 	}
 	// Berserked creatures are effectively always conflicted, and aren't careful about anything unnecessary
 	if (magr->mberserk) {
@@ -3732,10 +3797,10 @@ mm_grudge(
 		return ALLOW_M|ALLOW_TM;
 	}
     // pets attack hostile monsters
-	if (magr->mtame && !mdef->mpeaceful && (!actual || magr->mhp > magr->mhpmax/2 || banish_kill(magr->mtyp)) && !magr->mflee)
+	if (magr->mtame && !mdef->mpeaceful && (!actual || magr->mhp > magr->mhpmax/2 || banish_kill_mon(magr)) && !magr->mflee)
 	    return ALLOW_M|ALLOW_TM;
 	// and vice versa, with some limitations that will help your pet survive
-	if (mdef->mtame && !magr->mpeaceful && (!actual || mdef->mhp > mdef->mhpmax/2 || banish_kill(mdef->mtyp)) && !mdef->meating && mdef != u.usteed && !mdef->mflee)
+	if (mdef->mtame && !magr->mpeaceful && (!actual || mdef->mhp > mdef->mhpmax/2 || banish_kill_mon(mdef)) && !mdef->meating && mdef != u.usteed && !mdef->mflee)
 	    return ALLOW_M|ALLOW_TM;
 
 	/* Since the quest guardians are under siege, it makes sense to have 
@@ -3761,6 +3826,13 @@ mm_grudge(
 		if(mdef->mpeaceful==TRUE && magr->mpeaceful==FALSE && rn2(2)) return ALLOW_M|ALLOW_TM;
 		if(mdef->mpeaceful==TRUE && magr->mtame==TRUE) return FALSE;
 	}
+	if(magr->mfaction == MOON_FACTION && mdef->mfaction == CITY_FACTION){
+		if(magr->mpeaceful==FALSE && mdef->mpeaceful==TRUE) return ALLOW_M|ALLOW_TM;
+	}
+	if(mdef->mfaction == MOON_FACTION && magr->mfaction == CITY_FACTION){
+		if(mdef->mpeaceful==TRUE && magr->mpeaceful==FALSE && rn2(2)) return ALLOW_M|ALLOW_TM;
+		if(mdef->mpeaceful==TRUE && magr->mtame==TRUE) return FALSE;
+	}
 	
 	/* Various factions don't attack faction-mates */
 	if(magr->mfaction == mdef->mfaction && mdef->mfaction == YENDORIAN_FACTION)
@@ -3778,6 +3850,8 @@ mm_grudge(
 	if(magr->mfaction == mdef->mfaction && mdef->mfaction == YELLOW_FACTION)
 		return 0L;
 	if(magr->mfaction == mdef->mfaction && mdef->mfaction == YOG_FACTION)
+		return 0L;
+	if(magr->mfaction == mdef->mfaction && mdef->mfaction == MOON_FACTION)
 		return 0L;
 	
 	// dreadblossoms attack almost anything
@@ -4384,7 +4458,7 @@ lifesaved_monster(struct monst *mtmp)
 		lifesavers |= LSVD_ASC;
 	if (allied_iaso_on_level(mtmp))
 		lifesavers |= LSVD_IAS;
-	if ((mtmp->mtyp == PM_PUPPET_EMPEROR_XELETH || mtmp->mtyp == PM_PUPPET_EMPRESS_XEDALLI) && !on_level(&astral_level, &u.uz))
+	if ((mtmp->mtyp == PM_PUPPET_EMPEROR_XELETH || mtmp->mtyp == PM_PUPPET_EMPRESS_XEDALLI) && !Is_astralevel(&u.uz))
 		lifesavers |= LSVD_YEL;
 	if (mtmp->mtyp == PM_TWIN_SIBLING)
 		lifesavers |= LSVD_TWN;
@@ -4774,6 +4848,7 @@ lifesaved_monster(struct monst *mtmp)
 				pline("The escaping phantasmal mist condenses into %s.", nyar_description[nyar_form]);
 				pline("%s tears off the right half of %s face before rising through the ceiling!", nyar_name[nyar_form], s_suffix(Monnam(mtmp)));
 				change_usanity(u_sanity_loss_nyar(), TRUE);
+				TRANSCENDENCE_IMPURITY_UP(TRUE)
 				if(!(uarmc && uarmc->oartifact == ART_SPELL_WARDED_WRAPPINGS_OF_))
 					u.umadness |= MAD_THOUSAND_MASKS;
 			}
@@ -4847,6 +4922,7 @@ mondead(register struct monst *mtmp)
 		pline("%s twists and morphs into %s.", Monnam(mtmp), nyar_description[nyar_form]);
 		pline("%s rises through the ceiling!", nyar_name[nyar_form]);
 		change_usanity(u_sanity_loss_nyar(), TRUE);
+		TRANSCENDENCE_IMPURITY_UP(TRUE)
 		if(!(uarmc && uarmc->oartifact == ART_SPELL_WARDED_WRAPPINGS_OF_))
 			u.umadness |= MAD_THOUSAND_MASKS;
 	}
@@ -4887,6 +4963,31 @@ mondead(register struct monst *mtmp)
 	 */
 	tmp = monsndx(mtmp->data);
 	if (mvitals[tmp].died < 255) mvitals[tmp].died++;
+	if(tmp == PM_INDEX_WOLF){
+		//The phase of the moon may change to full.
+		if(flags.moonphase != FULL_MOON && flags.moonphase != HUNTING_MOON){
+			if(ACURR(A_WIS) > 14){
+				pline("The moon waxes full.");
+				change_uinsight(1); //iff you've already pierced the veil
+			}
+			flags.moonphase = phase_of_the_moon();
+			change_luck(1);
+		}
+		struct obj * stake = mksartifact(ART_STAKE_OF_WITHERING);
+		if(stake){
+			place_object(stake, mtmp->mx, mtmp->my);
+		}
+		mksobj_at(PORTABLE_ELECTRODE, mtmp->mx, mtmp->my, NO_MKOBJ_FLAGS);
+	}
+	if(tmp == PM_MOON_S_CHOSEN){
+		//The moon draws near.
+		int luckmod = flags.moonphase != FULL_MOON ? 2 : 1;
+		pline("The moon draws near.");
+		flags.moonphase = phase_of_the_moon();
+		quest_status.moon_close = TRUE;
+		change_luck(luckmod);
+		u.uevent.qcompleted = TRUE; //Insurance
+	}
 	
 	if (tmp == PM_NAZGUL){
 			if(mvitals[tmp].born > 0) mvitals[tmp].born--;
@@ -4983,6 +5084,20 @@ mondead(register struct monst *mtmp)
 		change_chokhmah(1);
 		change_keter(1);
 	}
+	if(u.ublood_smithing && (mtmp->mtyp == PM_BLASPHEMOUS_LURKER
+		|| mtmp->mtyp == PM_BAALPHEGOR
+		|| mtmp->mtyp == PM_ASMODEUS
+		|| mtmp->mtyp == PM_PALE_NIGHT
+		|| mtmp->mtyp == PM_GOOD_NEIGHBOR
+		|| mtmp->mtyp == PM_HMNYW_PHARAOH
+		|| mtmp->mtyp == PM_MOON_S_CHOSEN
+	)){
+		struct obj *otmp = mksobj_at(CRYSTAL, mtmp->mx, mtmp->my, MKOBJ_NOINIT);
+		if(otmp){
+			set_material_gm(otmp, HEMARGYOS);
+			otmp->spe = 4;
+		}
+	}
 	//Livelogs
 	if (mtmp->data->mlet == S_VAMPIRE && mtmp->data->geno & G_UNIQ && mtmp->mtyp != PM_VLAD_THE_IMPALER)
 		/* don't livelog Vlad's wives, too spammy */;
@@ -5029,18 +5144,6 @@ mondead(register struct monst *mtmp)
 					}
 				}
 				mmtmp = &(mon->nmon);
-			}
-		}
-	}
-	//Remove linked sword
-	if(mtmp->mtyp == PM_SURYA_DEVA){
-		struct monst *mon, *mtmp2;
-		for (mon = fmon; mon; mon = mtmp2){
-			mtmp2 = mon->nmon;
-			if(mon->mtyp == PM_DANCING_BLADE && mon->mvar_suryaID == mtmp->m_id){
-				if (DEADMONSTER(mon)) continue;
-				mon->mhp = -10;
-				monkilled(mon,"",AD_DRLI);
 			}
 		}
 	}
@@ -5201,7 +5304,7 @@ corpse_chance(
 	else if(mdat->mtyp == PM_CHOKHMAH_SEPHIRAH)
 		return FALSE;
 	
-	if(uwep && uwep->oartifact == ART_PEN_OF_THE_VOID && uwep->ovar1_seals&SEAL_MALPHAS && rn2(20) <= (mvitals[PM_ACERERAK].died > 0 ? 4 : 1)){
+	if(uwep && uwep->oartifact == ART_PEN_OF_THE_VOID && uwep->ovara_seals&SEAL_MALPHAS && rn2(20) <= (mvitals[PM_ACERERAK].died > 0 ? 4 : 1)){
 		struct monst *mtmp;
 		mtmp = makemon(&mons[PM_CROW], u.ux, u.uy, MM_EDOG|MM_ADJACENTOK);
 		if(mtmp){
@@ -5234,13 +5337,15 @@ corpse_chance(
 				maskmon->movement = 12;
 		}
 	}
-	/* Gas spores always explode upon death */
+	/* On-death explosions and other effects */
 	for(i = 0; i < NATTK; i++) {
-		if(mdat->mattk[i].aatyp == AT_NONE &&  mdat->mattk[i].adtyp == AD_OONA){
-			mdat->mattk[i].aatyp = AT_BOOM;
-			mdat->mattk[i].adtyp = u.oonaenergy;
+		int aatyp = mdat->mattk[i].aatyp;
+		int adtyp = mdat->mattk[i].adtyp;
+		if(aatyp == AT_NONE &&  adtyp == AD_OONA){
+			aatyp = AT_BOOM;
+			adtyp = u.oonaenergy;
 		}
-		if (mdat->mattk[i].aatyp == AT_BOOM  &&  mdat->mattk[i].adtyp != AD_HLBD && mdat->mattk[i].adtyp != AD_POSN) {
+		if (aatyp == AT_BOOM  &&  adtyp != AD_HLBD && adtyp != AD_POSN) {
 			if (mdat->mattk[i].damn)
 				tmp = d((int)mdat->mattk[i].damn,
 						(int)mdat->mattk[i].damd);
@@ -5272,14 +5377,14 @@ corpse_chance(
 	    	Sprintf(killer_buf, "%s explosion", s_suffix(mdat->mname));
 	    	killer = killer_buf;
 	    	killer_format = KILLED_BY_AN;
-			if(mdat->mattk[i].adtyp == AD_JAILER){
+			if(adtyp == AD_JAILER){
 				explode_pa(mon->mx, mon->my, AD_FIRE, MON_EXPLODE, tmp, EXPL_FIERY, 1, mdat);
 				u.uevent.ukilled_apollyon = 1;
 			}
 			else if(mdat->mtyp == PM_ANCIENT_OF_DEATH){
-				if(!(u.sealsActive&SEAL_OSE)) explode_pa(mon->mx, mon->my, mdat->mattk[i].adtyp, MON_EXPLODE, tmp, EXPL_DARK, 1, mdat);
+				if(!(u.sealsActive&SEAL_OSE)) explode_pa(mon->mx, mon->my, adtyp, MON_EXPLODE, tmp, EXPL_DARK, 1, mdat);
 			}
-			else if(mdat->mattk[i].adtyp == AD_GARO){
+			else if(adtyp == AD_GARO){
 				if(couldsee(mon->mx, mon->my)){
 					pline("\"R-regrettable... Although my rival, you were spectacular.");
 					pline("I shall take my bow by opening my heart and revealing my wisdom...");
@@ -5292,7 +5397,7 @@ corpse_chance(
 					explode_pa(mon->mx, mon->my, AD_PHYS, MON_EXPLODE, tmp, EXPL_MUDDY, 1, mdat);
 				}
 			}
-			else if(mdat->mattk[i].adtyp == AD_GARO_MASTER){
+			else if(adtyp == AD_GARO_MASTER){
 				if(couldsee(mon->mx, mon->my)){
 					pline("\"To think thou couldst defeat me...");
 					pline("Though my rival, thou were't spectacular.");
@@ -5306,7 +5411,7 @@ corpse_chance(
 					explode_pa(mon->mx, mon->my, AD_PHYS, MON_EXPLODE, tmp, EXPL_MUDDY, 1, mdat);
 				}
 			}
-			else if(mdat->mattk[i].adtyp == AD_FRWK){
+			else if(adtyp == AD_FRWK){
 				int x, y, i;
 				for(i = rn2(3)+2; i > 0; i--){
 					x = mon->mx+rn2(7)-3;
@@ -5319,14 +5424,14 @@ corpse_chance(
 				}
 				tmp=0;
 			}
-			else if(mdat->mattk[i].adtyp == AD_SPNL){
+			else if(adtyp == AD_SPNL){
 				struct monst *levi;
 				explode_pa(mon->mx, mon->my, AD_COLD, MON_EXPLODE, tmp, EXPL_WET, 1, mdat);
 				levi = makemon(&mons[rn2(2) ? PM_LEVISTUS : PM_LEVIATHAN], mon->mx, mon->my, MM_ADJACENTOK);
 				if(levi)
 					levi_spawn_items(mon->mx, mon->my, levi);
 			}
-			else if(mdat->mattk[i].adtyp == AD_MAND){
+			else if(adtyp == AD_MAND){
 				struct monst *mtmp, *mtmp2;
 				if(mon->mcan){
 					char buf[BUFSZ];
@@ -5352,6 +5457,11 @@ corpse_chance(
 					} else {
 					killer_format = KILLED_BY_AN;
 					killer = "mandrake's dying shriek";
+					if (!u.uconduct.killer){
+						//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+						IMPURITY_UP(u.uimp_murder)
+						IMPURITY_UP(u.uimp_bloodlust)
+					}
 					done(DIED);
 					}
 				} else shieldeff(u.ux,u.uy);
@@ -5417,10 +5527,10 @@ corpse_chance(
 			}
 			else {
 				explode_pa(mon->mx, mon->my, 
-						mdat->mattk[i].adtyp, 
+						adtyp, 
 						MON_EXPLODE, 
 						tmp, 
-						mon_expl_color(mdat, mdat->mattk[i].adtyp), 
+						mon_expl_color(mdat, adtyp), 
 						1,
 						mdat);
 			}
@@ -5430,7 +5540,7 @@ corpse_chance(
 			) return (TRUE);
 			else return (FALSE);
 	    } //End AT_BOOM != AD_HLBD && != AD_POSN
-		else if(mdat->mattk[i].adtyp == AD_HLBD && mdat->mtyp == PM_ASMODEUS){
+		else if(adtyp == AD_HLBD && mdat->mtyp == PM_ASMODEUS){
 			int i;
 			for(i=0; i<2; i++) makemon(&mons[PM_NESSIAN_PIT_FIEND], mon->mx, mon->my, MM_ADJACENTOK);
 			for(i=0; i<7; i++) makemon(&mons[PM_PIT_FIEND], mon->mx, mon->my, MM_ADJACENTOK);
@@ -5439,7 +5549,7 @@ corpse_chance(
 			for(i = 0; i<30; i++) makemon(&mons[PM_LEMURE], mon->mx, mon->my, MM_ADJACENTOK);
 	    	return (FALSE);
 		}
-		else if(mdat->mattk[i].adtyp == AD_HLBD && mdat->mtyp == PM_VERIER){
+		else if(adtyp == AD_HLBD && mdat->mtyp == PM_VERIER){
 			int i;
 			for(i=0; i<9; i++) makemon(&mons[PM_PIT_FIEND], mon->mx, mon->my, MM_ADJACENTOK);
 			for(i = 0; i<12; i++) makemon(&mons[PM_BARBED_DEVIL], mon->mx, mon->my, MM_ADJACENTOK);
@@ -5447,9 +5557,9 @@ corpse_chance(
 			for(i = 0; i<30; i++) makemon(&mons[PM_LEMURE], mon->mx, mon->my, MM_ADJACENTOK);
 	    	return (FALSE);
 		}
-  		else if(	( (mdat->mattk[i].aatyp == AT_NONE && mdat->mtyp==PM_GREAT_CTHULHU)
-					 || mdat->mattk[i].aatyp == AT_BOOM) 
-				&& mdat->mattk[i].adtyp == AD_POSN
+  		else if(	( (aatyp == AT_NONE && mdat->mtyp==PM_GREAT_CTHULHU)
+					 || aatyp == AT_BOOM) 
+				&& adtyp == AD_POSN
 		){
 	    	Sprintf(killer_buf, "%s explosion", s_suffix(mdat->mname));
 	    	killer = killer_buf;
@@ -5459,7 +5569,7 @@ corpse_chance(
 				create_gas_cloud(mon->mx, mon->my, 2, 30, FALSE);
 			}
 		}
-		else if(mdat->mattk[i].adtyp == AD_GROW){
+		else if(adtyp == AD_GROW){
 			struct monst *mtmp;
 			struct monst * axus = (struct monst *)0;
 			boolean found;
@@ -5505,7 +5615,7 @@ corpse_chance(
 				}
 			}
 		}//end AD_GROW basic
-		else if(mdat->mattk[i].adtyp == AD_SOUL){
+		else if(adtyp == AD_SOUL){
 			struct monst *mtmp;
 			struct permonst *mdat1;
 			int hpgain = 0;
@@ -5657,7 +5767,7 @@ corpse_chance(
 	
 	tmp = (int)(2 + ((int)(mdat->geno & G_FREQ)<2) + verysmall(mdat));
 	return (u.sealsActive&SEAL_EVE) ? (!rn2(tmp)||!rn2(tmp)) : 
-		  (uwep && uwep->oartifact == ART_PEN_OF_THE_VOID && uwep->ovar1_seals&SEAL_EVE) ?  (!rn2(tmp)||!rn2(2*tmp - 1)) :
+		  (uwep && uwep->oartifact == ART_PEN_OF_THE_VOID && uwep->ovara_seals&SEAL_EVE) ?  (!rn2(tmp)||!rn2(2*tmp - 1)) :
 		  !rn2(tmp);
 }
 
@@ -6171,7 +6281,7 @@ monkilled(register struct monst *mdef, const char *fltxt, int how)
 	else if ((mdef->wormno ? worm_known(mdef) : cansee(mdef->mx, mdef->my))
 		&& fltxt)
 	    pline("%s is %s%s%s!", Monnam(mdef),
-			banish_kill(mdef->mtyp) ? "banished" : nonliving(mdef->data) ? "destroyed" : "killed",
+			(banish_kill_mon(mdef) && !has_template(mdef, SPARK_SKELETON)) ? "banished" : nonliving(mdef->data) ? "destroyed" : "killed",
 		    *fltxt ? " by the " : "",
 		    fltxt
 		 );
@@ -6290,14 +6400,14 @@ xkilled(register struct monst *mtmp, int dest)
 			if((otmp->wrathdata&0x3L) < 3) otmp->wrathdata++;
 		}
 		else {
-			if(has_template(mtmp, ZOMBIFIED)){
-				otmp->wrathdata = PM_ZOMBIE<<2;
+			if(has_template(mtmp, ZOMBIFIED) || has_template(mtmp, YELLOW_DEAD)){
+				otmp->wrathdata = PM_GHOUL<<2;
 			} else if(has_template(mtmp, SKELIFIED)){
 				otmp->wrathdata = PM_SKELETON<<2;
 			} else if(has_template(mtmp, VAMPIRIC)){
 				otmp->wrathdata = PM_VAMPIRE<<2;
 			} else if(has_template(mtmp, PSEUDONATURAL)){
-				otmp->wrathdata = PM_MIND_FLAYER<<2;
+				otmp->wrathdata = PM_PARASITIC_MIND_FLAYER<<2;
 			} else {
 				otmp->wrathdata = monsndx(mtmp->data)<<2;
 			}
@@ -6309,14 +6419,14 @@ xkilled(register struct monst *mtmp, int dest)
 			if((otmp->wrathdata&0xFF) < 3) otmp->wrathdata++;
 		}
 		else {
-			if(has_template(mtmp, ZOMBIFIED)){
-				otmp->wrathdata = PM_ZOMBIE<<2;
+			if(has_template(mtmp, ZOMBIFIED) || has_template(mtmp, YELLOW_DEAD)){
+				otmp->wrathdata = PM_GHOUL<<2;
 			} else if(has_template(mtmp, SKELIFIED)){
 				otmp->wrathdata = PM_SKELETON<<2;
 			} else if(has_template(mtmp, VAMPIRIC)){
 				otmp->wrathdata = PM_VAMPIRE<<2;
 			} else if(has_template(mtmp, PSEUDONATURAL)){
-				otmp->wrathdata = PM_MIND_FLAYER<<2;
+				otmp->wrathdata = PM_PARASITIC_MIND_FLAYER<<2;
 			} else {
 				otmp->wrathdata = monsndx(mtmp->data)<<2;
 			}
@@ -6328,7 +6438,7 @@ xkilled(register struct monst *mtmp, int dest)
 	}
 	if (dest & 1) {
 		static boolean sflm_message = FALSE;
-	    const char *verb = banish_kill(mtmp->mtyp) ? "banish" : (mtmp->mflamemarked && !Infuture) ? "burn" : nonliving(mtmp->data) ? "destroy" : "kill";
+	    const char *verb = (banish_kill_mon(mtmp) && !has_template(mtmp, SPARK_SKELETON)) ? "banish" : (mtmp->mflamemarked && !Infuture) ? "burn" : nonliving(mtmp->data) ? "destroy" : "kill";
 
 	    if (!wasinside && !canspotmon(mtmp))
 			You("%s it!", verb);
@@ -6336,10 +6446,10 @@ xkilled(register struct monst *mtmp, int dest)
 			pline("Strands of black webbing flow from %s mortal wounds, engulfing %s body and choking off %s screams!", s_suffix(mon_nam(mtmp)), mhis(mtmp), mhis(mtmp));
 			pline("Now totally engulfed, %s is yanked upright and vanishes from the world.", mhe(mtmp));
 		}
-	    else if(!banish_kill(mtmp->mtyp) && mtmp->mibitemarked && !Infuture){
+	    else if(!banish_kill_mon(mtmp) && mtmp->mibitemarked && !Infuture){
 			pline("%s vanishes down into the murky waters.", Monnam(mtmp));
 		}
-	    else if(!banish_kill(mtmp->mtyp) && mtmp->mflamemarked && !Infuture && !sflm_message){
+	    else if(!banish_kill_mon(mtmp) && mtmp->mflamemarked && !Infuture && !sflm_message){
 			pline("%s burns from within, consumed by silver fire!", Monnam(mtmp));
 			sflm_message = TRUE;
 		}
@@ -6439,7 +6549,14 @@ xkilled(register struct monst *mtmp, int dest)
 	    if(wasinside) spoteffects(TRUE);
 	} else if(x != u.ux || y != u.uy) {
 		/* might be here after swallowed */
-		if (!rn2(active_glyph(EYE_THOUGHT) ? 3 : 6) && !(mvitals[mndx].mvflags & G_NOCORPSE)
+		int out_of = 6;
+		if(active_glyph(EYE_THOUGHT) && active_glyph(LUMEN))
+			out_of = 2;
+		else if(active_glyph(EYE_THOUGHT))
+			out_of = 3;
+		else if(active_glyph(LUMEN))
+			out_of = 4;
+		if (!rn2(out_of) && !(mvitals[mndx].mvflags & G_NOCORPSE)
 					&& mdat->mlet != S_KETER
 					&& mdat->mlet != S_PLANT
 					&& !(get_mx(mtmp, MX_ESUM))
@@ -6508,6 +6625,7 @@ cleanup:
 			You("...murderer!?");
 		else
 			You("murderer!");
+		IMPURITY_UP(u.uimp_murder)
 		if(u.ualign.type == A_LAWFUL){
 			change_hod(10);
 			u.ualign.sins += 5;
@@ -6586,7 +6704,7 @@ cleanup:
 		if (p_coaligned(mtmp)) u.ublessed = 0;
 		if (mdat->maligntyp == A_NONE)
 			adjalign((int)(ALIGNLIM / 4));		/* BIG bonus */
-	} else if (mtmp->mtame && u.ualign.type != A_VOID && !banish_kill(mtmp->mtyp) && !(EDOG(mtmp) && EDOG(mtmp)->dominated) && !Role_if(PM_ANACHRONOUNBINDER)) {
+	} else if (mtmp->mtame && u.ualign.type != A_VOID && !banish_kill_mon(mtmp) && !(EDOG(mtmp) && EDOG(mtmp)->dominated) && !Role_if(PM_ANACHRONOUNBINDER) ) {
 		adjalign(-15);	/* bad!! */
 		/* your god is mighty displeased... */
 		if (!Hallucination) You_hear("the rumble of distant thunder...");
@@ -6595,6 +6713,10 @@ cleanup:
 		adjalign(-5);
 	
 	if(((mtmp->mferal || mtmp->mtame)) && u.sealsActive&SEAL_BERITH) unbind(SEAL_BERITH,TRUE);
+
+	if(mtmp->mferal){
+		IMPURITY_UP(u.uimp_betrayal)
+	}
 
 	/* malign was already adjusted for u.ualign.type and randomization */
 	adjalign(mtmp->malign);
@@ -6934,7 +7056,7 @@ setmangry(register struct monst *mtmp)
 	} else
 		adjalign(-1);		/* attacking peaceful monsters is bad */
 	
-	if(mtmp->mtyp == PM_DANCING_BLADE){
+	if(mtmp->mtyp == PM_DANCING_BLADE && mtmp->mvar_suryaID){
 		struct monst *surya;
 		for(surya = fmon; surya; surya = surya->nmon) if(surya->m_id == mtmp->mvar_suryaID) break;
 		if(surya) setmangry(surya);
@@ -7245,7 +7367,7 @@ rescham(void)
 			(void) newcham(mtmp, cham_to_pm[mcham],
 				       FALSE, FALSE);
 		}
-		if(is_were(mtmp->data) && mtmp->data->mlet != S_HUMAN)
+		if(is_were(mtmp->data) && !healing_were(mtmp->data) && mtmp->data->mlet != S_HUMAN)
 			new_were(mtmp);
 		if(mtmp->m_ap_type && cansee(mtmp->mx, mtmp->my) && mtmp->m_ap_type != M_AP_MONSTER) {
 			seemimic(mtmp);
@@ -7286,7 +7408,7 @@ restore_cham(struct monst *mon)
 	    if (mcham) {
 		mon->cham = CHAM_ORDINARY;
 		(void) newcham(mon, cham_to_pm[mcham], FALSE, FALSE);
-	    } else if (is_were(mon->data) && !is_human(mon->data)) {
+	    } else if (is_were(mon->data) && !healing_were(mon->data) && !is_human(mon->data)) {
 		new_were(mon);
 	    }
 	} else if (mon->cham == CHAM_ORDINARY) {
@@ -8092,9 +8214,9 @@ nurse_heal(struct monst *nurse, struct monst *targ, boolean verbose)
 	}
 	healing += d(2+max(0, nurse->m_lev - 9)/3,6); //Note, nurses start at 11th level, healers 10th.
 	if(targ == &youmonst){
-		healing -= roll_udr(nurse, AT_ANY);
+		healing -= roll_udr(nurse, UPPER_TORSO_DR);
 	} else {
-		healing -= roll_mdr(targ, nurse, AT_ANY);
+		healing -= roll_mdr(targ, nurse, UPPER_TORSO_DR);
 	}
 	if(healing < 1)
 		healing = 1;
@@ -8435,7 +8557,7 @@ held_item_bites(struct monst *mdef, struct obj *obj)
 		if(mdef == &youmonst){
 			Your("%s bite%s you!", xname(obj), obj->quan == 1 ? "s":"");
 			// pline("damage pre DR: %d, slotvar: %ld, wornmask: %ld", damage, slotvar, obj->owornmask);
-			damage -= roll_udr_detail((struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, AT_ANY);
+			damage -= roll_udr_detail((struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, ROLL_SLOT);
 			// pline("damage post DR: %d", damage);
 			if(damage < 1)
 				damage = 1;
@@ -8445,7 +8567,7 @@ held_item_bites(struct monst *mdef, struct obj *obj)
 		}
 		else {
 			// pline("damage pre DR: %d", damage);
-			damage -= roll_mdr_detail(mdef, (struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, AT_ANY);
+			damage -= roll_mdr_detail(mdef, (struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, ROLL_SLOT);
 			// pline("damage post DR: %d", damage);
 			if(damage < 1)
 				damage = 1;
@@ -8476,7 +8598,7 @@ held_item_bites(struct monst *mdef, struct obj *obj)
 		if(mdef == &youmonst){
 			Your("%s bite%s and sting%s you!", xname(obj), obj->quan == 1 ? "s":"", obj->quan == 1 ? "s":"");
 			// pline("damage pre DR: %d, slotvar: %ld, wornmask: %ld", damage, slotvar, obj->owornmask);
-			damage -= roll_udr_detail((struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, AT_ANY);
+			damage -= roll_udr_detail((struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, ROLL_SLOT);
 			// pline("damage post DR: %d", damage);
 			if(damage < 1)
 				damage = 1;
@@ -8486,7 +8608,7 @@ held_item_bites(struct monst *mdef, struct obj *obj)
 		}
 		else {
 			// pline("damage pre DR: %d", damage);
-			damage -= roll_mdr_detail(mdef, (struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, AT_ANY);
+			damage -= roll_mdr_detail(mdef, (struct monst *)0, slotvar, (is_dress(obj->otyp) && slotvar != UPPER_TORSO_DR) ? W_ARM : obj->owornmask, ROLL_SLOT);
 			// pline("damage post DR: %d", damage);
 			if(damage < 1)
 				damage = 1;
@@ -9419,6 +9541,11 @@ do_ancient_breaths(struct monst *mtmp)
 				} else {
 					killer_format = KILLED_BY;
 					killer = "the scream of an old one";
+					if (!u.uconduct.killer){
+						//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+						IMPURITY_UP(u.uimp_murder)
+						IMPURITY_UP(u.uimp_bloodlust)
+					}
 					done(DIED);
 				}
 				//Roll vs. sanity
@@ -9706,6 +9833,11 @@ do_ancient_breaths(struct monst *mtmp)
 				} else {
 					killer_format = KILLED_BY;
 					killer = "the ancient breath of death";
+					if (!u.uconduct.killer){
+						//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+						IMPURITY_UP(u.uimp_murder)
+						IMPURITY_UP(u.uimp_bloodlust)
+					}
 					done(DIED);
 				}
 				nomul(0, NULL); //Interrupt
@@ -9898,7 +10030,14 @@ do_ancient_breaths(struct monst *mtmp)
 						if (!Very_fast)
 							You_feel("yourself slowing down%s.",
 										Fast ? " a bit" : "");
-					} else done(GLASSED);
+					} else{
+						if (!u.uconduct.killer){
+							//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+							IMPURITY_UP(u.uimp_murder)
+							IMPURITY_UP(u.uimp_bloodlust)
+						}
+						done(GLASSED);
+					}
 				} else {
 					int nobj = 0, cnt, onum;
 					for (otmp = invent; otmp; otmp = otmp->nobj) {
@@ -10130,12 +10269,12 @@ phantom_scorpions_sting(struct monst *mdef)
 		if(mdef == &youmonst){
 			// Your("%s bite%s you!", xname(obj), obj->quan == 1 ? "s":"");
 			// pline("damage pre DR: %d, slotvar: %ld, wornmask: %ld", damage, slotvar, obj->owornmask);
-			dmg -= roll_udr_detail((struct monst *)0, slotvar, depthvar, AT_ANY);
+			dmg -= roll_udr_detail((struct monst *)0, slotvar, depthvar, ROLL_SLOT);
 			// pline("damage post DR: %d", damage);
 		}
 		else {
 			// pline("damage pre DR: %d", damage);
-			dmg -= roll_mdr_detail(mdef, (struct monst *)0, slotvar, depthvar, AT_ANY);
+			dmg -= roll_mdr_detail(mdef, (struct monst *)0, slotvar, depthvar, ROLL_SLOT);
 			// pline("damage post DR: %d", damage);
 		}
 		if(dmg < 1)

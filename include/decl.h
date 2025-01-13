@@ -465,6 +465,7 @@ extern char *save_cm;
 #define NO_KILLER_PREFIX 2
 extern int killer_format;
 extern const char *killer;
+extern const char *title_override;
 extern const char *delayed_killer;
 #ifdef GOLDOBJ
 extern long done_money;
@@ -557,7 +558,7 @@ extern struct obj *magic_chest_objs[10];
 extern struct obj *invent,
 	*uarm, *uarmc, *uarmh, *uarms, *uarmg, *uarmf,
 	*uarmu,				/* under-wear, so to speak */
-	*uskin, *uamul, *ublindf,
+	*uskin, *uamul, *ubelt, *ublindf,
 	*uwep, *uswapwep, *uquiver;
 
 #define URINGS_SIZE 8
@@ -567,8 +568,8 @@ extern const long long ring_index_to_wornmask[URINGS_SIZE]; /* init'd and define
 #define uright (urings[1])
 
 /* Needs to update, so it's redefined each time whenever it's used */
-#define ARMOR_SLOTS { uarm, uarmc, uarmf, uarmh, uarmg, uarms, uarmu }
-#define WORN_SLOTS { uarm, uarmc, uarmf, uarmh, uarmg, uarms, uarmu, uamul, ublindf, uwep, uswapwep, uquiver, \
+#define ARMOR_SLOTS { uarm, uarmc, uarmf, uarmh, uarmg, uarms, uarmu, ubelt }
+#define WORN_SLOTS { uarm, uarmc, uarmf, uarmh, uarmg, uarms, uarmu, uamul, ubelt, ublindf, uwep, uswapwep, uquiver, \
 			urings[0], urings[1], urings[2], urings[3], urings[4], urings[5], urings[6], urings[7] }
 
 extern struct obj *urope;		/* defined only when entangled */
@@ -603,6 +604,8 @@ extern struct mvitals {
 	uchar	born; /*How many of this monster have been created in a way that respects extinction*/
 	uchar	died; /*How many of this monster have died of any cause*/
 	uchar	killed; /*How many of this monster have died at the PC's hands*/
+	uchar	dissected; /*How many of this monster has the PC dissected*/
+	uchar	reanimated; /*How many of this monster has the PC reanimated*/
 	long long mvflags;
 	int	san_lost;
 	int	insight_gained;

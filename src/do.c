@@ -255,11 +255,17 @@ flooreffects(struct obj *obj, int x, int y, const char *verb)
 
 
 void
-doaltarobj(  /* obj is an object dropped on an altar */
-	register struct obj *obj)
+doaltarobj(struct obj *obj, int god_index)  /* obj is an object dropped on an altar */
 {
 	if (Blind || Misotheism)
 		return;
+
+	/* Hunter "gods" are semi-atheistic philosophies */
+	if (no_altar_index(god_index)){
+		pline("%s %s on the altar.", Doname2(obj),
+			otense(obj, "land"));
+		return;
+	}
 
 	/* KMH, conduct */
 	u.uconduct.gnostic++;
@@ -515,7 +521,7 @@ giveback:
 boolean
 canletgo(register struct obj *obj, register const char *word)
 {
-	if(obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL)){
+	if(obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT)){
 		if (*word)
 			Norep("You cannot %s %s you are wearing.",word,
 				something);
@@ -626,7 +632,7 @@ dropx(register struct obj *obj)
 	if (!u.uswallow) {
 	    if (ship_object(obj, u.ux, u.uy, FALSE)) return;
 	    if (IS_ALTAR(levl[u.ux][u.uy].typ))
-		doaltarobj(obj); /* set bknown */
+			doaltarobj(obj, god_at_altar(u.ux,u.uy)); /* set bknown */
 	}
 	dropy(obj);
 }
@@ -888,9 +894,6 @@ dodown(void)
 	if (u.usteed && !u.usteed->mcanmove) {
 		pline("%s won't move!", Monnam(u.usteed));
 		return MOVE_CANCELLED;
-	} else if (u.usteed && u.usteed->meating) {
-		pline("%s is still eating.", Monnam(u.usteed));
-		return MOVE_CANCELLED;
 	} else
 	if (Levitation) {
 	    if ((HLevitation & I_SPECIAL) || (ELevitation & W_ARTI)) {
@@ -1032,9 +1035,6 @@ doup(void)
 	if (u.usteed && !u.usteed->mcanmove) {
 		pline("%s won't move!", Monnam(u.usteed));
 		return MOVE_CANCELLED;
-	} else if (u.usteed && u.usteed->meating) {
-		pline("%s is still eating.", Monnam(u.usteed));
-		return MOVE_CANCELLED;
 	} else
 	if(u.ustuck && (u.uswallow || !sticks(&youmonst))) {
 		You("are %s, and cannot go up.",
@@ -1061,6 +1061,24 @@ doup(void)
 			else if(u.uhave.amulet && missing_items){
 				acu_asc_items_warning(missing_items);
 				return MOVE_CANCELLED;
+			}
+		}
+		if(Role_if(PM_UNDEAD_HUNTER) && u.uevent.udemigod){
+			if(u.veil){
+				if(philosophy_index(u.ualign.god)
+				 && yesno("You feel that there is a deeper truth still to be uncovered here. Still climb?", iflags.paranoid_quit) != 'y'
+				){
+					return MOVE_CANCELLED;
+				}
+			}
+			else {
+				if (!quest_status.moon_close && yesno("You have the nagging feeling you have incomplete buisness here. Still climb?", iflags.paranoid_quit) != 'y')
+					return MOVE_CANCELLED;
+				if (philosophy_index(u.ualign.god)
+				 && research_incomplete()
+				 && yesno("You worry that you have not completed your research! Still climb?", iflags.paranoid_quit) != 'y'
+				)
+					return MOVE_CANCELLED;
 			}
 		}
 	}
@@ -1239,7 +1257,6 @@ goto_level(d_level *newlevel, boolean at_stairs, boolean falling, int portal)
 			at_stairs = at_ladder = FALSE;
 		}
 	}
-
 	/* Prevent the player from going past the first quest level unless
 	 * (s)he has been given the go-ahead by the leader.
 	 */
@@ -1256,6 +1273,29 @@ goto_level(d_level *newlevel, boolean at_stairs, boolean falling, int portal)
 			pline("There is too much life here.");
 		}
 		return;
+	}
+	/* Mysterious force to shake up the uh quest*/
+	if(!up && !newdungeon && !portal && In_quest(&u.uz) 
+		&& Role_if(PM_UNDEAD_HUNTER) && !mvitals[PM_MOON_S_CHOSEN].died
+		&& dunlev(&u.uz) < qlocate_level.dlevel
+		&& rnd(20) < u.uinsight && rn2(2)
+	){
+		int diff = rn2(2);	/* 0 - 1 */
+		if (diff != 0) {
+			assign_rnd_level(newlevel, &u.uz, diff);
+		}
+		else {
+			assign_level(newlevel, &u.uz);
+		    new_ledger = ledger_no(newlevel);
+
+		    pline("A mysterious force momentarily surrounds you...");
+		    if (on_level(newlevel, &u.uz)) {
+				(void) safe_teleds(FALSE);
+				(void) next_to_u();
+				return;
+		    } else
+				at_stairs = at_ladder = FALSE;
+		}
 	}
 	// if (on_level(&u.uz, &nemesis_level) && !(quest_status.got_quest) && flags.stag) {
 		// pline("A mysterious force prevents you from leaving.");
@@ -1690,9 +1730,17 @@ misc_levelport:
 	if (newdungeon && In_V_tower(&u.uz) && In_hell(&u.uz0))
 		pline_The("heat and smoke are gone.");
 
+	boolean restart_quest = (!u.uevent.qrecalled && Role_if(PM_UNDEAD_HUNTER) && !mvitals[PM_MOON_S_CHOSEN].died && u.uevent.qcompleted && quest_status.time_doing_quest >= UH_QUEST_TIME_1);
+	boolean recalled = u.uevent.qrecalled && (Role_if(PM_UNDEAD_HUNTER) && !mvitals[PM_MOON_S_CHOSEN].died);
 	/* the message from your quest leader */
-	if (!In_quest(&u.uz0) && at_dgn_entrance("The Quest") &&
-		!(u.uevent.qexpelled || u.uevent.qcompleted || quest_status.leader_is_dead)) {
+	if (((!In_quest(&u.uz0) && at_dgn_entrance("The Quest"))
+		|| (restart_quest && !In_quest(&u.uz0) && In_quest(&u.uz))
+	  ) &&
+		!(u.uevent.qexpelled 
+		  || (u.uevent.qcompleted && !(recalled || restart_quest))
+		  || quest_status.leader_is_dead
+		)
+	) {
 		if(Role_if(PM_EXILE)){
 			You("sense something reaching out to you....");
 		} else if(Role_if(PM_MADMAN)){
@@ -1713,6 +1761,26 @@ misc_levelport:
 				pline("Your help is urgently needed at Menzoberranzan!  Look for a ...ic transporter.");
 				pline("You couldn't quite make out that last message.");
 			}
+		} else if(Role_if(PM_UNDEAD_HUNTER) && restart_quest){
+			u.uevent.qrecalled = TRUE;
+			quest_status.got_thanks = FALSE;
+			if(quest_status.time_doing_quest >= UH_QUEST_TIME_4){
+				You("again sense Vicar Amalia pleading for help.");
+				pline("But it's garbled and confused.");
+			}
+			else if(quest_status.time_doing_quest >= UH_QUEST_TIME_2){
+				You("again sense Vicar Amalia pleading for help:");
+				pline("Something is wrong. The infection is spreading in the upper city!");
+			}
+			else if(quest_status.time_doing_quest >= UH_QUEST_TIME_1){
+				You("again sense Vicar Amalia pleading for help:");
+				pline("Somthing is wrong. The infection is now spreading in the city!");
+			}
+			//Futureproof, but I don't think this can be reached.
+			else {
+				You("again sense Vicar Amalia pleading for help:");
+				pline("Somthing is wrong. The infection is still spreading.");
+			}
 		} else {
 			if (u.uevent.qcalled) {
 				com_pager(Role_if(PM_ROGUE) ? 4 : 3);
@@ -1731,7 +1799,7 @@ misc_levelport:
 		    if (!DEADMONSTER(mtmp) && mtmp->msleeping) mtmp->msleeping = 0;
 	}
 
-	if (on_level(&u.uz, &astral_level))
+	if (Is_astralevel(&u.uz))
 	    final_level();
 	else
 	    onquest();
@@ -1828,6 +1896,43 @@ final_level(void)
 		makemon(&mons[PM_CARCOSAN_COURTIER], 0, 0, MM_ADJACENTOK);
 		makemon(&mons[PM_CARCOSAN_COURTIER], 0, 0, MM_ADJACENTOK);
 	}
+	else if(Role_if(PM_UNDEAD_HUNTER) && quest_status.moon_close){
+		makemon(&mons[PM_MOON_ENTITY_TONGUE], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_EYE_CLUSTER], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_MANIPALP], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_MANIPALP], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MOON_ENTITY_TONGUE], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_EYE_CLUSTER], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_MANIPALP], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_MANIPALP], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MOON_ENTITY_TONGUE], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_EYE_CLUSTER], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_MANIPALP], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_ENTITY_MANIPALP], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MIST_WOLF], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MIST_WOLF], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MIST_WOLF], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MIST_WOLF], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MIST_WOLF], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MIST_WOLF], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+		makemon(&mons[PM_MOON_FLEA], 0, 0, MM_ADJACENTOK);
+	}
 	/* create a guardian angel next to player, if worthy */
 	if(!u.veil){
 		You("notice the air thrums with hidden holy energy.");
@@ -1847,7 +1952,7 @@ final_level(void)
 				     mm.x, mm.y, FALSE);
 	    }
 
-	} else if (u.ualign.record > 8) {	/* fervent */
+	} else if (u.ualign.record > 8 && !philosophy_index(u.ualign.god)) {	/* fervent */
 	    pline("A voice whispers: \"Thou hast been worthy of me!\"");
 	    mm.x = u.ux;
 	    mm.y = u.uy;
@@ -2123,6 +2228,9 @@ revive_corpse(struct obj *corpse, int different)
 		break;
 	}
 	newsym(mtmp->mx,mtmp->my);
+	if(is_great_old_one(mtmp->data)){
+		TRANSCENDENCE_IMPURITY_UP(FALSE)
+	}
 	return TRUE;
     }
     return FALSE;

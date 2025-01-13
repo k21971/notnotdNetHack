@@ -354,6 +354,13 @@ drop_upon_death(struct monst *mtmp, struct obj *cont, int x, int y)
 		} else if(u.thoughts & SIGHT){
 			u.thoughts &= ~SIGHT;
 			otmp = mksobj(ORRERY_GLYPH, MKOBJ_NOINIT);
+		//Philosophy runes do not death-drop
+		} else if(u.thoughts & DEFILEMENT){
+			u.thoughts &= ~DEFILEMENT;
+		} else if(u.thoughts & LUMEN){
+			u.thoughts &= ~LUMEN;
+		} else if(u.thoughts & ROTTEN_EYES){
+			u.thoughts &= ~ROTTEN_EYES;
 		} else {
 			pline("Can't find glyph!");
 		}

@@ -47,7 +47,9 @@ typedef void (*timeout_proc)(void *, long);
 #define DESUMMON_OBJ	15
 #define LARVAE_DIE		16
 #define REVIVE_PICKUP	17
-#define NUM_TIME_FUNCS	18
+#define REVERT_OBJECT	18
+#define REVERT_MERC		19
+#define NUM_TIME_FUNCS	20
 
 /* used in timeout.c */
 typedef struct timer {

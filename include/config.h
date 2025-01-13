@@ -212,7 +212,7 @@ typedef uint32_t glyph_t;
 
 #define DUMP_LOG        /* Dump game end information to a file */
 #ifndef DUMP_FN
-#define DUMP_FN "dumplog/%t"      /* Fixed dumpfile name, if you want
+#define DUMP_FN "./dumplog/%t"      /* Fixed dumpfile name, if you want
                                    * to prevent definition by users */
 #endif
 #ifndef DUMPMSGS
@@ -232,7 +232,7 @@ typedef uint32_t glyph_t;
 /* Filename for where HUPping a game is saved.
    Can be left undefined, in which case HUPping doesn't write the data. */
 #ifndef HUPLIST_FN
-#define HUPLIST_FN "/dgldir/userdata/%n/notdnethack/hangup"
+#define HUPLIST_FN "./hangup"
 #endif
 
 /* Filename for dgamelaunch extra info field.

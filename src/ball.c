@@ -677,6 +677,9 @@ drop_ball(xchar x, xchar y)
 	    case TT_LAVA:
 		pline(pullmsg, "lava");
 		break;
+	    case TT_SALIVA:
+		pline(pullmsg, "saliva");
+		break;
 		case TT_FLESH_HOOK: {
 		    You("rip free of the flesh hook!  Ouch!");
 			losehp(d(13,3), "tearing free from a flesh hook", KILLED_BY);

@@ -135,7 +135,9 @@
 #define EARTH_CRYSTAL				1 + WATER_CRYSTAL
 #define AIR_CRYSTAL					1 + EARTH_CRYSTAL
 #define BLACK_CRYSTAL				1 + AIR_CRYSTAL
-#define LAST_PROP					(BLACK_CRYSTAL)
+#define WITHERING_STAKE				1 + BLACK_CRYSTAL
+#define PROT_ITEMS					1 + WITHERING_STAKE
+#define LAST_PROP					(PROT_ITEMS)
 
 #define MPROP_SIZE					(LAST_PROP/32 + 1)
 
@@ -173,13 +175,15 @@ struct prop {
 #	define W_RINGR	    W_RING1
 #	define W_RING	    (W_RING0 | W_RING1 | W_RING2 | W_RING3 | W_RING4 | W_RING5 | W_RING6 | W_RING7)
 #	define W_TOOL	    0x00200000LL /* Eyewear */
-#	define W_ACCESSORY	    (W_AMUL | W_RING | W_TOOL)
 #	define W_SADDLE     0x00400000LL	/* KMH -- For riding monsters */
 #	define W_BALL	    0x00800000LL /* Punishment ball */
 #	define W_CHAIN	    0x01000000LL /* Punishment chain */
 #	define W_SPIRIT	    0x02000000LL	/* Bound spirit */
 #	define W_GLYPH	    0x04000000LL	/* Active thought-glyph */
-#	define W_SKIN	    0x08000000LL	/* merged into skin */
+#	define W_UPGRADE    0x08000000LL	/* Permanent upgrade */
+#	define W_BELT	    0x10000000LL	/* Belt */
+#	define W_SKIN	    0x20000000LL	/* merged into skin */
+#	define W_ACCESSORY	    (W_AMUL | W_RING | W_TOOL | W_BELT)
 #	define W_WORN	    (W_ARMOR | W_ACCESSORY)
 
 	/*** Property is blocked by an object ***/
@@ -213,6 +217,7 @@ struct prop {
 #define WORN_GLOVES	W_ARMG
 #define WORN_BOOTS	W_ARMF
 #define WORN_AMUL	W_AMUL
+#define WORN_BELT	W_BELT
 #define WORN_BLINDF	W_TOOL
 #define WORN_SHIRT	W_ARMU
 

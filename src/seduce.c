@@ -7,7 +7,6 @@ static void mayberem(struct obj *, const char *, boolean);
 static void lrdmayberem(struct obj *, const char *, boolean);
 static void mlcmayberem(struct obj *, const char *, boolean);
 static void mayberem_common(struct obj *, const char *, boolean);
-static void sflmayberem(struct obj *, const char *, boolean);
 static void palemayberem(struct obj *, const char *, boolean);
 static boolean sedu_helpless(struct monst *);
 static int sedu_refuse(struct monst *);
@@ -83,8 +82,7 @@ could_seduce(struct monst *magr, struct monst *mdef, struct attack *mattk)
 		else
 			return (pagr->mlet == S_NYMPH || pagr->mtyp == PM_LEVISTUS) ? 2 : 0;
 	}
-	else if(pagr->mtyp == PM_MOTHER_LILITH || pagr->mtyp == PM_BELIAL
-		 /*|| pagr->mtyp == PM_SHAMI_AMOURAE*/){
+	else if(pagr->mtyp == PM_MOTHER_LILITH || pagr->mtyp == PM_BELIAL){
 		if(genagr == 1 - gendef) return 1;
 		else return 0;
 	}
@@ -147,15 +145,8 @@ doseduce(struct monst *mon)
 	}
 
 	/* fluff message */
-	if (TRUE) {
-		if (Blind) pline("It caresses you...");
-		else You_feel("very attracted to %s.", mon_nam(mon));
-	}
-	else {
-		/* code for unfinished monster, PM_SHAMI_AMOURAE */
-		if (Blind) You_feel("Something grab you...");
-		else pline("%s grabs you.", Monnam(mon));
-	}
+	if (Blind) pline("It caresses you...");
+	else You_feel("very attracted to %s.", mon_nam(mon));
 
 	/* interact with adornment ring */
 	sedu_adornment_ring(mon);
@@ -180,6 +171,8 @@ doseduce(struct monst *mon)
 	}
 	else if (u.ualign.type == A_CHAOTIC || u.ualign.type == A_NONE)
 		adjalign(1);
+
+	IMPURITY_UP(u.uimp_seduction)
 
 	/* select sedu effect */
 	effect = sedu_select_effect(mon, badeffect);
@@ -838,45 +831,6 @@ mayberem_common(register struct obj *obj, const char *str, boolean dontask)
 }
 
 static void
-sflmayberem(struct obj *obj, const char *str, boolean helpless)
-{
-	char qbuf[QBUFSZ];
-	int her_strength;
-
-	if (!obj || !obj->owornmask) return;
-	
-	her_strength = 25 + rn2(100);
-	if (!helpless && her_strength < ACURR(A_STR)) {
-		Sprintf(qbuf,"She tries to take off your %s, allow her?",
-			str);
-		if (yn(qbuf) == 'n') return;
-	} else if(her_strength > ACURR(A_STR)*2){
-		Sprintf(qbuf,"She tries to rip open your %s!",
-			str);
-		her_strength -= ACURR(A_STR);
-		if(Preservation){
-			pline("But, no harm is done!");
-		} 
-		else for(; her_strength >= 0; her_strength--){
-			if(obj->spe > -1*a_acdr(objects[(obj)->otyp])){
-				damage_item(obj);
-//				Your("%s less effective.", aobjnam(obj, "seem"));
-			}
-			else if(!obj->oartifact){
-				claws_destroy_arm(obj);
-			}
-			else{
-				remove_worn_item(obj, TRUE);
-			}
-		}
-		return;
-	}
-	remove_worn_item(obj, TRUE);
-	Sprintf(qbuf,"She removes your %s!",
-		str);
-}
-
-static void
 palemayberem(struct obj *obj, const char *str, boolean helpless)
 {
 	char qbuf[QBUFSZ];
@@ -914,11 +868,6 @@ sedu_helpless(struct monst *mon)
 	else if (mon->mtyp == PM_GRAZ_ZT || mon->mtyp == PM_MALCANTHET) {
 		You("are having a strange dream.");
 	}
-	/*
-	else if (mon->mtyp == PM_SHAMI_AMOURAE) {
-		You("are having a horrible dream.");
-	}
-	*/
 	return 0;
 }
 
@@ -946,13 +895,6 @@ sedu_refuse(struct monst *mon)
 				pline("He punches you!");
 				losehp(d(3, 8), "an enraged paramour", KILLED_BY);
 			break;
-		/*
-		case PM_SHAMI_AMOURAE:
-				verbalize("You can't resist forever!");
-				pline("She claws at you!");
-				losehp(d(4, 10), "a jilted paramour", KILLED_BY);
-			return 1; // don't attempt to teleport
-		*/
 		case PM_INCUBUS:
 		case PM_SUCCUBUS:
 		case PM_MOTHER_LILITH:
@@ -983,10 +925,6 @@ sedu_roll(struct monst *mon, boolean helpless)
 		case PM_MALCANTHET:
 		case PM_GRAZ_ZT:
 			return (Sterile || helpless || rn2(120) > ACURR(A_CHA) + ACURR(A_CON) + ACURR(A_INT));
-		/*
-		case PM_SHAMI_AMOURAE:
-			return (helpless || (25 + rn2(100)) > (ACURR(A_CHA) + ACURR(A_STR)));
-		*/
 		case PM_INCUBUS:
 		case PM_SUCCUBUS:
 		default:
@@ -1064,13 +1002,6 @@ sedu_undress(struct monst *mon)
 		/* message */
 		switch (mon->mtyp)
 		{
-			/*
-		case PM_SHAMI_AMOURAE:
-			if (canseemon(mon))
-			pline("%s stares at you.",
-				Monnam(mon));
-			break;
-			*/
 		case PM_MALCANTHET:
 		case PM_GRAZ_ZT:
 			if (!Blind)	/* if Blind, we already got "It caresses you..." */
@@ -1095,13 +1026,6 @@ sedu_undress(struct monst *mon)
 		/* message and select correct function */
 		switch (mon->mtyp)
 		{
-			/*
-		case PM_SHAMI_AMOURAE:
-			undressfunc = &dosflseduce;
-			pline("%s growls into your ear, while tearing at your clothing.",
-				Blind ? (mon->female ? "She" : "He") : Monnam(mon));
-			break;
-			*/
 		case PM_MALCANTHET:
 		case PM_GRAZ_ZT:
 			undressfunc = (void*)&mlcmayberem;
@@ -1734,6 +1658,11 @@ seduce_effect(struct monst *mon, int effect_num)
 					else
 						killer = "a poisoned kiss of fangs";
 					killer_format = KILLED_BY;
+					if (!u.uconduct.killer){
+						//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+						IMPURITY_UP(u.uimp_murder)
+						IMPURITY_UP(u.uimp_bloodlust)
+					}
 					done(DIED);
 				}
 				else {
@@ -2427,8 +2356,7 @@ msteal_m(struct monst *magr, struct monst *mdef, struct attack *attk, int *resul
 			mdef->mstrategy &= ~STRAT_WAITFORU;
 			mselftouch(mdef, (const char *)0, FALSE);
 			if(delay){
-				mdef->mfrozen = max(mdef->mfrozen, delay);
-				mdef->mcanmove = FALSE;
+				mdef->mequipping = max(mdef->mequipping, delay);
 			}
 			m_dowear(magr, FALSE);
 			if (mdef->mhp <= 0)

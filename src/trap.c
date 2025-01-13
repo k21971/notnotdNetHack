@@ -475,12 +475,12 @@ fall_through(
 	else if(Levitation || u.ustuck || !Can_fall_thru(&u.uz)
 	   || Flying || is_clinger(youracedata)
 	   || (Role_if(PM_ARCHEOLOGIST) && uwep && 
-			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP))
+			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP || uwep->otyp == WHIP_SAW))
 	   || (Inhell && !u.uevent.invoked &&
 					newlevel == (dunlevs_in_dungeon(&u.uz) - 1))/*seal off sanctum and square level until the invocation is performed*/
 		) {
 		if (Role_if(PM_ARCHEOLOGIST) && uwep && 
-			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP)
+			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP || uwep->otyp == WHIP_SAW)
 		)            
 		pline("But thanks to your trusty whip ...");
 	    dont_fall = "don't fall in.";
@@ -3488,7 +3488,7 @@ emergency_disrobe(boolean *lostsome)
 		    if (!((obj->otyp == LOADSTONE && obj->cursed) ||
 			  obj == uamul || obj->owornmask & W_RING ||
 			  obj == ublindf || obj == uarm || obj == uarmc ||
-			  obj == uarmg || obj == uarmf ||
+			  obj == uarmg || obj == ubelt || obj == uarmf ||
 			  obj == uarmu ||
 			  (obj->cursed && !Weldproof && (obj == uarmh || obj == uarms)) ||
 			  welded(obj)))
@@ -5187,6 +5187,7 @@ lava_effects(boolean initialize)
 					else if(obj->owornmask & W_RING) Ring_gone(obj);
 					else if(obj == ublindf) Blindf_off(obj);
 					else if(obj == uamul) Amulet_off();
+					else if(obj == ubelt) Belt_off();
 					else if(obj == uwep) uwepgone();
 					else if (obj == uquiver) uqwepgone();
 					else if (obj == uswapwep) uswapwepgone();

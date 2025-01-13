@@ -7,6 +7,8 @@
 /* #define DEBUG */	/* turn on for diagnostics */
 
 
+extern const int monstr[];
+
 static boolean did_dig_msg;
 
 static void fakerocktrap(void);
@@ -1480,6 +1482,7 @@ dig_up_grave(int x, int y)
 		/* Grave-robbing is frowned upon... */
 		exercise(A_WIS, FALSE);
 	}
+	IMPURITY_UP(u.uimp_graverobbery)
 	if (Role_if(PM_ARCHEOLOGIST)) {
 	    adjalign(-sgn(u.ualign.type)*3);
 		u.ualign.sins++;
@@ -1879,6 +1882,13 @@ use_pick_axe(struct obj *obj)
 		  res == MOVE_CANCELLED ? "Unfortunately," : "But", verb);
 	    return res;
 	}
+	if (u.utrap && u.utraptype == TT_SALIVA) {
+	    pline("%s you can't %s while glued down by saliva.",
+		  /* res==MOVE_CANCELLED => no prior message;
+		     res==MOVE_STANDARD => just got "You now wield a pick-axe." message */
+		  res == MOVE_CANCELLED ? "Unfortunately," : "But", verb);
+	    return res;
+	}
 
 	while(*sdp) {
 		(void) movecmd(*sdp);	/* sets u.dx and u.dy and u.dz */
@@ -1895,6 +1905,10 @@ use_pick_axe(struct obj *obj)
 	Sprintf(qbuf, "In what direction do you want to %s? [%s]", verb, dirsyms);
 	if(!getdir(qbuf))
 		return(res);
+
+	if((obj->otyp == HUNTER_S_AXE || obj->otyp == HUNTER_S_LONG_AXE) && !u.dx && !u.dy && !u.dz){
+		return use_hunter_axe(obj);
+	}
 
 	res &= ~MOVE_CANCELLED;
 	res |= use_pick_axe2(obj);
@@ -2612,14 +2626,14 @@ rot_corpse(
 		     otense(obj, "rot"), obj == uwep ? '!' : '.');
 	    }
 	    if (obj == uwep) {
-		uwepgone();	/* now bare handed */
-		stop_occupation();
+			uwepgone();	/* now bare handed */
+			stop_occupation();
 	    } else if (obj == uswapwep) {
-		uswapwepgone();
-		stop_occupation();
+			uswapwepgone();
+			stop_occupation();
 	    } else if (obj == uquiver) {
-		uqwepgone();
-		stop_occupation();
+			uqwepgone();
+			stop_occupation();
 	    }
 	} else if (obj->where == OBJ_MINVENT && obj->owornmask) {
 	    if (obj == MON_WEP(obj->ocarry)) {
@@ -2630,6 +2644,55 @@ rot_corpse(
 			setmnotwielded(obj->ocarry,obj);
 			MON_NOSWEP(obj->ocarry);
 	    }
+	}
+	if(on_floor){
+		if(u.ublood_smithing && has_blood(&mons[obj->corpsenm])){
+			if(obj->corpsenm == PM_INDEX_WOLF){
+				//Guaranteed chunk
+				struct obj *otmp = mksobj_at(CRYSTAL, x, y, MKOBJ_NOINIT);
+				if(otmp){
+					set_material_gm(otmp, HEMARGYOS);
+					otmp->spe = 3;
+				}
+			}
+			else {
+				int out_of = 20;
+				if(active_glyph(EYE_THOUGHT) && active_glyph(LUMEN))
+					out_of = 7;
+				else if(active_glyph(EYE_THOUGHT))
+					out_of = 10;
+				else if(active_glyph(LUMEN))
+					out_of = 13;
+				if(!rn2(out_of)){
+					struct obj *otmp = mksobj_at(CRYSTAL, x, y, MKOBJ_NOINIT);
+					if(otmp){
+						set_material_gm(otmp, HEMARGYOS);
+						if(obj->corpsenm == PM_GHOUL_QUEEN_NITOCRIS)
+							otmp->spe = 4;
+						if(monstr[obj->corpsenm] >= 20)
+							otmp->spe = 4;
+						else if(monstr[obj->corpsenm] >= 14)
+							otmp->spe = 3;
+						else if(monstr[obj->corpsenm] >= 5)
+							otmp->spe = 2;
+						else
+							otmp->spe = 1;
+					}
+				}
+			}
+		}
+		if((active_glyph(LUMEN) || (!u.veil && u.ualign.god == GOD_THE_CHOIR)) && !obj->researched && !mindless(&mons[obj->corpsenm]) && !is_animal(&mons[obj->corpsenm])){
+			int out_of = 100;
+			if(active_glyph(EYE_THOUGHT) && active_glyph(LUMEN))
+				out_of = 33;
+			else if(active_glyph(EYE_THOUGHT))
+				out_of = 50;
+			else if(active_glyph(LUMEN))
+				out_of = 66;
+			if(!rn2(out_of)){
+				mksobj_at(PARASITE, x, y, NO_MKOBJ_FLAGS);
+			}
+		}
 	}
 	// rot_organic(arg, timeout); //This is not for corpses, it is for buried containers.
 	obj_extract_self(obj);

@@ -66,7 +66,7 @@ static const char *deaths[] = {		/* the array of death */
 	"burning", "dissolving under the heat and pressure",
 	"crushed", "turned to stone", "turned to gold", "turned to glass", "turned into slime",
 	"exploded after being overwound", "turned into a weeping angel", "disintegrated",
-	"genocided",
+	"genocided", "world ended",
 	"panic", "trickery",
 	"quit", "escaped", "ascended"
 };
@@ -76,7 +76,7 @@ static const char *ends[] = {		/* "when you..." */
 	"burned", "dissolved in the lava",
 	"were crushed", "turned to stone", "turned to gold", "turned to glass", "turned into slime",
 	"were overwound and exploded", "turned into a weeping angel", "were disintegrated",
-	"were genocided",
+	"were genocided", "world ended",
 	"panicked", "were tricked",
 	"quit", "escaped", "ascended"
 };
@@ -282,8 +282,6 @@ done2(void)
 {
 	if (iflags.debug_fuzzer)
 		return MOVE_CANCELLED;
-	char buf[BUFSZ];
-
 	if (yesno("Really quit?", iflags.paranoid_quit) != 'y') {
 #ifndef NO_SIGNAL
 		(void) signal(SIGINT, (SIG_RET_TYPE) done1);
@@ -459,6 +457,11 @@ done_in_by(register struct monst *mtmp)
 	if (u.ugrave_arise >= LOW_PM &&
 				(mvitals[u.ugrave_arise].mvflags & G_GENOD && !In_quest(&u.uz)))
 		u.ugrave_arise = NON_PM;
+	if (!u.uconduct.killer){
+		//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+		IMPURITY_UP(u.uimp_murder)
+		IMPURITY_UP(u.uimp_bloodlust)
+	}
 	if (touch_petrifies(mtmp->data))
 		done(STONING);
 	else if (mtmp->mtraitor)
@@ -1001,7 +1004,7 @@ done(int how)
 	            killer_format = 0;
 	            return;
 	        }
-	    } else
+	} else
 
 
 	/* kilbuf: used to copy killer in case it comes from something like
@@ -1009,12 +1012,12 @@ done(int how)
 	 *	xname() when listing possessions
 	 * pbuf: holds Sprintf'd output for raw_print and putstr
 	 */
-	if (how == ASCENDED || (!killer && how == GENOCIDED))
+	if (!killer && (how == ASCENDED || how == GENOCIDED))
 		killer_format = NO_KILLER_PREFIX;
 	/* Avoid killed by "a" burning or "a" starvation */
 	if (!killer && (how == STARVING || how == BURNING))
 		killer_format = KILLED_BY;
-	Strcpy(kilbuf, (!killer || how >= PANICKED ? deaths[how] : killer));
+	Strcpy(kilbuf, (!killer || (how >= PANICKED && how != ASCENDED) ? deaths[how] : killer));
 	killer = kilbuf;
 
 #define LSVD_NONE 0
@@ -1368,11 +1371,11 @@ die:
 		if (lastmsg >= 0) {
 		  dump ("", "Latest messages");
 		  for (i = lastmsg + 1; i < DUMPMSGS; i++) {
-		    if (strcmp(msgs[i], ""))
+		    if (strcmp(msgs[i], "") )
 		      dump ("  ", msgs[i]);
 		  } 
 		  for (i = 0; i <= lastmsg; i++) {
-		    if (strcmp(msgs[i], ""))
+		    if (strcmp(msgs[i], "") )
 		      dump ("  ", msgs[i]);
 		  } 
 		  dump ("","");
@@ -1481,7 +1484,7 @@ die:
 		   how != ASCENDED ?
 		      (const char *) ((flags.female && urole.name.f) ?
 		         urole.name.f : urole.name.m) :
-		      (const char *) (flags.female ? "Demigoddess" : "Demigod"));
+		      (const char *) title_override ? title_override : (flags.female ? "Demigoddess" : "Demigod"));
 	if (!done_stopprint) {
 	    putstr(endwin, 0, pbuf);
 	    putstr(endwin, 0, "");

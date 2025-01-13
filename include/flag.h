@@ -95,6 +95,7 @@ struct flag {
 #define MOVE_CASTSPELL				0x00100	/* player cast a spell */
 #define MOVE_ATE					0x00200	/* player ate food */
 #define MOVE_FIRED					0x00400	/* player properly fired ammo, using a launcher or intrinsic launching means, NOT a standard thrown object. */
+#define MOVE_CONTAINER				0x00800	/* player used a container */
 
 	int	 end_top, end_around;	/* describe desired score list */
 	unsigned ident;		/* social security number for each monster */
@@ -102,6 +103,7 @@ struct flag {
 	unsigned long suppress_alert;
 #define NEW_MOON	0
 #define FULL_MOON	4
+#define HUNTING_MOON	8
 	unsigned no_of_wizards; /* 0, 1 or 2 (wizard and his shadow) */
 	boolean  travel;	/* find way automatically to u.tx,u.ty */
 	unsigned run;		/* 0: h (etc), 1: H (etc), 2: fh (etc) */

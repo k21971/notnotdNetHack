@@ -563,8 +563,12 @@ yyyymmdd(time_t date)
  * + 11/22 for rounding
  */
 int
-phase_of_the_moon(void)		/* 0-7, with 0: new, 4: full */
+phase_of_the_moon(void)		/* 0-7, with 0: new, 4: full, 8: hunting moon */
 {
+	if(mvitals[PM_MOON_S_CHOSEN].died)
+		return 8;
+	else if(mvitals[PM_INDEX_WOLF].died)
+		return 4;
 	register struct tm *lt = getlt();
 	register int epact, diy, goldn;
 

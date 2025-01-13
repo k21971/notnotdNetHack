@@ -188,7 +188,9 @@ shuffle_all(void)
 				oclass != WEAPON_CLASS &&
 				oclass != ARMOR_CLASS &&
 				oclass != SCOIN_CLASS &&
-				oclass != GEM_CLASS) {
+				// oclass != BELT_CLASS &&
+				oclass != GEM_CLASS
+		) {
 			int j = last-1;
 
 			if (oclass == POTION_CLASS)
@@ -1559,7 +1561,7 @@ set_submat(struct obj *otmp, int submat)
 		return;
 	}
 	otmp->sub_material = submat;
-	object_color(otmp);
+	set_object_color(otmp);
 }
 
 void

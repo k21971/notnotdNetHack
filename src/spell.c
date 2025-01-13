@@ -610,26 +610,26 @@ further_study( /* if the player is skilled enough in the book's spell school, th
 	int skillmin = 0;
 
 #define set_related(spell) if(!related) related = spell
-	switch (booktype)
+	switch (booktype) // comments show relative levels of book->related spell
 	{
-	case SPE_FINGER_OF_DEATH:	set_related(SPE_DRAIN_LIFE);
+	case SPE_EXTRA_HEALING:		set_related(SPE_HEALING);			// 3->1 (-2)
+	case SPE_FINGER_OF_DEATH:	set_related(SPE_DRAIN_LIFE);		// 7->2 (-5)
 		skillmin = P_BASIC;
 		break;
-	case SPE_FIREBALL:			set_related(SPE_FIRE_STORM);
-	case SPE_CONE_OF_COLD:		set_related(SPE_BLIZZARD);
-	case SPE_FIRE_STORM:		set_related(SPE_FIREBALL);
-	case SPE_BLIZZARD:		set_related(SPE_CONE_OF_COLD);
-	case SPE_LIGHTNING_STORM:	set_related(SPE_LIGHTNING_BOLT);
-	case SPE_EXTRA_HEALING:		set_related(SPE_HEALING);
-	case SPE_CHARM_MONSTER:		set_related(SPE_PACIFY_MONSTER);
+	case SPE_HEALING:			set_related(SPE_EXTRA_HEALING);		// 1->3 (+2)
+	case SPE_FIRE_STORM:		set_related(SPE_FIREBALL);			// 6->3 (-3)
+	case SPE_BLIZZARD:			set_related(SPE_CONE_OF_COLD);		// 6->3 (-3)
+	case SPE_CHARM_MONSTER:		set_related(SPE_PACIFY_MONSTER);	// 5->3 (-2)
+	case SPE_LIGHTNING_STORM:	set_related(SPE_LIGHTNING_BOLT);	// 7->5 (-2)
+	case SPE_PACIFY_MONSTER:	set_related(SPE_CHARM_MONSTER);		// 3->5 (+2)
+	case SPE_FIREBALL:			set_related(SPE_FIRE_STORM);		// 3->6 (+3)
+	case SPE_CONE_OF_COLD:		set_related(SPE_BLIZZARD);			// 3->6 (+3)
 		skillmin = P_SKILLED;
 		break;
-	case SPE_LIGHTNING_BOLT:	set_related(SPE_LIGHTNING_STORM);
-	case SPE_HEALING:			set_related(SPE_EXTRA_HEALING);
-	case SPE_DRAIN_LIFE:		set_related(SPE_FINGER_OF_DEATH);
-	case SPE_CREATE_MONSTER:	set_related(SPE_CREATE_FAMILIAR);
-	case SPE_CREATE_FAMILIAR:	set_related(SPE_CREATE_MONSTER);
-	case SPE_PACIFY_MONSTER:	set_related(SPE_CHARM_MONSTER);
+	case SPE_CREATE_MONSTER:	set_related(SPE_CREATE_FAMILIAR);	// 6->6 (+0)
+	case SPE_CREATE_FAMILIAR:	set_related(SPE_CREATE_MONSTER);	// 6->6 (+0)
+	case SPE_LIGHTNING_BOLT:	set_related(SPE_LIGHTNING_STORM);	// 5->7 (+2)
+	case SPE_DRAIN_LIFE:		set_related(SPE_FINGER_OF_DEATH);	// 2->7 (+5)
 		skillmin = P_EXPERT;
 		break;
 	}
@@ -910,6 +910,8 @@ run_maintained_spells(void)
 		if (u.uhave.amulet)
 			spell_level *= 2;
 		int hungr = spellhunger(spellenergy(spell_index)) * MAINTAINED_SPELL_HUNGER_MULTIPLIER * get_uhungersizemod();
+		if(check_preservation(PRESERVE_REDUCE_HUNGER))
+			hungr = (hungr+1)/2;
 		if (u.uen < spell_level){
 			You("lack the energy to maintain %s.",
 				spellname(spell_index));
@@ -1443,7 +1445,7 @@ void
 update_externally_granted_spells(void)
 {
 	int i, j, n = 0;
-	int exspells[MAXSPELL];
+	int exspells[MAXSPELL] = {0};
 
 	/* reset all sp_ext for recalc */
 	for (i = 0; i < MAXSPELL; i++)
@@ -3188,6 +3190,9 @@ spiriteffects(int power, boolean atme)
 							deltrap(t_at(u.ux,u.uy));
 						}
 						break;
+						case TT_SALIVA:
+						pline(pullmsg, "saliva");
+						break;
 						case TT_LAVA:
 						pline(pullmsg, "lava");
 						break;
@@ -3484,7 +3489,7 @@ spiriteffects(int power, boolean atme)
 		case PWR_GREAT_LEAP:
 			if(level_tele()){
 				You("plunge through the ceiling!");
-				morehungry(max_ints(1, rnd(625)*get_uhungersizemod()));
+				morehungry(max_ints(1, rnd(125)*get_uhungersizemod()));
 			}
 		break;
 		case PWR_MASTER_OF_DOORWAYS:{
@@ -4627,6 +4632,8 @@ spelleffects(int spell, boolean atme, int spelltyp)
 		} else {
 			if (spellid(spell) != SPE_DETECT_FOOD) {
 				int hungr = spellhunger(energy) * get_uhungersizemod();
+				if(check_preservation(PRESERVE_REDUCE_HUNGER))
+					hungr = (hungr+1)/2;
 				/* don't put player (quite) into fainting from
 				 * casting a spell, particularly since they might
 				 * not even be hungry at the beginning; however,
@@ -4710,6 +4717,22 @@ spelleffects(int spell, boolean atme, int spelltyp)
 								inacc = 0;
 								goto dothrowspell;
 dothrowspell:
+		if(u.explosion_up){
+			if(n > 1)
+				n += u.explosion_up;
+			else {
+				int out = 2;
+				int count = u.explosion_up;
+				while(count >= out){
+					count -= out;
+					n++;
+					out += 1;
+				}
+				if(count > rn2(out)){
+					n++;
+				}
+			}
+		}
 		if (Double_spell_size){
 			n = n * 3 / 2;
 			if (pseudo->otyp != SPE_LIGHTNING_STORM)
@@ -4815,7 +4838,26 @@ dothrowspell:
 				Sprintf(buf, "zapped %sself with a spell", uhim());
 				losehp(damage, buf, NO_KILLER_PREFIX);
 			    }
-			} else weffects(pseudo);
+			} else {
+				weffects(pseudo);
+				if(u.mm_up && active_glyph(LUMEN)){
+					int n = 0;
+					int out = 2;
+					int count = u.mm_up;
+					while(count >= out){
+						count -= out;
+						n++;
+						out += 1;
+					}
+					if(count > rn2(out)){
+						n++;
+					}
+					while(n > 0){
+						weffects(pseudo);
+						n--;
+					}
+				}
+			}
 		} else{
 			weffects(pseudo);
 		}
@@ -6019,6 +6061,18 @@ percent_success(int spell)
 			splcaster -= urole.spelarmr * cast_bon / 3;
 		}
 
+		if (uwep->otyp == PARASITE) {	// a diviner's friend
+			cast_bon = 0;
+			if(spell_skilltype(spellid(spell)) == P_DIVINATION_SPELL
+			  || Role_if(PM_UNDEAD_HUNTER)
+			  || active_glyph(LUMEN)
+			)
+			cast_bon += uwep->quan;
+			if (uwep->oartifact)
+				cast_bon *= urole.spelarmr; //Probably no such thing as an artifact parasite, but if so make it standard spellcasting based.
+			splcaster -= cast_bon;
+		}
+
 		if (uwep->otyp == QUARTERSTAFF || uwep->oartifact == ART_RITUAL_RINGED_SPEAR) {	// a sorcerous channeling tool
 			cast_bon = 0;
 			if (spell_skilltype(spellid(spell)) == P_ATTACK_SPELL)
@@ -6159,10 +6213,10 @@ percent_success(int spell)
 	if(Race_if(PM_INCANTIFIER) || (is_ent_species(youracedata, ENT_ELDER)))
 		splcaster += max(-3*urole.spelarmr,urole.spelsbon);
 
-	if(spellid(spell) == urole.spelspec)
+	if(spellid(spell) == urole.spelspec || spellid(spell) == further_study(urole.spelspec))
 		splcaster += urole.spelsbon;
 
-	if(spellid(spell) == urace.spelspec)
+	if(spellid(spell) == urace.spelspec || spellid(spell) == further_study(urace.spelspec))
 		splcaster += urace.spelsbon;
 
 	/* `healing spell' bonus */
@@ -6272,7 +6326,14 @@ percent_success(int spell)
 			}
 		}
 	}
-	
+
+	//Parasitology, uh, upgrades
+	if(active_glyph(LUMEN)){
+		chance += (u.mm_up + u.explosion_up + u.cuckoo)*5;
+		if(skill == P_ENCHANTMENT_SPELL)
+			chance += u.cuckoo*5;
+	}
+
 	if(flags.silence_level){
 		struct monst *cmon;
 		int dist = 0;

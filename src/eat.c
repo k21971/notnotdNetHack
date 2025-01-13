@@ -50,7 +50,7 @@ static const char comestibles[] = { FOOD_CLASS, 0 };
 static const char allobj[] = {
 	COIN_CLASS, WEAPON_CLASS, ARMOR_CLASS, POTION_CLASS, SCROLL_CLASS, TILE_CLASS,
 	WAND_CLASS, RING_CLASS, AMULET_CLASS, FOOD_CLASS, TOOL_CLASS,
-	GEM_CLASS, ROCK_CLASS, BALL_CLASS, CHAIN_CLASS, SPBOOK_CLASS, BED_CLASS, SCOIN_CLASS, 0 };
+	GEM_CLASS, ROCK_CLASS, BALL_CLASS, CHAIN_CLASS, SPBOOK_CLASS, BED_CLASS, SCOIN_CLASS, BELT_CLASS, 0 };
 
 static boolean force_save_hs = FALSE;
 
@@ -1400,6 +1400,7 @@ violated_vegetarian(void)
 		u.ualign.sins++;
 		if(u.uconduct.unvegetarian%2) change_hod(1);
     }
+	IMPURITY_UP(u.uimp_meat)
     return;
 }
 
@@ -2526,10 +2527,12 @@ fpostfx(		/* called after consuming (non-corpse) food */
 		break;
 	    }
 	    case BRAINROOT:
-			if(mvitals[PM_BRAINBLOSSOM_PATCH].insight_gained <= 0){
+			if(mvitals[PM_BRAINBLOSSOM_PATCH].insight_gained < 3){
 				pline("Alien impulses assault your mind!");
-				mvitals[PM_BRAINBLOSSOM_PATCH].insight_gained++;
-				change_uinsight(1);
+				if(mvitals[PM_BRAINBLOSSOM_PATCH].insight_gained == 0 || !rn2(mvitals[PM_BRAINBLOSSOM_PATCH].insight_gained+1)){
+					mvitals[PM_BRAINBLOSSOM_PATCH].insight_gained++;
+					change_uinsight(1);
+				}
 				make_hallucinated(HHallucination + 200,FALSE,0L);
 			}
 			else pline("Alien impulses intrude upon your mind.");
@@ -2797,7 +2800,7 @@ doeat(void)		/* generic "eat" command funtion (see cmd.c) */
 	if (!is_edible(otmp)) {
 	    You("cannot eat that!");
 	    return MOVE_CANCELLED;
-	} else if ((otmp->owornmask & (W_ARMOR|W_TOOL|W_AMUL
+	} else if ((otmp->owornmask & (W_ARMOR|W_TOOL|W_AMUL|W_BELT
 			|W_SADDLE
 			)) != 0) {
 	    /* let them eat rings */
@@ -3639,6 +3642,7 @@ doeat(void)		/* generic "eat" command funtion (see cmd.c) */
 			}
 			if(otmp->opoisoned & OPOISON_FILTH){
 				pline("Ulch - that was tainted with filth!");
+				IMPURITY_UP(u.uimp_dirtiness)
 				if (Sick_resistance) {
 					pline("It doesn't seem at all sickening, though...");
 				} else {
@@ -3962,6 +3966,10 @@ gethungry(void)	/* as time goes by - called by moveloop() and domove() */
 	if(Race_if(PM_INCANTIFIER))
 		hungermod *= 10;
 	
+	//Preservation upgrade reduces hunger
+	if(check_preservation(PRESERVE_REDUCE_HUNGER))
+		hungermod *= 2;
+	
 	//Unusually-sized creatures have more or less hunger
 	if(get_uhungersizemod() < 1){
 		hungermod /= get_uhungersizemod();
@@ -4115,7 +4123,7 @@ lesshungry(	/* called after eating (and after drinking fruit juice) */
 	    /* Have lesshungry() report when you're nearly full so all eating
 	     * warns when you're about to choke.
 	     */
-	    if ((Race_if(PM_INCANTIFIER) && u.uen >= (get_uhungermax()*7)/8) ||
+	    if ((Race_if(PM_INCANTIFIER) && u.uen >= (u.uenmax*7)/8) ||
 			(uclockwork && u.uhunger >= (get_uhungermax()*7)/8) || 
 			(!Race_if(PM_INCANTIFIER) && !uclockwork && u.uhunger >= (get_uhungermax()*3)/4)) {
 			if (!victual.eating || (victual.eating && !victual.fullwarn)) {
@@ -4597,12 +4605,13 @@ newuhs(boolean incr)
 struct obj *
 floorfood(	/* get food from floor or pack */
 	const char *verb,
-	int corpsecheck /* 0, no check, 1, corpses, 2, tinnable corpses */)
+	int corpsecheck) /* 0, no check, 1, corpses, 2, tinnable corpses, 3, corpses with blood */
 {
 	register struct obj *otmp;
 	char qbuf[QBUFSZ];
 	char c;
 	boolean feeding = (!strcmp(verb, "eat"));
+	boolean researching = (!strcmp(verb, "research"));
 
 	/* if we can't touch floor objects then use invent food only */
 	if (!can_reach_floor() ||
@@ -4651,9 +4660,15 @@ floorfood(	/* get food from floor or pack */
 	/* Is there some food (probably a heavy corpse) here on the ground? */
 	for (otmp = level.objects[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
 		if(corpsecheck ?
-		(otmp->otyp==CORPSE && (corpsecheck == 1 || tinnable(otmp))) :
+		(otmp->otyp==CORPSE && (corpsecheck == 1 
+							|| (corpsecheck == 2 && tinnable(otmp))
+							|| (corpsecheck == 3 && !otmp->odrained && has_blood(&mons[otmp->corpsenm]))
+							) ) :
 		    feeding ? (otmp->oclass != COIN_CLASS && is_edible(otmp)) :
-						otmp->oclass==FOOD_CLASS) {
+						otmp->oclass==FOOD_CLASS
+		) {
+			if(researching && otmp->researched)
+				continue;
 			Sprintf(qbuf, "There %s %s here; %s %s?",
 				otense(otmp, "are"),
 				doname(otmp), verb,
