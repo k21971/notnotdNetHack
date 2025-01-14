@@ -101,4 +101,41 @@ void foo VA_DECL(int, arg)  --macro expansion has a hidden opening brace
 # endif /* __GNUC__ */
 #endif /* __has_include(<stdckdint.h>) */
 
+/*
+ * If we don't have C23 <stdbit.h>, fall back to GCC
+ * __builtin_popcount and C11 _Generic.  If we don't have that either,
+ * fall back to Brian Kernighan's algorithm and C11 _Generic.
+ */
+#if __has_include(<stdbit.h>)
+# include <stdbit.h>
+#else
+# ifdef __GNUC__
+#  define stdc_count_ones_uc(n) (unsigned char)__builtin_popcount((unsigned char)(n))
+#  define stdc_count_ones_us(n) (unsigned short)__builtin_popcount((unsigned short)(n))
+#  define stdc_count_ones_ui(n) __builtin_popcount((n))
+#  define stdc_count_ones_ul(n) __builtin_popcountl((n))
+#  define stdc_count_ones_ull(n) __builtin_popcountll((n))
+# else
+#  define DEFINE_STDC_COUNT_ONES(suffix, type)			       \
+	static inline type stdc_count_ones_##suffix(type n) {	       \
+		int count = 0;					       \
+		while (n) { n &= n-1; count++; }		       \
+		return count;					       \
+	}
+DEFINE_STDC_COUNT_ONES(uc, unsigned char)
+DEFINE_STDC_COUNT_ONES(us, unsigned short)
+DEFINE_STDC_COUNT_ONES(ui, unsigned int)
+DEFINE_STDC_COUNT_ONES(ul, unsigned long)
+DEFINE_STDC_COUNT_ONES(ull, unsigned long long)
+#  undef DEFINE_STDC_COUNT_ONES
+# endif /* __GNUC__ */
+#define stdc_count_ones(n)						\
+	_Generic((n),							\
+		 unsigned char: stdc_count_ones_uc((n)),		\
+		 unsigned short: stdc_count_ones_us((n)),		\
+		 unsigned int: stdc_count_ones_ui((n)),			\
+		 unsigned long: stdc_count_ones_ul((n)),		\
+		 unsigned long long: stdc_count_ones_ull((n)))
+#endif /* __has_include(<stdbit.h>) */
+
 #endif /* TRADSTDC_H */
