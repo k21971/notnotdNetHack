@@ -80,6 +80,6 @@
 #define SUBOUT_SALA2	21	/* Sala hug attack */
 #define SUBOUT_OCT	22	/* Octopode tentacle attack */
 #define MAX_SUBOUT		23
-#define SUBOUT_ARRAY_SIZE (MAX_SUBOUT/8+1)
+#define SUBOUT_ARRAY_SIZE ((MAX_SUBOUT-1)/32+1)
 
 #endif
