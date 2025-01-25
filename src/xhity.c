@@ -13527,7 +13527,8 @@ void * vpointer,			/* additional /whatever/, type based on hmoncode. */
 	static int warnedotyp = -1;
 	static struct permonst *warnedptr = 0;
 
-	char killerbuf[BUFSZ];		/* only for use with killer */
+	static char killerbuf[BUFSZ];		/* only for use with killer */
+
 	char buf[BUFSZ];
 
 	boolean phase_armor = FALSE;
