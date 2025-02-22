@@ -7245,7 +7245,7 @@ spell_would_be_useless(struct monst *magr, struct monst *mdef, int spellnum, int
 		))
 		return TRUE;
 	/* Don't de-stone the player */
-	if (youdef && (Stoned || Golded) && (
+	if (youdef && (Stoned || Golded || Salted) && (
 		spellnum == ACID_RAIN
 		))
 		return TRUE;

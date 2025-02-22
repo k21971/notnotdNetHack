@@ -11,6 +11,7 @@
 
 static void stoned_dialogue(void);
 static void golded_dialogue(void);
+static void salted_dialogue(void);
 static void gillyweed_dialogue(void);
 static void phasing_dialogue(void);
 static void vomiting_dialogue(void);
@@ -20,7 +21,6 @@ static void slip_or_trip(void);
 static void see_lamp_flicker(struct obj *, const char *);
 static void lantern_message(struct obj *);
 static void cleanup_burn(void *,long);
-
 
 /* used by wizard mode #timeout and #wizintrinsic; order by 'interest'
    for timeout countdown, where most won't occur in normal play */
@@ -157,6 +157,30 @@ golded_dialogue(void)
 		HFast = 0L;
 	if (i == 3L && !Free_action)
 		nomul(-3, "turning to gold");
+	exercise(A_DEX, FALSE);
+}
+
+static const char * const salted_texts[] = {
+	"You are slowing down.",		/* 5 */
+	"Your limbs are stiffening.",		/* 4 */
+	"Your limbs have turned to salt.",	/* 3 */
+	"You have turned to salt.",		/* 2 */
+	"You have become a pillar of salt."			/* 1 */
+};
+
+static void
+salted_dialogue(void)
+{
+	register long i = (Salted & TIMEOUT);
+
+	if (i > 0L && i <= SIZE(salted_texts)) {
+		pline1(salted_texts[SIZE(salted_texts) - i]);
+		nomul(0, NULL); /* fix for C343-74 */
+	}
+	if (i == 5L)
+		HFast = 0L;
+	if (i == 3L && !Free_action)
+		nomul(-3, "turning to salt");
 	exercise(A_DEX, FALSE);
 }
 
@@ -562,6 +586,7 @@ nh_timeout(void)
 	if(Invulnerable) return; /* things past this point could kill you */
 	if(Stoned) stoned_dialogue();
 	if(Golded) golded_dialogue();
+	if(Salted) salted_dialogue();
 	if(Slimed) slime_dialogue();
 	if(Vomiting) vomiting_dialogue();
 	if((Strangled || FrozenAir || BloodDrown) && !Breathless) choke_dialogue();
@@ -823,6 +848,24 @@ nh_timeout(void)
 				IMPURITY_UP(u.uimp_bloodlust)
 			}
 			done(GOLDING);
+			break;
+		case SALTED:
+			if (delayed_killer && !killer) {
+				killer = delayed_killer;
+				delayed_killer = 0;
+			}
+			if (!killer) {
+				/* leaving killer_format would make it
+				   "petrified by petrification" */
+				killer_format = NO_KILLER_PREFIX;
+				killer = "killed by turning to salt";
+			}
+			if (!u.uconduct.killer){
+				//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+				IMPURITY_UP(u.uimp_murder)
+				IMPURITY_UP(u.uimp_bloodlust)
+			}
+			done(SALTING);
 			break;
 		case FROZEN_AIR:
 			pline("The frozen air surrounding you becomes vapor.");
