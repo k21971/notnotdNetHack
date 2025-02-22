@@ -1,7 +1,8 @@
+when:
+  event: [push, pull_request]
+
 steps:
-  build:
-    when:
-      event: [push, pull_request]
+  - name: build
     image: alpine
     commands:
       - apk update
