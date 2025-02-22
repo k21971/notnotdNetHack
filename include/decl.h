@@ -445,6 +445,7 @@ extern struct sinfo {
 } program_state;
 
 extern boolean restoring;
+extern boolean loading_mons;
 
 extern const char quitchars[];
 extern const char vowels[];

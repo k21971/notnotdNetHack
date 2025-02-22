@@ -2341,7 +2341,6 @@ arti_phasing(struct obj *obj)
     return (obj && (
 		(obj->oartifact && arti_attack_prop(obj, ARTA_PHASING)) ||
 		has_spear_point(obj, OBSIDIAN) ||
-		(is_lightsaber(obj) && litsaber(obj)) ||
 		(check_oprop(obj, OPROP_ELFLW) && u.uinsight >= 22) ||
 		(check_oprop(obj, OPROP_PHSEW)) ||
 		(check_oprop(obj, OPROP_RLYHW) && u.uinsight >= 40) ||
@@ -5104,6 +5103,40 @@ otyp_hit(
 			}
 		}
 	}
+	if (otmp->otyp == TOOTH && u.uinsight >= 20 && otmp->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(otmp, magr, ETRAIT_FOCUS_FIRE)){
+		if(otmp->ovar1_tooth_type == MAGMA_TOOTH){
+			if (!Fire_res(mdef)) {
+				if (species_resists_cold(mdef))
+					(*truedmgptr) += 3 * (d(5,10) + otmp->spe) / 2;
+				else
+					(*truedmgptr) += d(5,10) + otmp->spe;
+			}
+			if (!UseInvFire_res(mdef)){
+				if (rn2(3)) destroy_item(mdef, SCROLL_CLASS, AD_FIRE);
+				if (rn2(3)) destroy_item(mdef, SPBOOK_CLASS, AD_FIRE);
+				if (rn2(3)) destroy_item(mdef, POTION_CLASS, AD_FIRE);
+			}
+		}
+		else if(otmp->ovar1_tooth_type == SERPENT_TOOTH){
+			if (!Poison_res(mdef)) {
+				(*truedmgptr) += d(1,8) + otmp->spe;
+			}
+			if (!Acid_res(mdef)) {
+				(*truedmgptr) += d(1,8) + otmp->spe;
+			}
+			if (!UseInvAcid_res(mdef)){
+				if (rn2(3)) destroy_item(mdef, POTION_CLASS, AD_FIRE);
+			}
+		}
+		else if(otmp->ovar1_tooth_type == VOID_TOOTH){
+			if (!Cold_res(mdef)) {
+				(*truedmgptr) += d(3,3) + otmp->spe;
+			}
+			if (!UseInvCold_res(mdef)){
+				if (rn2(3)) destroy_item(mdef, POTION_CLASS, AD_COLD);
+			}
+		}
+	}
 	
 	if (otmp->otyp == TONITRUS && otmp->lamplit){
 		int modifier = (youdef ? (Blind_telepat && !Tele_blind) : mon_resistance(mdef, TELEPAT)) ? 2 : 1;
@@ -5424,6 +5457,7 @@ otyp_hit(
 	//Flogging raises sanity (note: this is "backwards" on purpose)
 	if((otmp->otyp == CANE && !youdef && mdef && is_serration_vulnerable(mdef) && u.uinsight >= rnd(100))
 	|| (otmp->otyp == WHIP_SAW && !youdef && mdef && hates_holy_mon(mdef) && u.uinsight >= rnd(100))
+	|| (otmp->otyp == CHURCH_SHORTSWORD && (resist_pierce(mdef->data) && !resist_slash(mdef->data)) && u.uinsight >= rnd(100))
 	){
 		int reglevel = san_threshhold() + otmp->spe;
 		if(u.usanity < reglevel){
@@ -7348,8 +7382,16 @@ special_weapon_hit(
 	}
 
 	/*level drain*/
-	if (check_oprop(otmp, OPROP_DRANW) && !Drain_res(mdef)){
+	if ((check_oprop(otmp, OPROP_DRANW) 
+		|| (otmp->otyp == TOOTH && otmp->ovar1_tooth_type == VOID_TOOTH && u.uinsight >= 20 && otmp->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(otmp, magr, ETRAIT_FOCUS_FIRE))
+		) && !Drain_res(mdef)
+	){
 		int dlife;
+		int n = 0;
+		if(check_oprop(otmp, OPROP_DRANW))
+			n++;
+		if(otmp->otyp == TOOTH && otmp->ovar1_tooth_type == VOID_TOOTH && u.uinsight >= 20 && otmp->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(otmp, magr, ETRAIT_FOCUS_FIRE))
+			n += 3;
 		/* message */
 		if (youdef) {
 			if (Blind)
@@ -7367,20 +7409,23 @@ special_weapon_hit(
 
 		if (youdef) {
 			dlife = *hpmax(mdef);
-			losexp("life drainage", FALSE, FALSE, FALSE);
+			for(int i = 0; i < n; i++)
+				losexp("life drainage", FALSE, FALSE, FALSE);
 			dlife -= *hpmax(mdef);
 		}
 		else {
 			dlife = *hpmax(mdef);
-			*hpmax(mdef) -= min_ints(rnd(hd_size(mdef->data)), *hpmax(mdef));
-			if (*hpmax(mdef) == 0 || mlev(mdef) == 0) {
-				*hp(mdef) = 1;
-				*hpmax(mdef) = 1;
+			for(int i = 0; i < n; i++){
+				*hpmax(mdef) -= min_ints(rnd(hd_size(mdef->data)), *hpmax(mdef));
+				if (*hpmax(mdef) == 0 || mlev(mdef) == 0) {
+					*hp(mdef) = 1;
+					*hpmax(mdef) = 1;
+				}
+				if (mdef->m_lev > 0)
+					mdef->m_lev--;
+				else
+					*truedmgptr += *hpmax(mdef);
 			}
-			if (mdef->m_lev > 0)
-				mdef->m_lev--;
-			else
-				*truedmgptr += *hpmax(mdef);
 			dlife -= *hpmax(mdef);
 		}
 
@@ -7486,7 +7531,7 @@ special_weapon_hit(
 				else if (otmp->oartifact == ART_THORNS) i = rnd(3);
 				else i = 1;
 				for (; i>0; i--){
-					if (obj->spe > -1 * objects[(obj)->otyp].a_ac){
+					if ((obj->oclass == ARMOR_CLASS || obj->oclass == BELT_CLASS) && obj->spe > -1 * a_acdr(objects[(obj)->otyp])){
 						damage_item(obj);
 						if (!i && vis) {
 							pline("%s %s less effective.",
@@ -10803,7 +10848,7 @@ arti_invoke(struct obj *obj)
 			
 			struct monst *mtmp = makemon(pm, u.ux, u.uy, MM_EDOG|MM_ADJACENTOK);
 			initedog(mtmp);
-			if (mtmp->mtyp != PM_SKELETON)
+			if (!skeleton_innards(mtmp->data))
 				set_template(mtmp, SKELIFIED);
 
 			if (onfloor) useupf(corpse, 1);

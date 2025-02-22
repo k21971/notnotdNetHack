@@ -726,7 +726,7 @@ dotele(void)
 	struct trap *trap;
 
 	trap = t_at(u.ux, u.uy);
-	if (trap && (!trap->tseen || trap->ttyp != TELEP_TRAP))
+	if (trap && (!trap->tseen || (trap->ttyp != TELEP_TRAP && trap->ttyp != LEVEL_TELEP)))
 		trap = 0;
 
 	if (trap) {
@@ -739,9 +739,14 @@ dotele(void)
 				newsym(u.ux, u.uy);
 			}
 		}
-		if (trap)
+		if (trap){
 			You("%s onto the teleportation trap.",
 			    locomotion(&youmonst, "jump"));
+			if(trap->ttyp == LEVEL_TELEP){
+				level_tele_trap(trap, TRUE);
+				return MOVE_STANDARD;
+			}
+		}
 	}
 	if (!trap) {
 	    boolean castit = FALSE;
@@ -1363,15 +1368,15 @@ tele_trap(struct trap *trap)
 }
 
 void
-level_tele_trap(struct trap *trap)
+level_tele_trap(struct trap *trap, boolean force)
 {
 	You("%s onto a level teleport trap!",
 		      Levitation ? (const char *)"float" :
 				  locomotion(&youmonst, "step"));
-	if (Antimagic) {
+	if (Antimagic && !force) {
 	    shieldeff(u.ux, u.uy);
 	}
-	if (Antimagic || In_endgame(&u.uz)) {
+	if ((Antimagic && !force) || In_endgame(&u.uz)) {
 	    You_feel("a wrenching sensation.");
 	    return;
 	}

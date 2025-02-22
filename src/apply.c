@@ -49,6 +49,7 @@ static int use_chikage(struct obj *);
 static int use_church_weapon(struct obj *);
 static int use_church_sword(struct obj *);
 static int use_church_sheath(struct obj *);
+static int use_beast_crusher(struct obj *);
 static int use_devil_fist(struct obj *);
 static int use_smithing_hammer(struct obj *);
 static void light_cocktail(struct obj *);
@@ -498,7 +499,6 @@ its_dead(int rx, int ry, int *resp, struct obj *tobj)
 		}
 		return TRUE;
 	}
-
 
 	return FALSE;
 }
@@ -2104,6 +2104,26 @@ use_hunter_axe(struct obj *obj)
 }
 
 int
+use_church_pick(struct obj *obj)
+{
+	if(obj->unpaid){
+		You("need to buy it.");
+		return MOVE_CANCELLED;
+	}
+	
+	if(obj->otyp == CHURCH_SHORTSWORD){
+		You("lenthen the handle.");
+		obj->otyp = CHURCH_PICK;
+	} else {
+		You("shorten the handle.");
+		obj->otyp = CHURCH_SHORTSWORD;
+	}
+	fix_object(obj);
+	update_inventory();
+	return MOVE_INSTANT;
+}
+
+int
 use_saw_cleaver(struct obj *obj)
 {
 	if(obj->unpaid){
@@ -2246,6 +2266,25 @@ use_threaded_cane(struct obj *obj)
 }
 
 int
+use_beast_crusher(struct obj *obj)
+{
+	if(obj->unpaid){
+		You("need to buy it.");
+		return MOVE_CANCELLED;
+	}
+	
+	if(obj->otyp == BEAST_CRUSHER){
+		You("unlock %s.",the(xname(obj)));
+		obj->otyp = BEAST_CUTTER;
+	} else {
+		You("lock %s.",the(xname(obj)));
+		obj->otyp = BEAST_CRUSHER;
+	}
+
+	return MOVE_INSTANT;
+}
+
+int
 use_chikage(struct obj *obj)
 {
 	if(obj->unpaid){
@@ -2267,8 +2306,10 @@ use_chikage(struct obj *obj)
 	} else {
 		if(u.uinsight < 27)
 			You("sheath your sword in your saya and draw it forth bloody.");
-		else
+		else if(u.uinsight < 50)
 			You("sheath your sword in your %s and draw it forth bloody.", body_part(HEART));
+		else
+			You("sheath your sword in your shadow's %s and draw it forth bloody.", body_part(HEART));
 
 		if(obj->obj_material != obj->ovar1_alt_mat)
 			obj->ovar1_alt_mat = obj->obj_material;
@@ -4214,7 +4255,7 @@ use_smithing_hammer(struct obj *obj)
 				continue;
 			if(i != CHURCH_HAMMER && i != BOX && !metallic_material(objects[i].oc_material))
 				continue;
-			if(objects[i].oc_class == WEAPON_CLASS){
+			if(objects[i].oc_class == WEAPON_CLASS || (objects[i].oc_class == TOOL_CLASS && objects[i].oc_skill != P_NONE)){
 				if(P_SKILL(objects[i].oc_skill < 0 ? -1*objects[i].oc_skill : objects[i].oc_skill) < P_SKILLED && (P_SKILL(P_SMITHING) < P_SKILLED || !has_object_type(invent, i)))
 					continue;
 			}
@@ -10055,8 +10096,12 @@ doapply(void)
 		return use_church_sword(obj);
 	} else if(obj->otyp == CHURCH_SHEATH || obj->otyp == CHURCH_BRICK){
 		return use_church_sheath(obj);
+	} else if(obj->otyp == BEAST_CRUSHER || obj->otyp == BEAST_CUTTER){
+		return use_beast_crusher(obj);
 	} else if(obj->otyp == DEMON_CLAW || obj->otyp == DEVIL_FIST){
 		return use_devil_fist(obj);
+	} else if(obj->otyp == CHURCH_SHORTSWORD){
+		return use_church_pick(obj);
 	} else switch(obj->otyp){
 	case BLINDFOLD:
 	case NIGHT_VISION_GOGGLES:
@@ -10125,10 +10170,10 @@ doapply(void)
 	case LOCK_PICK:
 	case CREDIT_CARD:
 	case SKELETON_KEY:
-		res = pick_lock(&obj);
+		res = pick_lock(obj,0,0,NULL);
 		break;
 	case UNIVERSAL_KEY:
-		res =  pick_lock(&obj);
+		res =  pick_lock(obj,0,0,NULL);
 		break;
 	case PICK_AXE:
 	case DWARVISH_MATTOCK:

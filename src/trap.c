@@ -1245,7 +1245,7 @@ glovecheck:		(void) rust_dmg(uarmg, "gauntlets", 1, TRUE, &youmonst, FALSE);
 		break;
 	    case LEVEL_TELEP:
 		seetrap(trap);
-		level_tele_trap(trap);
+		level_tele_trap(trap, FALSE);
 		nomul(0, NULL);
 		break;
 
@@ -3249,6 +3249,12 @@ water_damage(struct obj *obj, boolean force, boolean here, uchar modifiers, stru
 	struct obj *obj_original = obj;
 	boolean obj_destroyed = FALSE;
 	int is_lethe = lethe;
+	if(owner && ProtectItems(owner) &&
+		(obj->oclass == POTION_CLASS
+		 || obj->oclass == SCROLL_CLASS
+		 || obj->oclass == WAND_CLASS
+	))
+		return 0;
 	if(owner == &youmonst){
 		if(Waterproof) {
 			return 0;

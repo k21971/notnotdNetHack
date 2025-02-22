@@ -970,7 +970,7 @@ domonnoise(struct monst *mtmp, boolean chatting)
 				if (smith_offer_price(charge, mtmp) == FALSE) break;
 				u.utats |= selection;
 				pline("%s tattoos a %s onto you.",Monnam(mtmp),tat_to_name(selection));
-				You_feel("your coin purse's weight vanish.");
+				You_feel("gilded.");
 				break;
 			case TAT_UNKNOWN:
 				charge = (int) 8000 * discount;
@@ -4927,7 +4927,7 @@ dobinding(int tx, int ty)
 				pline("The creature's five legs are arranged in a star pattern, and to move it rolls from foot to foot.");
 				pline("At the center of the wheel is a lion's head, complete with a glorious mane.");
 			}
-			pline("The creature speaks to you; and it's voice, though deep, is clearly that of a woman.");
+			pline("The creature speaks to you; and its voice, though deep, is clearly that of a woman.");
 			pline("\"I am Buer, %s, %s to %s.", buerTitles[rn2(SIZE(buerTitles))], buerSetOne[rn2(SIZE(buerSetOne))], buerSetTwo[rn2(SIZE(buerSetTwo))]);
 			if(u.sealCounts < numSlots){
 				if(Role_if(PM_ANACHRONOUNBINDER)){

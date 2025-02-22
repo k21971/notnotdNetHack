@@ -1413,7 +1413,7 @@ die:
 
 	if (bones_ok) {
 #ifdef WIZARD
-	    if(!wizard || (yesno("Save WIZARD MODE bones?", TRUE) == 'y'))
+	    if(!wizard || yesno("Save WIZARD MODE bones?", TRUE) == 'y')
 #endif /* WIZARD */
 		savebones(corpse);
 	    /* corpse may be invalid pointer now so

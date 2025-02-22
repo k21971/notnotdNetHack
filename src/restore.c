@@ -51,6 +51,7 @@ static struct bucket *id_map = 0;
 #include "quest.h"
 
 boolean restoring = FALSE;
+boolean loading_mons = FALSE;
 static struct fruit *oldfruit;
 static long omoves;
 
@@ -250,6 +251,7 @@ restmonchn(register int fd, boolean ghostly)
 	struct permonst *monbegin;
 	boolean moved;
 
+	loading_mons = TRUE;
 	/* get the original base address */
 	mread(fd, (void *)&monbegin, sizeof(monbegin));
 	moved = (monbegin != mons);
@@ -329,6 +331,7 @@ restmonchn(register int fd, boolean ghostly)
 		impossible("Restmonchn: error reading monchn.");
 		mtmp2->nmon = 0;
 	}
+	loading_mons = FALSE;
 	return(first);
 }
 

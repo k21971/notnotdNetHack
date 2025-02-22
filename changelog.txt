@@ -179,6 +179,7 @@ Leprechaun race
 	Gets tele control at xlvl 7
 	Unarmed attacks steal gold
 	Special spell detect treasure
+	Natural fast energy regen getting a flat half a pw per turn bonus
 
 Yuki-Onna changes
 	Increase hp gain SLIGHTLY
@@ -448,7 +449,7 @@ Dungeon Changes
 					for anyone
 					 $2000
 				Croesus family crest
-					gold in open inventory weighs nothing.
+					let everyone know how broke they are compared to you
 					available for someone wearing all gold chest,gloves,boot,helm 
 					$30000
 				Blasphemous shapes

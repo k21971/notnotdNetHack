@@ -68,6 +68,7 @@ extern int use_whip(struct obj *);
 extern int use_nunchucks(struct obj *);
 extern int use_force_sword(struct obj *);
 extern int use_hunter_axe(struct obj *);
+extern int use_church_pick(struct obj *);
 extern int do_bloodletter(struct obj *);
 extern int parasite_count(void);
 extern boolean parasite_ok(void);
@@ -575,7 +576,6 @@ extern char *coyotename(struct monst *,char *);
 
 /* ### do_wear.c ### */
 
-
 extern void off_msg(struct obj *);
 extern void set_wear(void);
 extern boolean donning(struct obj *);
@@ -632,6 +632,8 @@ extern int destroy_arm(struct obj *);
 extern int destroy_marm(struct monst *, struct obj *);
 extern int claws_destroy_arm(struct obj *);
 extern int claws_destroy_marm(struct monst *, struct obj *);
+extern int saber_destroys_arm(struct obj *);
+extern int saber_destroys_marm(struct monst *, struct obj *);
 extern int teleport_arm(struct obj *, struct monst *);
 extern int teleport_steal_arm(struct monst *, struct obj *);
 extern int tent_destroy_arm(struct obj *);
@@ -1300,7 +1302,8 @@ extern boolean picking_lock(int *,int *);
 extern boolean picking_at(int,int);
 extern boolean forcing_door(int *, int*);
 extern void reset_pick(void);
-extern int pick_lock(struct obj **);
+extern struct obj *autokey(boolean);
+extern int pick_lock(struct obj *, xchar, xchar, struct obj *);
 extern int doforce(void);
 extern boolean boxlock(struct obj *,struct obj *);
 extern boolean doorlock(struct obj *,int,int);
@@ -1308,7 +1311,6 @@ extern int doopen(void);
 extern int doopen_indir(int,int);
 extern int doclose(void);
 extern int artifact_door(int,int);
-
 
 /* ### mail.c ### */
 
@@ -2732,7 +2734,7 @@ extern boolean level_tele(void);
 extern boolean branch_tele(void);
 extern void domagicportal(struct trap *);
 extern void tele_trap(struct trap *);
-extern void level_tele_trap(struct trap *);
+extern void level_tele_trap(struct trap *, boolean);
 extern void rloc_to(struct monst *,int,int);
 extern boolean rloc(struct monst *, boolean);
 extern boolean tele_restrict(struct monst *);
@@ -3133,6 +3135,7 @@ extern int heal_mlevel_bonus(void);
 extern int heal_vilya(void);
 extern int lev_lomya(void);
 extern int en_nenya(void);
+extern void saber_damage_slot(struct monst *, struct obj *, int, boolean, boolean, boolean *);
 
 /* ### write.c ### */
 

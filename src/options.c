@@ -46,6 +46,7 @@ static struct Bool_Opt
 	{"autopickup", &flags.pickup, TRUE, SET_IN_GAME},
 	{"apexception_regex", &iflags.ape_regex, FALSE,  SET_IN_FILE},
 	{"autoquiver", &flags.autoquiver, FALSE, SET_IN_GAME},
+	{"autounlock", &flags.autounlock, TRUE, SET_IN_GAME},
 	{"block_forget_map", &iflags.no_forget_map, TRUE, SET_IN_GAME},
 	{"botl_updates", &iflags.botl_updates, TRUE, SET_IN_GAME},
 	{"bones", (boolean *)&iflags.bones, TRUE, SET_IN_GAME},

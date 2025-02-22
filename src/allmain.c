@@ -939,6 +939,9 @@ you_regen_hp(void)
 	int * hpmax;
 	int * hp;
 	boolean blockRegen = FALSE;
+	boolean bleeding = FALSE;
+	boolean air_drowning = FALSE;
+	boolean disintegrating = FALSE;
 
 	// set hp, maxhp pointers
 	hp    = (Upolyd) ? (&u.mh)    : (&u.uhp);
@@ -1039,12 +1042,14 @@ you_regen_hp(void)
 		else
 			perX -= HEALCYCLE;
 		blockRegen = TRUE;
+		air_drowning = TRUE;
 	}
 
 	// invidiaks out of dark
 	if (youracedata->mtyp == PM_INVIDIAK && !isdark(u.ux, u.uy)) {
 		perX -= HEALCYCLE;
 		blockRegen = TRUE;
+		disintegrating = TRUE;
 	}
 
 	// salamander in or above lava 
@@ -1055,6 +1060,7 @@ you_regen_hp(void)
 	// bleeding out
 	if (youmonst.mbleed > 0) {
 		youmonst.mbleed--;
+		bleeding = TRUE;
 		perX -= youmonst.mbleed*HEALCYCLE;
 		blockRegen = TRUE;
 	}
@@ -1262,9 +1268,23 @@ you_regen_hp(void)
 			(*hp) = (*hpmax);
 
 		// check for rehumanization
-		if (Upolyd && (*hp < 1)){
-			rehumanize();
-			change_gevurah(1); //cheated death.
+		if (*hp < 1){
+			if(Upolyd){
+				rehumanize();
+				change_gevurah(1); //cheated death.
+			}
+			else {
+				killer_format = KILLED_BY;
+				if(bleeding)
+					killer="blood loss";
+				else if(air_drowning)
+					killer="air-drowning";
+				else if(disintegrating)
+					killer="disintegrating in bright light";
+				else
+					killer="poor health, apparently";
+				done(DIED);
+			}
 		}
 	}
 }
@@ -1333,6 +1353,8 @@ you_regen_pw(void)
 			reglevel += flags.female ? 8 : 4;//Note: blessing of Lolth
 		if (Race_if(PM_GNOME) && !Upolyd)
 			reglevel += 12;
+		if ((Race_if(PM_LEPRECHAUN)) && !Upolyd)
+			reglevel += HEALCYCLE/2;
 		// penalty for being itchy
 		reglevel -= u_healing_penalty();
 		// penalty from spell protection interfering with natural pw regeneration
