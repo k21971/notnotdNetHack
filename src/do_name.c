@@ -1928,6 +1928,7 @@ static const char * const bogusmons[] = {
 	"hippocampus",
 	"hippogriff",
 	"kelpie",
+	"iwlwifi firmware blob",
 
 	/* soundex and typos of monsters */
 	"gloating eye",
