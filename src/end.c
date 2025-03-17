@@ -64,7 +64,7 @@ static boolean should_query_disclose_option(int,char *);
 static const char *deaths[] = {		/* the array of death */
 	"died", "betrayed", "choked", "poisoned", "starvation", "drowning", /*5*/
 	"burning", "dissolving under the heat and pressure",
-	"crushed", "turned to stone", "turned to gold", "turned to glass", "turned into slime",
+	"crushed", "turned to stone", "turned to gold", "turned to salt", "turned to glass", "turned into slime",
 	"exploded after being overwound", "turned into a weeping angel", "disintegrated",
 	"genocided", "world ended",
 	"panic", "trickery",
@@ -74,7 +74,7 @@ static const char *deaths[] = {		/* the array of death */
 static const char *ends[] = {		/* "when you..." */
 	"died", "were betrayed", "choked", "were poisoned", "starved", "drowned",
 	"burned", "dissolved in the lava",
-	"were crushed", "turned to stone", "turned to gold", "turned to glass", "turned into slime",
+	"were crushed", "turned to stone", "turned to gold", "turned to salt", "turned to glass", "turned into slime",
 	"were overwound and exploded", "turned into a weeping angel", "were disintegrated",
 	"were genocided", "world ended",
 	"panicked", "were tricked",

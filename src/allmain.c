@@ -3800,7 +3800,6 @@ find_preset_inherited(char *name)
 		if(artilist[i].gflags&ARTG_INHER
 		&& !Role_if(artilist[i].role) && !Pantheon_if(artilist[i].role)
 		&& !(urole.questarti == i)
-		&& (artilist[i].alignment == A_NONE || artilist[i].alignment == u.ualign.type)
 		){
 			aname = (char *)artilist[i].name;
 			if(!strncmpi(aname, "the ", 4)) aname += 4;
