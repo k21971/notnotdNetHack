@@ -1670,7 +1670,7 @@ count_madnesses(void)
 }
 
 int
-roll_madness(long int madness)
+roll_madness(long long int madness)
 {
 	int sanlevel;
 	int usan = u.usanity;
@@ -1698,7 +1698,7 @@ roll_madness(long int madness)
 }
 
 int
-mad_turn(long int madness)
+mad_turn(long long int madness)
 {
 	int sanlevel;
 	int usan = u.usanity;
@@ -1723,7 +1723,7 @@ mad_turn(long int madness)
 }
 
 int
-flat_mad_turn(long int madness)
+flat_mad_turn(long long int madness)
 {
 	int sanlevel;
 	int usan = u.usanity;
@@ -1746,7 +1746,7 @@ flat_mad_turn(long int madness)
 }
 
 int
-mad_monster_turn(struct monst *mon, long int madness)
+mad_monster_turn(struct monst *mon, long long int madness)
 {
 	int sanlevel;
 	int usan = u.usanity;
