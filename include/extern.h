@@ -29,17 +29,21 @@ extern time_t get_realtime(void);
 extern void dogoat(void);
 extern void dogoat_mon(struct monst *);
 extern void dojellysting(struct monst *);
+extern void dorotbite(struct monst *);
+extern void dorotsting(struct monst *);
 extern boolean doyog(struct monst *);
 extern void dotwin_cast(struct monst *);
 extern void dochaos_mon(struct monst *);
 extern void dohost_mon(struct monst *);
 extern void dosnake(struct monst *);
 extern void dokraken_mon(struct monst *);
+extern void dochain_lashes(struct monst *);
 extern void dotailslap(struct monst *);
 extern void dovines(struct monst *);
 extern void dostarblades(struct monst *);
 extern void dostorm(struct monst *);
 extern void donachash(struct monst *);
+extern void incarnator_spawn(xchar, xchar, boolean);
 
 /* ### apply.c ### */
 
@@ -75,6 +79,7 @@ extern boolean parasite_ok(void);
 extern int defile_count(void);
 extern int preservation_count(void);
 extern int vampire_count(void);
+extern int rot_count(void);
 extern boolean defile_ok(void);
 extern boolean impurity_ok(void);
 extern boolean research_incomplete(void);
@@ -206,9 +211,12 @@ extern int merc_weapon_damage_slice(struct obj *, struct monst *, int);
 extern int infinity_s_mirrored_arc_litness(struct obj *);
 extern int merge_skies(struct obj **);
 extern void do_your_auras(void);
+extern int throweffect(void);
 
 /* ### astar.c ### */
+
 extern boolean path_exists(int, int, int, int, long, int);
+
 /* ### attrib.c ### */
 
 extern boolean adjattrib(int,int,int);
@@ -235,8 +243,9 @@ extern double conplus(int);
 extern void change_usanity(int, boolean);
 extern void change_uinsight(int);
 extern boolean check_insight(void);
-extern int roll_generic_madness(int);
-extern int roll_generic_flat_madness(int);
+extern int roll_impurity(boolean);
+extern int roll_generic_madness(boolean);
+extern int roll_generic_flat_madness(boolean);
 extern int count_madnesses(void);
 extern int roll_madness(long long int);
 extern int mad_turn(long long int);
@@ -1156,6 +1165,7 @@ extern char *strstri(const char *,const char *);
 extern char *strsubst(char *bp, const char *orig, const char *replacement);
 extern boolean fuzzymatch(const char *,const char *,const char *,boolean);
 extern void setrandom(void);
+extern struct tm * getlt(void);
 extern int getyear(void);
 #if 0
 extern char *yymmdd(time_t);
@@ -1206,7 +1216,8 @@ extern boolean have_lizard(void);
 extern struct obj *o_on(unsigned int,struct obj *);
 extern boolean obj_here(struct obj *,int,int);
 extern boolean wearing_armor(void);
-extern boolean is_worn(struct obj *);
+extern boolean is_worn_no_flags(struct obj *);
+extern boolean is_worn(struct obj *, int);
 extern struct obj *g_at(int,int);
 extern struct obj *mkgoldobj(long);
 extern struct obj *getobj(const char *,const char *);
@@ -1345,7 +1356,7 @@ extern struct permonst *grow_up(struct monst *,struct monst *);
 extern struct obj * mongets(struct monst *,int,int);
 extern void m_initthrow(struct monst *, int, int, int);
 extern int golemhp(int);
-extern boolean peace_minded(struct permonst *);
+extern boolean peace_minded(struct monst *);
 extern void set_malign(struct monst *);
 extern void set_mimic_sym(struct monst *);
 extern void set_curhouse(int);
@@ -1492,7 +1503,7 @@ extern struct obj *mksobj_at(int,int,int,int);
 extern struct obj *mkobj(char,int);
 extern int rndmonnum(void);
 extern struct obj *splitobj(struct obj *,long);
-extern struct obj *duplicate_obj(struct obj *);
+extern struct obj *duplicate_obj(struct obj *, boolean);
 extern void replace_object(struct obj *,struct obj *);
 extern void bill_dummy_object(struct obj *);
 extern struct obj *mksobj(int,int);
@@ -1799,6 +1810,8 @@ extern void add_byakhee_to_obj(struct obj *);
 extern boolean likes_obj(struct monst *, struct obj *);
 extern boolean can_equip(struct monst *, struct obj *);
 extern void phantom_scorpions_sting(struct monst *);
+extern void rot_caterpillars_bite(struct monst *);
+extern void orc_mud_stabs(struct monst *);
 
 /* ### monst.c ### */
 
@@ -1983,6 +1996,7 @@ extern char *mshot_xname(struct obj *);
 extern boolean the_unique_obj(struct obj *obj);
 extern char *doname(struct obj *);
 extern char *doname_with_price(struct obj *);
+extern boolean not_fully_identified_dummy_flags(struct obj *, int);
 extern boolean not_fully_identified(struct obj *);
 extern char *corpse_xname(struct obj *,boolean);
 extern char *cxname(struct obj *);
@@ -2072,14 +2086,15 @@ extern int collect_obj_classes(char *,struct obj *,boolean,boolean (*)(struct ob
 extern int collect_obj_classes(char *,struct obj *,boolean,boolean,boolean (*)(struct obj *), int *);
 #endif
 extern void add_valid_menu_class(int);
-extern boolean allow_all(struct obj *);
-extern boolean allow_category(struct obj *);
-extern boolean is_worn_by_type(struct obj *);
+extern boolean allow_all_nomods(struct obj *);
+extern boolean allow_all(struct obj *, int);
+extern boolean allow_category(struct obj *, int);
+extern boolean is_worn_by_type(struct obj *, int);
 extern int pickup(int);
 extern int pickup_object(struct obj *, long, boolean);
 extern int query_category(const char *, struct obj *, int,
 				menu_item **, int);
-extern int query_objlist(const char *, struct obj *, int, menu_item **, int, boolean (*)(struct obj *));
+extern int query_objlist(const char *, struct obj *, int, menu_item **, int, boolean (*)(struct obj *, int));
 extern struct obj *pick_obj(struct obj *);
 extern int encumber_msg(void);
 extern int doloot(void);
@@ -2190,6 +2205,7 @@ extern int dosacrifice(void);
 extern void at_your_feet(const char *);
 extern boolean can_pray(boolean);
 extern int dopray(void);
+extern int turn_level(struct monst *);
 extern const char *u_gname(void);
 extern int doturn(void);
 extern int mon_doturn(struct monst *);
@@ -2365,6 +2381,9 @@ extern NhRegion* create_generic_cloud(xchar, xchar, int, struct region_arg *, bo
 extern NhRegion* create_gas_cloud(xchar, xchar, int, int, boolean);
 extern NhRegion* create_fog_cloud(xchar, xchar, int, int, boolean);
 extern NhRegion* create_dust_cloud(xchar, xchar, int, int);
+
+/* ### research.c ### */
+extern int doupgradeability(void);
 
 /* ### restore.c ### */
 
@@ -2852,6 +2871,7 @@ extern int dodeepswim(void);
 extern void drain_en(int);
 extern int dountrap(void);
 extern void remove_trap_ammo(struct trap *);
+extern void obj_extract_self_from_trap(struct obj *);
 extern int you_remove_jrt_fang(struct monst *, struct obj *);
 extern int untrap(struct obj *);
 extern boolean chest_trap(struct obj *,int,boolean);
@@ -3157,7 +3177,7 @@ extern int xdamagey(struct monst *, struct monst *, struct attack *, int);
 extern int xstoney(struct monst *, struct monst *);
 extern int xmeleehurty(struct monst *, struct monst *, struct attack *, struct attack *, struct obj **, boolean, int, int, int, boolean);
 extern int xmeleehurty_core(struct monst *, struct monst *, struct attack *, struct attack *, struct obj **, boolean, int, int, int, boolean, unsigned long);
-extern void getgazeinfo(int, int, struct permonst *, struct monst *, struct monst *, boolean *, boolean *, boolean *);
+extern void getgazeinfo(int, int, struct permonst *, struct monst *, struct monst *, boolean *, boolean *, boolean *, boolean *);
 extern int xgazey(struct monst *, struct monst *, struct attack *, int);
 extern int xengulfhity(struct monst *, struct monst *, struct attack *, int);
 extern int xengulfhurty(struct monst *, struct monst *, struct attack *, int);
@@ -3281,6 +3301,7 @@ extern boolean break_statue(struct obj *);
 extern void break_crate(struct obj *);
 extern void separate_mass_of_stuff(struct obj *, boolean);
 extern int resist(struct monst *,char,int,int);
+extern int mm_resist(struct monst *,struct monst *,int,int);
 extern boolean makewish(int);
 extern void costly_cancel(struct obj *);
 extern void revive_egg(struct obj *);

@@ -79,7 +79,10 @@
 #define SUBOUT_SALA1	20	/* Sala tuch attack */
 #define SUBOUT_SALA2	21	/* Sala hug attack */
 #define SUBOUT_OCT	22	/* Octopode tentacle attack */
-#define MAX_SUBOUT		23
-#define SUBOUT_ARRAY_SIZE ((MAX_SUBOUT-1)/32+1)
+#define SUBOUT_ROT_SPORES	23	/* Pasive spore attack */
+#define SUBOUT_ROT_VOMIT	24	/* Vomit rot */
+#define SUBOUT_ROT_STING	25	/* Rot stinger */
+#define MAX_SUBOUT		26
+#define SUBOUT_ARRAY_SIZE (MAX_SUBOUT/16+1)
 
 #endif

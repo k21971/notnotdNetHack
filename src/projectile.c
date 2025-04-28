@@ -248,7 +248,7 @@ projectile(
 	/* player exercises STR just be throwing heavy things */
 	if (youagr && !launcher && !(hmoncode & HMON_KICKED) && (
 		is_boulder(thrownobj) ||
-		thrownobj->otyp == HEAVY_IRON_BALL
+		thrownobj->otyp == BALL
 		))
 	{
 		exercise(A_STR, TRUE);
@@ -503,7 +503,7 @@ projectile(
 		}
 
 		/* limit range of iron balls so hero won't make an invalid move */
-		if (range > 0 && thrownobj && thrownobj->otyp == HEAVY_IRON_BALL) {
+		if (range > 0 && thrownobj && thrownobj->otyp == BALL) {
 			struct obj *bobj;
 			struct trap *t;
 			if ((bobj = boulder_at(bhitpos.x, bhitpos.y)) != 0) {
@@ -1977,7 +1977,7 @@ calc_multishot(struct monst *magr, struct obj *ammo, struct obj *launcher, int s
 		int magr_wepskill;
 		if (youagr)
 			magr_wepskill = P_SKILL(weapon_type((launcher && launcher->oartifact != ART_PEN_OF_THE_VOID) ? launcher : ammo));
-		else if(magr->mformication || magr->mscorpions)
+		else if(magr->mformication || magr->mscorpions || magr->mcaterpillars)
 			magr_wepskill = P_UNSKILLED;
 		else
 			magr_wepskill = m_martial_skill(magr->data);
@@ -2168,7 +2168,7 @@ calc_range(struct monst *magr, struct obj *ammo, struct obj *launcher, int *hurt
 		* than 1, so the effects from throwing attached balls are
 		* actually possible
 		*/
-		if (ammo->otyp == HEAVY_IRON_BALL)
+		if (ammo->otyp == BALL)
 			range = urange - (heaviness / 100);
 		else
 			range = urange - (heaviness / 40);
@@ -3450,7 +3450,7 @@ xfirey(		/* monster fires arrows at you */
 		ammo_type = SILVER_ARROW;
 		break;
 	case AD_BALL:
-		ammo_type = HEAVY_IRON_BALL;
+		ammo_type = BALL;
 		qvr = mksobj(ammo_type, MKOBJ_NOINIT);
 		rngmod = 8;
 		break;
@@ -3481,7 +3481,7 @@ xfirey(		/* monster fires arrows at you */
 		rngmod = 8;
 		break;
 	case AD_VBLD:
-		ammo_type = HEAVY_IRON_BALL;
+		ammo_type = BALL;
 		qvr = mksobj(ammo_type, MKOBJ_NOINIT);
 		rngmod = 8;
 		volley = TRUE;

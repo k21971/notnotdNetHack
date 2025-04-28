@@ -651,14 +651,14 @@ static struct trobj UndeadHunter[] = {
 #define U_SMITH_HAMMER	2
 	{ SMITHING_HAMMER, 0, WEAPON_CLASS, 1, 0 },
 #define U_JACKET		3
-	{ JACKET, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
+	{ JACKET, 0, ARMOR_CLASS, 1, 0 },
 #define U_SHIRT			4
-	{ RUFFLED_SHIRT, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
+	{ RUFFLED_SHIRT, 0, ARMOR_CLASS, 1, 0 },
 #define U_HAT			5
-	{ FEDORA, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
-	{ CLOAK, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
-	{ GLOVES, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
-	{ HIGH_BOOTS, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
+	{ TRICORN, 0, ARMOR_CLASS, 1, 0 },
+	{ CAPELET, 0, ARMOR_CLASS, 1, 0 },
+	{ GLOVES, 0, ARMOR_CLASS, 1, 0 },
+	{ HIGH_BOOTS, 0, ARMOR_CLASS, 1, 0 },
 #define U_BULLETS		9
 	{ BLOOD_BULLET, 0, WEAPON_CLASS, 20, 0 },
 	{ NIGHTMARE_S_BULLET_MOLD, 0, TOOL_CLASS, 1, 0 },
@@ -1300,6 +1300,13 @@ static const struct def_skill Skill_Orc_Brd[] = {
     { P_NONE, 0 }
 };
 
+static const struct def_skill Skill_Elf_Brd[] = {
+    { P_DAGGER, P_EXPERT },
+    { P_BROAD_SWORD, P_EXPERT },
+    { P_TWO_WEAPON_COMBAT, P_EXPERT },
+    { P_NONE, 0 }
+};
+
 static const struct def_skill Skill_Drow_Unarmed[] = {
     { P_BARE_HANDED_COMBAT, P_GRAND_MASTER },
     { P_NONE, 0 }
@@ -1826,6 +1833,7 @@ u_init(void)
 	u.uavoid_grabattk = 0; // by default, allow grabbing attacks
 	u.uavoid_englattk = 0; // by default, allow engulfing attacks
 	u.uavoid_unsafetouch = 1; // avoid touching potentally unsafe monsters by default
+	u.uavoid_theft = 0; // by default, allow theft attacks
 	u.umystic = ~0; //By default, all monk style attacks are active
 
 	u.summonMonster = FALSE;
@@ -2375,6 +2383,7 @@ u_init(void)
 		godlist[urole.lgod].anger = 1;
 		godlist[urole.ngod].anger = 1;
 		godlist[urole.cgod].anger = 1;
+		godlist[urole.vgod].anger = 0;
 		u.usanity = 75; /* Your sanity is not so hot */
 		u.umadness |= MAD_DELUSIONS; /* Your sanity is not so hot */
 		u.udrunken = 30; /* Your sanity is not so hot (and you may have once been more powerful) */
@@ -2630,6 +2639,7 @@ u_init(void)
 			switch(rn2(5)){
 			case 0:
 				//UndeadHunter[U_WEAPON].trotyp = CANE;
+				UndeadHunter[U_HAT].trotyp = flags.female ? (rn2(2) ? ESCOFFION : HENNIN) : TOP_HAT;
 			break;
 			case 1:
 				UndeadHunter[U_WEAPON].trotyp = SOLDIER_S_RAPIER;
@@ -2778,7 +2788,10 @@ u_init(void)
 		ini_inv(Instrument);
 	    }
 
-		if(!Role_if(PM_BARD)) skill_add(Skill_Elf_Music);
+		if(Role_if(PM_BARD)){
+			skill_add(Skill_Elf_Brd);
+		}
+		else skill_add(Skill_Elf_Music);
 		if(Role_if(PM_ANACHRONONAUT)){
 			u.umartial = TRUE;
 			HTelepat |= FROMOUTSIDE;
@@ -2986,6 +2999,12 @@ u_init(void)
     break;
 	case PM_VAMPIRE:
 	    /* Vampires start off with gods not as pleased, luck penalty */
+		if(!Role_if(PM_EXILE) && (u.ualign.type == godlist[urole.vgod].alignment || godlist[urole.vgod].alignment == A_NONE)){
+			u.ualign.god = u.ugodbase[UGOD_CURRENT] = u.ugodbase[UGOD_ORIGINAL] = urole.vgod;
+			if(godlist[urole.vgod].alignment == A_NONE){
+				flags.initalign = 3;
+			}
+		}
 	    knows_object(POT_BLOOD);
 	    adjalign(-5);
 		u.ualign.sins += 5;
@@ -3332,6 +3351,19 @@ ini_inv(register struct trobj *trop)
 				obj->corpsenm = PM_ETHEREALOID;
 			if(obj->otyp == HEAVY_MACHINE_GUN && Role_if(PM_ANACHRONONAUT) && Race_if(PM_DWARF)){
 				set_material_gm(obj, MITHRIL);
+			}
+			if(Role_if(PM_UNDEAD_HUNTER)){
+				if(Race_if(PM_VAMPIRE) && obj->otyp != HIGH_BOOTS){
+					if(obj->obj_material == LEATHER || obj->otyp == TRICORN){
+						set_material_gm(obj, CLOTH);
+						if(obj->otyp == GLOVES)
+							obj->obj_color = CLR_RED;
+						else
+							obj->obj_color = CLR_BLACK;
+					}
+				}
+				else if(obj->otyp == TRICORN)
+					set_material_gm(obj, LEATHER);
 			}
 			if(obj->otyp == RIFLE && Role_if(PM_ANACHRONONAUT) && Race_if(PM_DWARF)){
 				set_material_gm(obj, MITHRIL);

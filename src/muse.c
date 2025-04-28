@@ -249,8 +249,12 @@ find_defensive(struct monst *mtmp)
 	struct trap *t;
 	int x=mtmp->mx, y=mtmp->my;
 	boolean stuck = (mtmp == u.ustuck);
-	boolean immobile = (mtmp->data->mmove == 0);
+	boolean immobile = (mtmp->data->mmove == 0) || stationary_mon(mtmp);
 	int fraction;
+	boolean nomouth = nomouth(mtmp->mtyp)
+			|| ((mtmp->misc_worn_check & W_ARMH) && which_armor(mtmp, W_ARMH) && FacelessHelm(which_armor(mtmp, W_ARMH)))
+			|| ((mtmp->misc_worn_check & W_ARMC) && which_armor(mtmp, W_ARMC)
+				&& FacelessCloak(which_armor(mtmp, W_ARMC)));
 
 	if (is_animal(mtmp->data) && mindless_muse_mon(mtmp))
 		return FALSE;
@@ -300,7 +304,7 @@ find_defensive(struct monst *mtmp)
 	 * These would be hard to combine because of the control flow.
 	 * Pestilence won't use healing even when blind.
 	 */
-	if (!mtmp->mcansee && !nohands(mtmp->data) &&
+	if (!mtmp->mcansee && !nohands(mtmp->data) && !nomouth &&
 		mtmp->mtyp != PM_PESTILENCE) {
 	    if ((obj = m_carrying(mtmp, POT_FULL_HEALING)) != 0) {
 		m.defensive = obj;
@@ -346,7 +350,7 @@ find_defensive(struct monst *mtmp)
 		}
 	}
 	if(mtmp->mhp >= mtmp->mhpmax
-		|| (mtmp->mhp >= 10 && mtmp->mhp*fraction >= mtmp->mhpmax)
+		|| (mtmp->mhp >= 10 && mtmp->mhp*fraction >= mtmp->mhpmax && !nomouth)
 	){
 		if(mtmp->mhp < mtmp->mhpmax*9/10 && has_sunflask(mtmp->mtyp) && mtmp->mvar_flask_charges > 3 && mtmp->mvar_flask_charges == MAX_FLASK_CHARGES(mtmp)){
 			m.has_defense = MUSE_LIFE_FLASK;
@@ -356,22 +360,22 @@ find_defensive(struct monst *mtmp)
 	}
 
 	if (mtmp->mpeaceful) {
-	    if (!nohands(mtmp->data)) {
+	    if (!nohands(mtmp->data) && !nomouth) {
 		if ((obj = m_carrying(mtmp, POT_FULL_HEALING)) != 0) {
 		    m.defensive = obj;
 		    m.has_defense = MUSE_POT_FULL_HEALING;
 		    return TRUE;
 		}
-		if(has_sunflask(mtmp->mtyp) && mtmp->mvar_flask_charges > 0){
+		if(has_sunflask(mtmp->mtyp) && mtmp->mvar_flask_charges > 0 && !nomouth){
 			m.has_defense = MUSE_LIFE_FLASK;
 		    return TRUE;
 		}
-		if ((obj = m_carrying(mtmp, POT_EXTRA_HEALING)) != 0) {
+		if ((obj = m_carrying(mtmp, POT_EXTRA_HEALING)) != 0 && !nomouth) {
 		    m.defensive = obj;
 		    m.has_defense = MUSE_POT_EXTRA_HEALING;
 		    return TRUE;
 		}
-		if ((obj = m_carrying(mtmp, POT_HEALING)) != 0) {
+		if ((obj = m_carrying(mtmp, POT_HEALING)) != 0 && !nomouth) {
 		    m.defensive = obj;
 		    m.has_defense = MUSE_POT_HEALING;
 		    return TRUE;
@@ -589,7 +593,7 @@ use_defensive(struct monst *mtmp)
 		    if (otmp)
 				pline("%s %s a unicorn horn!", Monnam(mtmp), is_weeping(mtmp->data) ? "is using" : "uses");
 		    else if(mtmp->mtyp == PM_ITINERANT_PRIESTESS && !straitjacketed_mon(mtmp)){
-				if(u.uinsight < 40){
+				if(Insight < 40){
 					pline("A glow issues from somewhere around %s torso, but trying to see the exact source gives you a %sache!", s_suffix(mon_nam(mtmp)), body_part(HEAD));
 				}
 				else {
@@ -1597,7 +1601,7 @@ use_offensive(struct monst *mtmp)
 					 mtmp->mtyp == PM_MIGO_PHILOSOPHER ? 2 :
 					 mtmp->mtyp == PM_MIGO_SOLDIER ? 1 : 0);
 		cloud_data.adtyp = AD_COLD;
-		(void) create_generic_cloud(u.ux, u.uy, 4+bcsign(otmp), &cloud_data, TRUE);
+		(void) create_generic_cloud(mtmp->mx+tbx, mtmp->my+tby, 4+bcsign(otmp), &cloud_data, TRUE);
 		if (cansee(mtmp->mx, mtmp->my))
 			You("see whirling snow swirl out from around %s %s.",
 			    s_suffix(mon_nam(mtmp)), xname(otmp));
@@ -2049,7 +2053,7 @@ find_misc(struct monst *mtmp)
 	int x = mtmp->mx, y = mtmp->my;
 	struct trap *t;
 	int xx, yy;
-	boolean immobile = (mdat->mmove == 0);
+	boolean immobile = (mdat->mmove == 0) || stationary_mon(mtmp);
 	boolean stuck = (mtmp == u.ustuck);
 	boolean nomouth = nomouth(mtmp->mtyp)
 			|| ((mtmp->misc_worn_check & W_ARMH) && which_armor(mtmp, W_ARMH) && FacelessHelm(which_armor(mtmp, W_ARMH)))
@@ -2453,6 +2457,7 @@ museamnesia:
 			mtmp->mformication = 0;
 			mtmp->mscorpions = 0;
 			mtmp->mvermin = 0;
+			mtmp->mcaterpillars = 0;
 		} else {
 			if (vismon) pline("%s looks angry and confused!", Monnam(mtmp));
 			untame(mtmp, 0);
@@ -2512,7 +2517,7 @@ museamnesia:
 		    if (vismon){
 				pline("%s flicks a whip towards your %s!", Monnam(mtmp), hand);
 			}
-		    if (obj->otyp == HEAVY_IRON_BALL) {
+		    if (obj->otyp == BALL) {
 				pline("%s fails to wrap around %s.", The_whip, the_weapon);
 				return 1;
 		    }

@@ -967,6 +967,14 @@ add_properties_words(struct obj *obj, char *buf, boolean dofull)
 			Strcat(buf, "wool-lined ");
 	}
 	
+	if((obj == uwep || obj == uswapwep)
+		&& CHECK_ETRAIT(obj, &youmonst, ETRAIT_BLADESONG)
+		&& ((u.bladesong + (Race_if(PM_ELF) ? 3 : 0)) >= monstermoves)
+	){
+		Strcat(buf, "chiming ");
+		return;
+	}
+
 	if(obj->oartifact && get_artifact(obj)->inv_prop == RINGED_SPEAR){
 		if (artinstance[obj->oartifact].RRSember >= moves)
 			Strcat(buf, "molten ");
@@ -980,16 +988,16 @@ add_properties_words(struct obj *obj, char *buf, boolean dofull)
 	}
 	
 	if (!check_oprop(obj, OPROP_NONE) && (obj->oartifact == 0 || dofull)){
-		if (check_oprop(obj, OPROP_ASECW) && (obj->known || u.uinsight >= 10) && !(obj->opoisoned&OPOISON_ACID))
-			u.uinsight < 10 ? Strcat(buf, "self-acidifying ") : Strcat(buf, "acid-secreting ");
-		if (check_oprop(obj, OPROP_PSECW) && (obj->known || u.uinsight >= 10) && !(obj->opoisoned&OPOISON_BASIC))
-			u.uinsight < 10 ? Strcat(buf, "self-poisoning ") : Strcat(buf, "poison-secreting ");
-		if (check_oprop(obj, OPROP_GRES) && (obj->known || u.uinsight >= 10) && !(obj->greased))
-			u.uinsight < 10 ? Strcat(buf, "self-greasing ") : Strcat(buf, "grease-secreting ");
-		if (check_oprop(obj, OPROP_HEAL) && (obj->known || u.uinsight >= 21))
-			u.uinsight < 21 ? Strcat(buf, "healing ") : check_oprop(obj, OPROP_UNHY) ? Strcat(buf, "angel-imprisoning ") : Strcat(buf, "angel-haunted ");
-		if (check_oprop(obj, OPROP_RETRW) && (obj->known || u.uinsight >= 10))
-			u.uinsight < 10 ? Strcat(buf, "returning ") : Strcat(buf, "loyal ");
+		if (check_oprop(obj, OPROP_ASECW) && (obj->known || Insight >= 10) && !(obj->opoisoned&OPOISON_ACID))
+			Insight < 10 ? Strcat(buf, "self-acidifying ") : Strcat(buf, "acid-secreting ");
+		if (check_oprop(obj, OPROP_PSECW) && (obj->known || Insight >= 10) && !(obj->opoisoned&OPOISON_BASIC))
+			Insight < 10 ? Strcat(buf, "self-poisoning ") : Strcat(buf, "poison-secreting ");
+		if (check_oprop(obj, OPROP_GRES) && (obj->known || Insight >= 10) && !(obj->greased))
+			Insight < 10 ? Strcat(buf, "self-greasing ") : Strcat(buf, "grease-secreting ");
+		if (check_oprop(obj, OPROP_HEAL) && (obj->known || Insight >= 21))
+			Insight < 21 ? Strcat(buf, "healing ") : check_oprop(obj, OPROP_UNHY) ? Strcat(buf, "angel-imprisoning ") : Strcat(buf, "angel-haunted ");
+		if (check_oprop(obj, OPROP_RETRW) && (obj->known || Insight >= 10))
+			Insight < 10 ? Strcat(buf, "returning ") : Strcat(buf, "loyal ");
 		
 		if(check_oprop(obj, OPROP_OCLTW) && obj->known)
 			Strcat(buf, "occult ");
@@ -1056,7 +1064,7 @@ add_properties_words(struct obj *obj, char *buf, boolean dofull)
 			Strcat(buf, "wrathful ");
 		
 		if (check_oprop(obj, OPROP_ELFLW))
-			Strcat(buf, u.uinsight >= 33 ? "radiant " : u.uinsight >= 11 ? "incandescent " : "luminous ");
+			Strcat(buf, Insight >= 33 ? "radiant " : Insight >= 11 ? "incandescent " : "luminous ");
 
 		if (check_oprop(obj, OPROP_WATRW))
 			Strcat(buf, "misty ");
@@ -1157,11 +1165,11 @@ add_properties_words(struct obj *obj, char *buf, boolean dofull)
 		if (check_oprop(obj, OPROP_LESSER_FLAYW) && obj->known)
 			Strcat(buf, "excoriating ");
 		
-		if (check_oprop(obj, OPROP_LIVEW) && u.uinsight >= 40)
+		if (check_oprop(obj, OPROP_LIVEW) && Insight >= 40)
 			Strcat(buf, "living ");
 		
 		if (check_oprop(obj, OPROP_GSSDW))
-			Strcat(buf, u.uinsight >= 50 ? "rushing " : u.uinsight >= 25 ? "flowing " : u.uinsight > 0 ? "rippling " : "");
+			Strcat(buf, Insight >= 50 ? "rushing " : Insight >= 25 ? "flowing " : Insight > 0 ? "rippling " : "");
 
 		if (check_oprop(obj, OPROP_BRIL) && !obj->known)
 			Strcat(buf, "ornate ");
@@ -1388,29 +1396,29 @@ add_insight_words(struct obj *obj, char *buf)
 			Strcat(buf, "budding ");
 	}
 	if (rakuyo_prop(obj)){
-		if(u.uinsight >= 40)
+		if(Insight >= 40)
 			Strcat(buf, "burning ");
-		if(u.uinsight >= 20)
+		if(Insight >= 20)
 			Strcat(buf, "blood-drenched ");
 	}
 	if (obj->otyp == ISAMUSEI){
-		if(u.uinsight >= 70)
+		if(Insight >= 70)
 			Strcat(buf, "circular ");
-		else if(u.uinsight >= 57)
+		else if(Insight >= 57)
 			Strcat(buf, "tredecile ");
-		else if(u.uinsight >= 45)
+		else if(Insight >= 45)
 			Strcat(buf, "crossed ");
-		else if(u.uinsight >= 22)
+		else if(Insight >= 22)
 			Strcat(buf, "reflected ");
 	}
 	if (obj->otyp == CLUB && check_oprop(obj, OPROP_CCLAW)){
-		if(u.uinsight >= 30)
+		if(Insight >= 30)
 			Strcat(buf, "thrashing ");
-		else if(u.uinsight >= 15)
+		else if(Insight >= 15)
 			Strcat(buf, "severed ");
 	}
 	if (obj->otyp == DISKOS){
-		if(u.uinsight >= 15){
+		if(Insight >= 15){
 			if(obj->where == OBJ_INVENT)
 				Strcat(buf, u.ualign.record < -3 ? "shadow-wrapped " : u.ualign.record > 3 ? "light-wrapped " : "energy-wrapped ");
 			else if(obj->where == OBJ_MINVENT)
@@ -1418,14 +1426,14 @@ add_insight_words(struct obj *obj, char *buf)
 			else
 				Strcat(buf, "energy-wrapped ");
 		}
-		else if(u.uinsight >= 5)
+		else if(Insight >= 5)
 			Strcat(buf, "spinning ");
 	}
 	if (mercy_blade_prop(obj)){
 		//Note: Brain fluid
-		if(u.uinsight >= 50)
+		if(Insight >= 50)
 			Strcat(buf, "sticky ");
-		if(u.uinsight >= 25)
+		if(Insight >= 25)
 			Strcat(buf, "sidereal ");
 		else if(!u.veil)
 			Strcat(buf, "twinkling ");
@@ -1717,12 +1725,20 @@ default_material_name(int material, boolean adjective)
 static void
 add_material_words(struct obj *obj, char *buf)
 {
+	if (obj->otyp == BALL && (obj->owt > objects[BALL].oc_weight)) {
+		Strcat(buf, "very ");
+	}
+	if(obj->otyp == BALL){
+		Strcat(buf, "heavy ");
+	}
 	/*To avoid an if statement with a massive condition, detect cases where the material should NOT be printed, and return out*/
 	/*Materials don't matter for lit lightsabers, and they should be described in terms of color*/
 	if(is_lightsaber(obj) && litsaber(obj))
 		return;
 	/* gold pieces should not have their material described, it's in their name */
 	if(obj->otyp == GOLD_PIECE)
+		return;
+	if(obj->otyp == CRYSTAL && obj->obj_material == FLESH)
 		return;
 	if (obj->oartifact && !iflags.artifact_descriptors && !undiscovered_artifact(obj->oartifact) && artilist[obj->oartifact].material != MT_DEFAULT){
 		/*Known artifact is made from the artifact's expected material */
@@ -1739,7 +1755,7 @@ add_material_words(struct obj *obj, char *buf)
 		if (obj->otyp == find_gcirclet())
 			goto force_add_material_name;
 		/*Item is made from standard material, and isn't of a type for which the material is always shown*/
-		if(objects[obj->otyp].oc_name_known && (!(objects[obj->otyp].oc_showmat&IDED) || (obj->otyp == TOOTH && u.uinsight >= 20)) && obj->obj_material == objects[obj->otyp].oc_material)
+		if(objects[obj->otyp].oc_name_known && (!(objects[obj->otyp].oc_showmat&IDED) || (obj->otyp == TOOTH && Insight >= 20)) && obj->obj_material == objects[obj->otyp].oc_material)
 			return;
 		/*Unknown item is made from standard material, and isn't of a type for which the material is always shown*/
 		if(!objects[obj->otyp].oc_name_known && !(objects[obj->otyp].oc_showmat&UNIDED) && obj->obj_material == objects[obj->otyp].oc_material)
@@ -1797,7 +1813,7 @@ static void
 add_otyp_words(struct obj *obj, char *buf)
 {
 	if (obj->otyp == TOOTH && objects[obj->otyp].oc_name_known){
-		if(u.uinsight >= 20){
+		if(Insight >= 20){
 			switch (obj->ovar1_tooth_type){
 			case SERPENT_TOOTH:  Strcat(buf, "world-serpent ");  break;
 			case MAGMA_TOOTH: Strcat(buf, "primordial dragon "); break;
@@ -1840,36 +1856,47 @@ doxname(struct obj *obj, boolean dofull, boolean ignore_oquan, boolean with_pric
 		actualn = Alternate_item_name(typ, Pirate_items);
 
 	if(obj->otyp == CLUB && check_oprop(obj, OPROP_CCLAW)){
-		if(u.uinsight >= 15)
+		if(Insight >= 15)
 			actualn = "arm";
 	}
-	if(obj->otyp == CRYSTAL && obj->obj_material == HEMARGYOS){
-		if(obj->spe == 1)
-			actualn = "columnar crystal rod";
-		else if(obj->spe == 2)
-			actualn = "twin-columnar crystal";
-		else if(obj->spe == 3)
-			actualn = "columnar chunk";
-		else if(obj->spe == 4)
-			actualn = "columnar mass";
-	}
-	if(obj->otyp == CRYSTAL
-		&& obj->obj_material == CHITIN
-		&& check_oprop(obj, OPROP_GOATW)
-	){
-		actualn = "misty seed";
-	}
-	if(obj->otyp == CRYSTAL
-		&& obj->obj_material == SILVER
-		&& check_oprop(obj, OPROP_SFLMW)
-	){
-		actualn = "mirror shard";
-	}
-	if(obj->otyp == CRYSTAL
-		&& obj->obj_material == FIRMAMENT
-		&& check_oprop(obj, OPROP_SOTHW)
-	){
-		actualn = "sky fragment";
+	if(obj->otyp == CRYSTAL){
+		if(obj->obj_material == HEMARGYOS){
+			if(obj->spe == 1)
+				actualn = "columnar crystal rod";
+			else if(obj->spe == 2)
+				actualn = "twin-columnar crystal";
+			else if(obj->spe == 3)
+				actualn = "columnar chunk";
+			else if(obj->spe == 4)
+				actualn = "columnar mass";
+		}
+		else if(obj->obj_material == CHITIN
+			&& check_oprop(obj, OPROP_GOATW)
+		){
+			actualn = "misty seed";
+		}
+		else if(obj->obj_material == SILVER
+			&& check_oprop(obj, OPROP_SFLMW)
+		){
+			actualn = "mirror shard";
+		}
+		else if(obj->obj_material == FIRMAMENT
+			&& check_oprop(obj, OPROP_SOTHW)
+		){
+			actualn = "sky fragment";
+		}
+		else if(obj->obj_material == FLESH){
+			const char *butterflies[] = {
+				"novel Hedylidae crysalis",
+				"novel Hesperiidae crysalis",
+				"novel Lycaenidae crysalis",
+				"novel Nymphalidae crysalis",
+				"novel Papilionidae crysalis",
+				"novel Pieridae crysalis",
+				"novel Riodinidae crysalis",
+			};
+			actualn = butterflies[obj->spe];
+		}
 	}
 	
 	buf[0] = '\0';
@@ -2052,9 +2079,6 @@ doxname(struct obj *obj, boolean dofull, boolean ignore_oquan, boolean with_pric
 				}
 				Strcat(buf, OBJ_NAME(objects[ptyp]));
 				Strcat(buf, " ");
-			}
-			if (obj->oclass == BALL_CLASS && (obj->owt > ocl->oc_weight)) {
-				Strcat(buf, "very ");
 			}
 			if (typ == STATUE) {
 				if (Role_if(PM_ARCHEOLOGIST) && (obj->spe & STATUE_HISTORIC))
@@ -2657,9 +2681,15 @@ doname_with_price(register struct obj *obj)
 
 
 
+boolean
+not_fully_identified_dummy_flags(struct obj *otmp, int qflags)
+{
+	return not_fully_identified(otmp);
+}
+
 /* used from invent.c */
 boolean
-not_fully_identified(register struct obj *otmp)
+not_fully_identified(struct obj *otmp)
 {
 #ifdef GOLDOBJ
     /* gold doesn't have any interesting attributes [yet?] */
@@ -3763,7 +3793,7 @@ struct alt_spellings {
 	{ "orichalcum gauntlets", ORIHALCYON_GAUNTLETS },
 	{ "chain", CHAIN },
 	{ "iron chain", CHAIN },
-	{ "iron ball", HEAVY_IRON_BALL },
+	{ "iron ball", BALL },
 	{ "mattock", DWARVISH_MATTOCK },
 	{ "amulet of poison resistance", AMULET_VERSUS_POISON },
 	{ "amulet of curse resistance", AMULET_VERSUS_CURSES },
@@ -4003,6 +4033,12 @@ readobjnam(register char *bp, int *wishreturn, int wishflags)
 		return mkcolumnarcrystal(3);
 	if(!strcmpi(bp, "columnar mass"))
 		return mkcolumnarcrystal(4);
+	if(!strcmpi(bp, "crysalis")){
+		struct obj *crys = mksobj(CRYSTAL, NO_MKOBJ_FLAGS);
+		set_material_gm(crys, FLESH);
+		crys->spe = rn2(7);
+		return crys;
+	}
 
 	for(;;) {
 		register int l;
@@ -5654,7 +5690,7 @@ typfnd:
 			/* Fall through */
 		case SKELETON_KEY: case UNIVERSAL_KEY: case CHEST: case BOX:
 		case SARCOPHAGUS:
-		case HEAVY_IRON_BALL: case CHAIN: case STATUE:
+		case BALL: case CHAIN: case STATUE:
 			/* otmp->cobj already done in mksobj() */
 				break;
 #ifdef MAIL
@@ -5995,9 +6031,9 @@ typfnd:
 		{
 			*wishreturn = (NOWISH) ? WISH_DENIED : ((NOJUICE) ? WISH_OUTOFJUICE : WISH_MERCYRULE);
 			/* wish failed */
-			artifact_exists(otmp, ONAME(otmp), FALSE);	// Is this necessary?
-			obfree(otmp, (struct obj *) 0);		// Is this necessary?
-			otmp = &zeroobj;					// Is this necessary?
+			artifact_exists(otmp, ONAME(otmp), FALSE);
+			obfree(otmp, (struct obj *) 0);
+			otmp = &zeroobj;
 			return &zeroobj;
 		}
 		else {
@@ -6082,8 +6118,8 @@ typfnd:
 			consume_oeaten(otmp, -amt);
 		}
 	}
-	otmp->owt = weight(otmp);
-	if (very && otmp->otyp == HEAVY_IRON_BALL) otmp->owt += 160;
+	fix_object(otmp);
+	if (very && otmp->otyp == BALL) otmp->owt += 160;
 
 	*wishreturn = WISH_SUCCESS;
 	return(otmp);

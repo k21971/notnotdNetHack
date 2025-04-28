@@ -393,7 +393,7 @@ boolean
 scaryItem(struct monst *mtmp)
 {
 	if (mtmp->isshk || mtmp->isgd || mtmp->iswiz || is_blind(mtmp) ||
-	    mtmp->mpeaceful || mtmp->data->mlet == S_HUMAN || 
+	    mtmp->mpeaceful || (mtmp->data->mlet == S_HUMAN && !mtmp->mtemplate) || 
 	    is_lminion(mtmp) || mtmp->mtyp == PM_ANGEL ||
 	    is_rider(mtmp->data) || mtmp->mtyp == PM_MINOTAUR)
 		return(FALSE);
@@ -413,7 +413,7 @@ scaryLol(struct monst *mtmp)
   if(u.ualign.type == A_VOID) return FALSE;
   if(LOLTH_HIGH_POWER){
 	if (mtmp->isshk || mtmp->isgd || mtmp->iswiz || is_blind(mtmp) ||
-	    mtmp->mpeaceful || mtmp->data->mlet == S_HUMAN || 
+	    mtmp->mpeaceful || (mtmp->data->mlet == S_HUMAN && !mtmp->mtemplate) || 
 	    (is_rider(mtmp->data))
 	)
 		return(FALSE);
@@ -433,7 +433,8 @@ scaryElb(struct monst *mtmp)
   if(Infuture) return FALSE;
   if(ELBERETH_HIGH_POWER){
 	if (mtmp->isshk || mtmp->isgd || mtmp->iswiz || is_blind(mtmp) ||
-	    mtmp->mpeaceful || mtmp->data->mlet == S_HUMAN || 
+	    mtmp->mpeaceful || 
+		(mtmp->data->mlet == S_HUMAN && !mtmp->mtemplate) || 
 	    is_lminion(mtmp) || mtmp->mtyp == PM_ANGEL ||
 	    (is_rider(mtmp->data) && !(mtmp->mtyp == PM_NAZGUL)) || 
 		mtmp->mtyp == PM_MINOTAUR)
@@ -448,7 +449,7 @@ scaryElb(struct monst *mtmp)
   }
   else{
 	if (mtmp->isshk || mtmp->isgd || mtmp->iswiz || is_blind(mtmp) ||
-	    mtmp->mpeaceful || mtmp->data->mlet == S_HUMAN || 
+	    mtmp->mpeaceful || (mtmp->data->mlet == S_HUMAN && !mtmp->mtemplate) || 
 	    is_lminion(mtmp) || mtmp->mtyp == PM_ANGEL ||
 	    (is_rider(mtmp->data) && !(mtmp->mtyp == PM_NAZGUL)) || 
 		mtmp->mtyp == PM_MINOTAUR)
@@ -490,8 +491,10 @@ mon_regen(struct monst *mon, boolean digest_meal)
 			mon->mhp -= rnd(6);
 			if(hates_silver(mon->data) && entangle_material(mon, SILVER))
 				mon->mhp -= rnd(20);
-			if(hates_iron(mon->data) && (entangle_material(mon, IRON) || entangle_material(mon, GREEN_STEEL)))
+			if(hates_iron(mon->data) && (entangle_material(mon, IRON) || entangle_material(mon, GREEN_STEEL))){
 				mon->mhp -= rnd(mon->m_lev);
+				mon->mironmarked = TRUE;
+			}
 			if(hates_unholy_mon(mon) && entangle_material(mon, GREEN_STEEL))
 				mon->mhp -= d(2,9);
 			beat = entangle_beatitude(mon, -1);
@@ -745,7 +748,7 @@ monflee(struct monst *mtmp, int fleetime, boolean first, boolean fleemsg)
 			mtmp->mspec_used = 10;
 			for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
 				if(tmpm != mtmp && !DEADMONSTER(tmpm)){
-					if(tmpm->mpeaceful != mtmp->mpeaceful && !resist(tmpm, 0, 0, FALSE)){
+					if(tmpm->mpeaceful != mtmp->mpeaceful && !resist(tmpm, RING_CLASS, 0, 0)){
 						tmpm->mconf = 1;
 					}
 				}
@@ -813,7 +816,7 @@ distfleeck(register struct monst *mtmp, int *inrange, int *nearby, int *scared)
 	}
 	
 	if(mtmp->mtyp == PM_DAUGHTER_OF_BEDLAM && !rn2(20)) *scared = TRUE;
-	else if(mtmp->mtyp == PM_CARCOSAN_COURTIER && *nearby && !mtmp->mflee && (u.uinsight < 25 || mtmp->m_id%2)) *scared = TRUE;
+	else if(mtmp->mtyp == PM_CARCOSAN_COURTIER && *nearby && !mtmp->mflee && (Insight < 25 || mtmp->m_id%2)) *scared = TRUE;
 	else if(*nearby && !mtmp->mflee && fleetflee(mtmp->data) && (mtmp->data->mmove > youracedata->mmove || noattacks(mtmp->data))) *scared = TRUE;
 	
 	if(*scared) {
@@ -946,8 +949,13 @@ dochug(register struct monst *mtmp)
 			makemon(&mons[PM_GNOLL], mtmp->mx, mtmp->my, NO_MINVENT|MM_ADJACENTOK|MM_ADJACENTSTRICT);
 		}
 	}
+	if(mdat->mtyp == PM_INCARNATOR_MAGGOT){
+		if(!rn2(3)){ //Twice as likely when active
+			incarnator_spawn(mtmp->mx, mtmp->my, FALSE);
+		}
+	}
 	if(mdat->mtyp == PM_FORD_GUARDIAN){
-		if(!rn2(2) && distmin(mtmp->mux, mtmp->muy, mtmp->mx, mtmp->my) < 4 && distmin(u.ux, u.uy, mtmp->mx, mtmp->my) < 4 && !(mtmp->mstrategy&STRAT_WAITFORU)){
+		if(!rn2(2) && distmin(mtmp->mux, mtmp->muy, mtmp->mx, mtmp->my) < BOLT_LIM && distmin(u.ux, u.uy, mtmp->mx, mtmp->my) < BOLT_LIM && !(mtmp->mstrategy&STRAT_WAITFORU)){
 			ford_rises(mtmp);
 		}
 	}
@@ -1014,7 +1022,7 @@ dochug(register struct monst *mtmp)
 		&& !mtmp->mtame 
 		&& !Is_astralevel(&u.uz)
 		&& (near_capacity()>UNENCUMBERED || u.ulevel < 14 || mtmp->mpeaceful) 
-		&& (near_capacity()>SLT_ENCUMBER || mtmp->mpeaceful || u.uinsight < 2 || (u.uinsight < 32 && !rn2(u.uinsight))) 
+		&& (near_capacity()>SLT_ENCUMBER || mtmp->mpeaceful || Insight < 2 || (Insight < 32 && !rn2(Insight))) 
 		&& (near_capacity()>MOD_ENCUMBER || !rn2(4))
 	){
 		int nlev;
@@ -1072,8 +1080,9 @@ dochug(register struct monst *mtmp)
 	if (mtmp->mdoubt && !rn2(300)) mtmp->mdoubt = 0;
 	if (mtmp->mwounded_legs && !rn2(60)) mtmp->mwounded_legs = 0;
 	if (mtmp->mscorpions && !rn2(20)) mtmp->mscorpions = 0;
+	if (mtmp->mcaterpillars && !rn2(20)) mtmp->mcaterpillars = 0;
 	
-	if(mtmp->msleeping && (mtmp->mformication || mtmp->mscorpions) && rn2(mtmp->m_lev)){
+	if(mtmp->msleeping && (mtmp->mformication || mtmp->mscorpions || mtmp->mcaterpillars) && rn2(mtmp->m_lev)){
 		//Awakens from the bugs. High level is good for it here.
 		mtmp->msleeping = 0;
 	}
@@ -1501,7 +1510,7 @@ dochug(register struct monst *mtmp)
 		}
 	}
 	
-	if (mtmp->mtyp == PM_ITINERANT_PRIESTESS && u.uinsight >= 40 && !straitjacketed_mon(mtmp)){
+	if (mtmp->mtyp == PM_ITINERANT_PRIESTESS && Insight >= 40 && !straitjacketed_mon(mtmp)){
 		struct monst *patient = 0;
 		int i, j, x, y, rot = rn2(3);
 		for(i = -1; i < 2; i++){
@@ -1851,9 +1860,20 @@ dochug(register struct monst *mtmp)
 				}
 			}
 			else if(mdat->mtyp == PM_FOETID_ANGEL){
-				pline("It screams %s!",
-					m_sen ? "at you through your telepathy" :
-					Blind_telepat ? "at you through your latent telepathy" : "into your mind");
+				if(m_sen || (Blind_telepat && rn2(2)) || !rn2(10)){
+					pline("It screams %s!",
+						m_sen ? "at you through your telepathy" :
+						Blind_telepat ? "at you through your latent telepathy" : "into your mind");
+					dmg = rnd(15);
+				}
+			}
+			else if(is_tettigon(mdat)){
+				if(m_sen || (Blind_telepat && rn2(2)) || !rn2(7)){
+					Your("%s fills with white sunlight!", body_part(HEAD));
+					dmg = d(3,15);
+					if(hates_holy(youracedata))
+						dmg += d(3,15);
+				}
 			}
 			else if (m_sen || (Blind_telepat && rn2(2)) || !rn2(10)) {
 				pline("It locks on to your %s!",
@@ -1872,7 +1892,24 @@ dochug(register struct monst *mtmp)
 					u.umadness |= MAD_DREAMS;
 				}
 				if(mdat->mtyp == PM_FOETID_ANGEL){
-					make_doubtful((long) u.uinsight,TRUE);
+					make_doubtful((long) Insight,TRUE);
+				}
+				if(is_tettigon(mdat)){
+					if(hates_holy(youracedata)){
+						cancel_monst(&youmonst, (struct obj	*)0, FALSE, TRUE, FALSE,0);
+						if (!Blinded) {
+							if (Hallucination)
+								pline("Oh, bummer!  Can't see!");
+							else You("are blinded!");
+							make_blinded((long)dmg, FALSE);
+							if (!Blind) Your1(vision_clears);
+						}
+						int xlev = turn_level(&youmonst);
+						if(is_undead(youracedata) && mtmp->m_lev >= xlev && rnd(u.ulevel) <= xlev && !rn2(HPanicking)){
+							You("panic!");
+							HPanicking += dmg;
+						}
+					}
 				}
 				if (mdat->mtyp == PM_ELDER_BRAIN) {
 					for (m2 = fmon; m2; m2 = nmon) {
@@ -1938,6 +1975,7 @@ dochug(register struct monst *mtmp)
 			if (m2 == mtmp) continue;
 			if (m2->mstrategy&STRAT_WAITMASK) continue;
 			if (nonthreat(m2)) continue;
+			if(is_tettigon(m2->data) && rn2(20)) continue;
 			power = 0;
 			dmg = 0;
 			if(mdat->mtyp == PM_CLAIRVOYANT_CHANGED){
@@ -1974,6 +2012,10 @@ dochug(register struct monst *mtmp)
 						dmg = d(5,15);
 					else if(mdat->mtyp == PM_ELDER_BRAIN){
 						dmg = d(3,15);
+					} else if(is_tettigon(mdat)){
+						dmg = d(3,15);
+						if(hates_holy_mon(m2))
+							dmg += d(3,15);
 					} else {
 						dmg = rnd(15);
 					}
@@ -1994,6 +2036,27 @@ dochug(register struct monst *mtmp)
 							m2->mconf=TRUE;
 						else if(mdat->mtyp == PM_FOETID_ANGEL){
 							m2->mdoubt = TRUE;
+						}
+						else if(is_tettigon(mdat)){
+							if(hates_holy_mon(m2)){
+								cancel_monst(m2, (struct obj	*)0, FALSE, TRUE, FALSE,0);
+								m2->mblinded = TRUE;
+								m2->mcansee = FALSE;
+								if (!resist(m2, WAND_CLASS, 0, TELL)) {
+									int xlev = turn_level(m2);
+									if(is_undead(m2->data)){
+										xlev = turn_level(m2);
+										if (mtmp->m_lev >= xlev && !resist(m2, WAND_CLASS, 0, NOTELL)) {
+											pline("%s is destroyed!", Monnam(m2));
+											grow_up(mtmp, m2);
+											monkilled(m2, (const char *)0, AD_SPEL);
+										}
+									}
+									/* else flee */
+									if(!DEADMONSTER(m2))
+										monflee(m2, 0, FALSE, TRUE);
+								}
+							}
 						}
 						else if(mdat->mtyp == PM_CLAIRVOYANT_CHANGED){
 							if(power >= 3){
@@ -2215,7 +2278,7 @@ boolean
 check_shore(int x, int y)
 {
 	int i;
-	for(i = 1; i < 2; i++){
+	for(i = -1; i < 2; i++){
 		if(isok(x+i,y+i) && !is_pool(x+i,y+i,FALSE) && ZAP_POS(levl[x+i][y+i].typ))
 			return TRUE;
 	}

@@ -78,6 +78,7 @@ struct flag {
 	boolean  toptenwin;	/* ending list in window instead of stdout */
 	boolean  verbose;	/* max battle info */
 	boolean  prayconfirm;	/* confirm before praying */
+	boolean  tm_hour;	/* hour of the day (updated once per global turn) */
 
 	int move;	/* type[s] of action taken by player's last input/action */
 	int movetoprint;
@@ -196,6 +197,7 @@ struct flag {
 	int	 panLgod;	/* deity selection for binder character */
 	int	 panNgod;	/* deity selection for binder character */
 	int	 panCgod;	/* deity selection for binder character */
+	int	 panVgod;	/* deity selection for binder character */
 	int  HDbreath;	/* half-dragon breath weapon type*/
 	int altrace;
 };

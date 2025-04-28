@@ -467,8 +467,6 @@ fuzzymatch(const char *s1, const char *s2, const char *ignore_chars, boolean cas
  *	- determination of what files are "very old"
  */
 
-static struct tm *getlt(void);
-
 void
 setrandom(void)
 {
@@ -491,7 +489,7 @@ setrandom(void)
 	srand((unsigned int) time((time_t *)0)); /*The basic rand function is always used in a few places, so seed it*/
 }
 
-static struct tm *
+struct tm *
 getlt(void)
 {
 	time_t date;
@@ -600,15 +598,13 @@ friday_13th(void)
 int
 night(void)
 {
-	register int hour = getlt()->tm_hour;
-
-	return(hour < 6 || hour > 21);
+	return(flags.tm_hour < 6 || flags.tm_hour > 21);
 }
 
 int
 midnight(void)
 {
-	return(getlt()->tm_hour == 0);
+	return flags.tm_hour == 0;
 }
 
 //Integer hash function courtesy of Thomas Mueller via Stackoverflow

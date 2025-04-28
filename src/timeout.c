@@ -11,8 +11,8 @@
 
 static void stoned_dialogue(void);
 static void golded_dialogue(void);
-static void salted_dialogue(void);
 static void gillyweed_dialogue(void);
+static void salted_dialogue(void);
 static void phasing_dialogue(void);
 static void vomiting_dialogue(void);
 static void choke_dialogue(void);
@@ -160,6 +160,18 @@ golded_dialogue(void)
 	exercise(A_DEX, FALSE);
 }
 
+static void
+gillyweed_dialogue(void)
+{
+    if (HMagical_breathing == 15) {
+        Your("gills are beginning to disappear.");
+        stop_occupation();
+    } else if (HMagical_breathing == 1) {
+        Your("gills are gone.");
+        stop_occupation();
+    }
+}
+
 static const char * const salted_texts[] = {
 	"You are slowing down.",		/* 5 */
 	"Your limbs are stiffening.",		/* 4 */
@@ -182,18 +194,6 @@ salted_dialogue(void)
 	if (i == 3L && !Free_action)
 		nomul(-3, "turning to salt");
 	exercise(A_DEX, FALSE);
-}
-
-static void
-gillyweed_dialogue(void)
-{
-    if (HMagical_breathing == 15) {
-        Your("gills are beginning to disappear.");
-        stop_occupation();
-    } else if (HMagical_breathing == 1) {
-        Your("gills are gone.");
-        stop_occupation();
-    }
 }
 
 static void
@@ -352,6 +352,14 @@ burn_away_slime(void)
 	    Slimed = 0L;
 	    flags.botl = 1;
 		delayed_killer = 0;
+	}
+	if (youmonst.mcaterpillars) {
+	    pline_The("parasitic caterpillars are burned off!");
+	    youmonst.mcaterpillars = FALSE;
+	}
+	if (youmonst.momud) {
+	    pline_The("writhing mud that covers you is burned away!");
+	    youmonst.momud = FALSE;
 	}
 	return;
 }
@@ -715,7 +723,7 @@ nh_timeout(void)
 		if(u.divetimer<=3) You("are running short on air.");
 		if(u.divetimer==1) You("are running out of air!");
 	} else if (!u.usubwater){ /* limited duration dive, 2 turns to 6 turns naturally, 8 turns with magic */ 
-		if(u.divetimer < (ACURR(A_CON))/3 && !u.ustuck && !Babble && !Screaming) u.divetimer++;
+		if(u.divetimer < (ACURR(A_CON))/3 && !u.ustuck && (u.divetimer == 0 || (!Babble && !Screaming))) u.divetimer++;
 		else if(u.divetimer > (ACURR(A_CON))/3) u.divetimer--;
 	}
 
@@ -1261,6 +1269,13 @@ hatch_egg(void * arg, long timeout)
 
 	mon = mon2 = (struct monst *)0;
 	mtyp = big_to_little(egg->corpsenm);
+	if(u.silvergrubs && !rn2(20)){
+		u.silvergrubs = FALSE;
+	}
+	if(check_rot(ROT_KIN) && (u.silvergrubs || !rn2(100)) && !(mvitals[PM_MAN_FLY].mvflags&G_GONE && !In_quest(&u.uz))){
+		mtyp = PM_MAN_FLY;
+		u.silvergrubs = TRUE;
+	}
 	/* The identity of one's father is learned, not innate */
 	yours = (egg->spe || (!flags.female && carried(egg) && !rn2(2)));
 	silent = (timeout != monstermoves);	/* hatched while away */
@@ -2673,6 +2688,7 @@ update_skull_mon(struct monst *mon, struct obj *obj)
 	EMON(obj)->mspores = mon->mspores;
 	EMON(obj)->mformication = mon->mformication;
 	EMON(obj)->mscorpions = mon->mscorpions;
+	EMON(obj)->mcaterpillars = mon->mcaterpillars;
 	
 	
 	EMON(obj)->encouraged = mon->encouraged;

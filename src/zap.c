@@ -165,7 +165,7 @@ zap_glyph_color(int adtyp)
 	case AD_DRST:
 		return CLR_GREEN;
 	case AD_PHYS:
-		return CLR_BROWN;
+		return CLR_BRIGHT_MAGENTA;
 	case AD_WET:
 		return CLR_BLUE;
 	case AD_DISE:
@@ -1417,7 +1417,7 @@ obj_resists(
 	} else {
 		int chance = rn2(100);
 
-		return((boolean)(chance < ((obj->oartifact || is_lightsaber(obj) || is_slab(obj) || obj->blood_smithed || obj->spe >= 10) ? achance : ochance)));
+		return((boolean)(chance < ((obj->oartifact || is_lightsaber(obj) || is_imperial_elven_armor(obj) || is_slab(obj) || obj->blood_smithed || obj->spe >= 10) ? achance : ochance)));
 	}
 }
 
@@ -2129,7 +2129,7 @@ bhito(struct obj *obj, struct obj *otmp)
 		res = !obj->dknown;
 		/* target object has now been "seen (up close)" */
 		obj->dknown = 1;
-		if (Is_container(obj) || obj->otyp == STATUE || (obj->otyp == CRYSTAL_SKULL && u.uinsight >= 20)) {
+		if (Is_container(obj) || obj->otyp == STATUE || (obj->otyp == CRYSTAL_SKULL && Insight >= 20)) {
 		    if (!obj->cobj)
 			pline("%s empty.", Tobjnam(obj, "are"));
 		    else {
@@ -2658,6 +2658,17 @@ zapyourself(struct obj *obj, boolean ordinary)
 		case SPE_FIRE_STORM:
 		    You("explode a fireball on top of yourself!");
 		    explode(u.ux, u.uy, AD_FIRE, WAND_CLASS, d(6,6), EXPL_FIERY, 1);
+			if(u.explosion_up){
+				int ex, ey;
+				for(int i = 0; i < u.explosion_up; i++){
+					ex = u.ux + rn2(3) - 1;
+					ey = u.uy + rn2(3) - 1;
+					if(isok(ex, ey) && ZAP_POS(levl[ex][ey].typ))
+						explode(ex, ey, AD_FIRE, WAND_CLASS, d(6,6), EXPL_FIERY, 1);
+					else
+						explode(u.ux, u.uy, AD_FIRE, WAND_CLASS, d(6,6), EXPL_FIERY, 1);
+				}
+			}
 		    break;
 		case WAN_FIRE:
 		    makeknown(WAN_FIRE);
@@ -4230,6 +4241,17 @@ zap(
 	/* TODO: record colours in zapdata? Color currently standardized on AD_type */
 	if (zapdata->explosive) {
 		explode(sx, sy, zapdata->adtyp, 0, zapdamage(magr, (struct monst *)0, zapdata), adtyp_expl_color(zapdata->adtyp), 1 + !!(youagr &&Double_spell_size));
+		if(youagr && u.explosion_up){
+			int ex, ey;
+			for(int i = 0; i < u.explosion_up; i++){
+				ex = sx + rn2(3) - 1;
+				ey = sy + rn2(3) - 1;
+				if(isok(ex, ey) && ZAP_POS(levl[ex][ey].typ))
+					explode(ex, ey, zapdata->adtyp, 0, zapdamage(magr, (struct monst *)0, zapdata), adtyp_expl_color(zapdata->adtyp), 1 + !!(Double_spell_size));
+				else
+					explode(sx, sy, zapdata->adtyp, 0, zapdamage(magr, (struct monst *)0, zapdata), adtyp_expl_color(zapdata->adtyp), 1 + !!(Double_spell_size));
+			}
+		}
 	}
 	if (zapdata->splashing) {
 		splash(sx, sy, dx, dy, zapdata->adtyp, 0, zapdamage(magr, (struct monst *)0, zapdata), adtyp_expl_color(zapdata->adtyp));
@@ -5592,6 +5614,85 @@ separate_mass_of_stuff(struct obj *obj, boolean burial)
 	fracture_rock(obj);
 }
 
+
+int
+mm_resist(struct monst *mdef, struct monst *magr, int damage, int tell)
+{
+	int resisted;
+	int alev, dlev;
+	boolean youagr = &youmonst == magr;
+
+#define LUCK_MODIFIER	if(Luck > 0) alev += rnd(Luck)/2; else if(Luck < 0) alev -= rnd(-1*Luck)/2;
+
+	damage -= avg_spell_mdr(mdef);
+	if(damage < 0)
+		damage = 0;
+	alev = mlev(magr);
+	/* attack level */
+	if(!mdef->mpeaceful || magr->mtame){
+		LUCK_MODIFIER
+	}
+#undef LUCK_MODIFIER
+	/* defense level */
+	dlev = (int)mdef->m_lev;
+	if(mdef->mcan)
+		dlev /= 2;
+	if (dlev > 50) dlev = 50;
+	else if (dlev < 1) dlev = 1;
+	
+	if(mdef->mtame && artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_STEEL)
+		dlev += 1;
+
+	int mons_mr = mdef->data->mr;
+	if(mdef->mcan){
+		if(mdef->mtyp == PM_ALIDER)
+			mons_mr = 0;
+		else
+			mons_mr /= 2;
+	}
+	if(mdef->mtame && artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_WILL)
+		mons_mr += 10;
+
+	if(mdef->mtyp == PM_CHOKHMAH_SEPHIRAH) dlev+=u.chokhmah;
+	resisted = rn2(100 + alev - dlev) < mons_mr;
+	if (resisted) {
+	    if (tell) {
+			shieldeff(mdef->mx, mdef->my);
+			pline("%s resists!", Monnam(mdef));
+	    }
+	    damage = (damage + 1) / 2;
+	}
+
+	if(youagr && mdef->female && humanoid_torso(mdef->data) && roll_madness(MAD_SANCTITY)){
+		damage /= 4;
+	}
+	if(youagr && roll_madness(MAD_ARGENT_SHEEN)){
+		damage /= 6;
+	}
+	if(youagr && (is_spider(mdef->data) 
+		|| mdef->mtyp == PM_SPROW
+		|| mdef->mtyp == PM_DRIDER
+		|| mdef->mtyp == PM_PRIESTESS_OF_GHAUNADAUR
+		|| mdef->mtyp == PM_AVATAR_OF_LOLTH
+	) && roll_madness(MAD_ARACHNOPHOBIA)){
+		damage /= 4;
+	}
+	if(youagr && mdef->female && humanoid_upperbody(mdef->data) && roll_madness(MAD_ARACHNOPHOBIA)){
+		damage /= 2;
+	}
+	if(youagr && is_aquatic(mdef->data) && roll_madness(MAD_THALASSOPHOBIA)){
+		damage /= 10;
+	}
+	
+	if (damage) {
+	    mdef->mhp -= damage;
+	    if (mdef->mhp < 1) {
+			if(m_using) monkilled(mdef, "", AD_RBRE);
+			else killed(mdef);
+	    }
+	}
+	return(resisted);
+}
 
 int
 resist(struct monst *mtmp, char oclass, int damage, int tell)

@@ -1475,7 +1475,7 @@ update_externally_granted_spells(void)
 	if(uarmh && uarmh->oartifact == ART_CROWN_OF_THE_PERCIPIENT){
 		for (i = 0; i < MAXSPELL; i++) {
 			if (spellid(i) != NO_SPELL) {
-				if (spl_book[i].sp_lev <= (u.uinsight*2)/11+1)
+				if (spl_book[i].sp_lev <= (Insight*2)/11+1)
 					spellext(i) = TRUE;
 			}
 		}
@@ -3212,7 +3212,7 @@ spiriteffects(int power, boolean atme)
 								losehp(2, "leg damage from being pulled out of a bear trap",
 										KILLED_BY);
 								set_wounded_legs(side, rn1(100,50));
-								if(!Preservation){
+								if(!Preservation && !uarmf->oartifact){
 									if(bootdamage > uarmf->spe){
 										claws_destroy_arm(uarmf);
 									}else{
@@ -4940,6 +4940,7 @@ dothrowspell:
 	
 	/* gain skill for successful cast */
 	use_skill(skill, spellev(spell));
+	u.bladesong = monstermoves + spellev(spell);
 	u.lastcast = monstermoves + spellev(spell);
 	if(uwep && uwep->oartifact == ART_INFINITY_S_MIRRORED_ARC && uwep->spe > 0)
 		u.lastcast += uwep->spe;
@@ -5117,7 +5118,7 @@ dospiritmenu(
 				if (u.spiritPOrder[i] == PWR_MAD_BURST && !check_mutation(YOG_GAZE_1) && (action == SPELLMENU_CAST || action == SPELLMENU_DESCRIBE)) continue;
 				if (u.spiritPOrder[i] == PWR_UNENDURABLE_MADNESS && !check_mutation(YOG_GAZE_2) && (action == SPELLMENU_CAST || action == SPELLMENU_DESCRIBE)) continue;
 				if(u.spiritPOrder[i] == PWR_CONTACT_YOG_SOTHOTH){
-					if(u.yog_sothoth_credit >= 50){
+					if(u.yog_sothoth_credit >= 50 && (u.specialSealsActive & SEAL_YOG_SOTHOTH)){
 						Sprintf1(buf, spirit_powers[u.spiritPOrder[i]].name);
 						any.a_int = u.spiritPOrder[i] + 1;	/* must be non-zero */
 						add_menu(tmpwin, NO_GLYPH, &any,
@@ -5981,6 +5982,9 @@ percent_success(int spell)
 			splcaster -= urole.spelarmr;
 	}
 
+	if(Black_crystal)
+		splcaster -= urole.spelarmr;
+
 	if(uwep){
 		int cast_bon;
 		// powerful channeling artifacts
@@ -5990,7 +5994,6 @@ percent_success(int spell)
 			|| uwep->oartifact == ART_PROFANED_GREATSCYTHE
 			|| uwep->oartifact == ART_GARNET_ROD
 			|| (Role_if(PM_KNIGHT) && uwep->oartifact == ART_MAGIC_MIRROR_OF_MERLIN)
-			|| Black_crystal
 		) splcaster -= urole.spelarmr;
 
 		if(uwep->obj_material == MERCURIAL)
@@ -6293,7 +6296,7 @@ percent_success(int spell)
 	chance = chance * (20-splcaster) / 15 - splcaster;
 	
 	if(check_mutation(SHUB_RADIANCE)){
-		int insight = u.uinsight;
+		int insight = Insight;
 		while(insight){
 			chance += 1;
 			insight /= 2;

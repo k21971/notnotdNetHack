@@ -37,6 +37,7 @@ static void cthulhu_mind_blast(void);
 static void unseen_actions(struct monst *);
 static void blessed_spawn(struct monst *);
 static void alkilith_spawn(struct monst *);
+static void incarnator_action(struct monst *);
 static void befouled_wraith(struct monst *);
 static void good_neighbor(struct monst *);
 static void dark_pharaoh(struct monst *);
@@ -48,7 +49,7 @@ static void goat_sacrifice(struct monst *);
 static void palid_stranger(struct monst *);
 static void sib_follow(struct monst *);
 static void invisible_twin_act(struct monst *);
-
+void make_rage_walker_polts(int);
 
 extern const int monstr[];
 
@@ -482,7 +483,7 @@ void
 clear_stale_fforms(void)
 {
 	for(int fform = NO_FFORM+1; fform <= LAST_FFORM; fform++){
-		if (!!(u.fightingForm[(fform-1)/16] & (0x1L << ((fform-1)%16))) && FightingFormSkillLevel(fform) <= P_ISRESTRICTED){
+		if (!!(u.fightingForm[(fform-1)/16] & (0x1L << ((fform-1)%16))) && fform != FFORM_SHII_CHO && FightingFormSkillLevel(fform) <= P_ISRESTRICTED){
 			unSetFightingForm(fform);
 			You("readjust your stance.");
 		}
@@ -1335,7 +1336,7 @@ you_regen_pw(void)
 			reglevel += 10;
 		}
 		if (Role_if(PM_MADMAN))   reglevel += 9;
-		if (Role_if(PM_UNDEAD_HUNTER) && u.uinsight > 10)
+		if (Role_if(PM_UNDEAD_HUNTER) && Insight > 10)
 								  reglevel += 9;
 		if (Role_if(PM_HEALER))   reglevel += 6;
 		if (Role_if(PM_PRIEST))   reglevel += 6;
@@ -1469,7 +1470,7 @@ san_threshhold(void)
 {
 	// Threshold levels based on wis.
 	int reglevel = ACURR(A_WIS);
-	int insight = u.uinsight;
+	int insight = Insight;
 
 	// role bonuses
 	if (Role_if(PM_BARBARIAN))   reglevel += 10;
@@ -1483,7 +1484,7 @@ san_threshhold(void)
 	if (Role_if(PM_CONVICT))  reglevel -= 3;
 	if (Role_if(PM_NOBLEMAN))  reglevel -= 5;
 	if (Role_if(PM_MADMAN))   reglevel -= 10;
-	if (Role_if(PM_UNDEAD_HUNTER) && (u.uinsight >= 50 || quest_status.moon_close))   reglevel -= 10;
+	if (Role_if(PM_UNDEAD_HUNTER) && (Insight >= 50 || quest_status.moon_close))   reglevel -= 10;
 	//Maybe scale undead hunter based on how well they did on the quest as well.
 
 	if (Race_if(PM_ELF))   reglevel += 3;
@@ -1622,6 +1623,7 @@ moveloop(void)
 	pline("Be careful!  New moon tonight.");
     }
     flags.friday13 = friday_13th();
+    flags.tm_hour = getlt()->tm_hour;
     if (flags.friday13) {
 	pline("Watch out!  Bad things can happen on Friday the 13th.");
 	change_luck(-1);
@@ -1663,6 +1665,14 @@ moveloop(void)
 		flags.initalign = 2;
 		impossible("Bad alignment initializer detected and fixed. Save and reload.");
 	}
+	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_NONE && flags.initalign != 3){
+		flags.initalign = 3;
+		impossible("Bad alignment initializer detected and fixed. Save and reload.");
+	}
+	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_VOID && flags.initalign != 4){
+		flags.initalign = 4;
+		impossible("Bad alignment initializer detected and fixed. Save and reload.");
+	}
 	// printMons();
 	// printMonNames();
 	// printDPR();
@@ -1694,13 +1704,24 @@ moveloop(void)
 		/**************************************************/
 		for (mtmp = fmon; mtmp; mtmp = nxtmon){
 			nxtmon = mtmp->nmon;
-			if(mtmp->m_insight_level > u.uinsight
+			if(DEADMONSTER(mtmp))
+				continue;
+			if(mtmp->m_insight_level > Insight && !mtmp->mcan && mtmp->mtyp == PM_TRANSCENDENT_TETTIGON){
+				set_mon_data(mtmp, PM_UNMASKED_TETTIGON);
+				mtmp->m_insight_level -= 35;
+				newsym(x(mtmp), y(mtmp));
+			}
+			if(mtmp->m_insight_level > Insight
 			  || (mtmp->mtyp == PM_WALKING_DELIRIUM && BlockableClearThoughts)
 			  || (mtmp->mtyp == PM_STRANGER && !quest_status.touched_artifact)
 			  || ((mtmp->mtyp == PM_PUPPET_EMPEROR_XELETH || mtmp->mtyp == PM_PUPPET_EMPRESS_XEDALLI) && mtmp->mvar_yellow_lifesaved)
 			  || (mtmp->mtyp == PM_TWIN_SIBLING && (mtmp->mvar_twin_lifesaved || !(u.specialSealsActive&SEAL_YOG_SOTHOTH)))
 			){
 				if(!(mtmp->mtrapped && t_at(mtmp->mx, mtmp->my) && t_at(mtmp->mx, mtmp->my)->ttyp == VIVI_TRAP)){
+					if(mtmp->mvar1_tettigon_uncancel){
+						mtmp->mvar1_tettigon_uncancel = FALSE;
+						set_mcan(mtmp, FALSE);
+					}
 					insight_vanish(mtmp);
 					continue;
 				}
@@ -1726,8 +1747,7 @@ moveloop(void)
 				mtmp->mamnesia = FALSE;
 				newsym(mtmp->mx, mtmp->my);
 			}
-			if (!DEADMONSTER(mtmp)
-				&& mon_attacktype(mtmp, AT_WDGZ)
+			if (mon_attacktype(mtmp, AT_WDGZ)
 				&& !(controlledwidegaze(mtmp->data) && (mtmp->mpeaceful || mtmp->mtame || helpless(mtmp)))
 				&& !(hideablewidegaze(mtmp->data) && hiddenwidegaze(mtmp))
 				&& !vivitrapped(mtmp)
@@ -1769,6 +1789,8 @@ moveloop(void)
 				average_dogs();
 			for (mtmp = fmon; mtmp; mtmp = nxtmon){
 				nxtmon = mtmp->nmon;
+				if(DEADMONSTER(mtmp))
+					continue;
 				if(mtmp->mtyp == PM_HELLCAT){
 					if(!isdark(mtmp->mx,mtmp->my) && !mtmp->minvis){
 						mtmp->minvis = TRUE;
@@ -1800,7 +1822,12 @@ moveloop(void)
 						newsym(mtmp->mx,mtmp->my);
 					}
 				}
-				if(mtmp->m_insight_level > u.uinsight
+				if(mtmp->m_insight_level > Insight && !mtmp->mcan && mtmp->mtyp == PM_TRANSCENDENT_TETTIGON){
+					set_mon_data(mtmp, PM_UNMASKED_TETTIGON);
+					mtmp->m_insight_level -= 35;
+					newsym(x(mtmp), y(mtmp));
+				}
+				if(mtmp->m_insight_level > Insight
 				  || (mtmp->mtyp == PM_WALKING_DELIRIUM && BlockableClearThoughts)
 				  || (mtmp->mtyp == PM_STRANGER && !quest_status.touched_artifact)
 				  || ((mtmp->mtyp == PM_PUPPET_EMPEROR_XELETH || mtmp->mtyp == PM_PUPPET_EMPRESS_XEDALLI) && mtmp->mvar_yellow_lifesaved)
@@ -2593,10 +2620,24 @@ karemade:
 								messaged = TRUE;
 								TRANSCENDENCE_IMPURITY_UP(FALSE)
 							}
-							mark_mon_as_summoned(mtmp, (struct monst *)0, NightmareAware_Insanity+u.uinsight, 0);
+							mark_mon_as_summoned(mtmp, (struct monst *)0, NightmareAware_Insanity+Insight, 0);
 						}
 					}
 				}
+				if(u.uz.flags.walkers < 3 && rnd(100)+3 < u.uz.rage && roll_generic_flat_madness(TRUE) && rnd(98)+2 < Insight){
+					mtmp = makemon(&mons[PM_RAGE_WALKER], 0, 0, MM_ADJACENTOK);
+					if(mtmp){
+						make_rage_walker_polts(u.uz.rage+3);
+						u.uz.rage = 0;
+					}
+					int i;
+					int vort[] = {PM_ICE_VORTEX, PM_ENERGY_VORTEX, PM_FIRE_VORTEX};
+					for(i = d(3,3); i > 0; i--) makemon(&mons[ROLL_FROM(vort)], 0, 0, NO_MM_FLAGS);
+					int sphere[] = {PM_FREEZING_SPHERE, PM_FLAMING_SPHERE, PM_SHOCKING_SPHERE};
+					for(i = d(3,3); i > 0; i--) makemon(&mons[ROLL_FROM(sphere)], 0, 0, NO_MM_FLAGS);
+				}
+				else if(u.uz.rage > 0 && !rn2(u.uz.rage))
+					u.uz.rage--;
 			}
 			if(Infuture && !(Is_qstart(&u.uz) && !Race_if(PM_ANDROID)) && !rn2(35)){
 				struct monst* mtmp = makemon(&mons[PM_SEMBLANCE], rn1(COLNO-3,2), rn1(ROWNO-3,2), MM_ADJACENTOK);
@@ -2740,6 +2781,7 @@ karemade:
 				&& !Race_if(PM_ANDROID) && !Race_if(PM_CLOCKWORK_AUTOMATON)
 			){
 				make_hallucinated(itimeout_incr(HHallucination, 100), TRUE, 0L);
+				IMPURITY_UP(u.uimp_rot)
 				if(roll_madness(MAD_SPORES)){//Second roll for more severe symptoms
 					make_stunned(itimeout_incr(HStun, 100), TRUE);
 					make_confused(itimeout_incr(HConfusion, 100), FALSE);
@@ -2747,6 +2789,7 @@ karemade:
 					exercise(A_INT, FALSE);exercise(A_WIS, FALSE);exercise(A_CHA, FALSE);
 					exercise(A_INT, FALSE);exercise(A_WIS, FALSE);exercise(A_CHA, FALSE);
 					exercise(A_INT, FALSE);exercise(A_WIS, FALSE);exercise(A_CHA, FALSE);
+					IMPURITY_UP(u.uimp_rot)
 				}
 				else {
 					make_confused(itimeout_incr(HConfusion, 100), TRUE);
@@ -2773,11 +2816,32 @@ karemade:
 				}
 			}
 			
-			if(u.umadness&MAD_SCORPIONS){
-				change_usanity(-1, FALSE);
-				phantom_scorpions_sting(&youmonst);
-				if(!rn2(20)){
-					u.umadness &= ~MAD_SCORPIONS;
+			if(!u.uinvulnerable){
+				if(u.umadness&MAD_SCORPIONS){
+					change_usanity(-1, FALSE);
+					phantom_scorpions_sting(&youmonst);
+					if(!rn2(20)){
+						u.umadness &= ~MAD_SCORPIONS;
+					}
+				}
+				if(youmonst.mcaterpillars){
+					rot_caterpillars_bite(&youmonst);
+					if(!rn2(20)){
+						youmonst.mcaterpillars = FALSE;
+					}
+				}
+				if(youmonst.momud){
+					orc_mud_stabs(&youmonst);
+					if(!rn2(20)){
+						youmonst.momud = FALSE;
+						struct obj *daggers = mksobj(ORCISH_DAGGER, NO_MKOBJ_FLAGS);
+						curse(daggers);
+						daggers->opoisoned = OPOISON_ACID;
+						daggers->quan = d(3,8);
+						set_obj_size(daggers, MZ_TINY);
+						set_material_gm(daggers, BONE);
+						place_object(daggers, u.ux, u.uy);
+					}
 				}
 			}
 			
@@ -2816,9 +2880,9 @@ karemade:
 				nomul(0, NULL);
 			}
 
-			if(!rn2(7) && roll_madness(MAD_REACHER)){
+			if(!rn2(7) && (Is_bridge_temple(&u.uz) || !rn2(11)) && roll_madness(MAD_REACHER)){
 				You("feel its multitudinous gaze upon you!");
-				if(!UseInvShock_res(&youmonst) || !rn2(11)){
+				if(!UseInvShock_res(&youmonst) || (!rn2(11) && Is_bridge_temple(&u.uz))){
 					destroy_item(&youmonst, WAND_CLASS, AD_ELEC);
 					destroy_item(&youmonst, RING_CLASS, AD_ELEC);
 				}
@@ -2866,6 +2930,8 @@ karemade:
 		      /********************************/
 		     /* once-per-turn things go here */
 		    /********************************/
+			/* Update the hour of the day */
+			flags.tm_hour = getlt()->tm_hour;
 			/* Environment effects */
 			dust_storm();
 			/* Unseen monsters may take action */
@@ -2985,7 +3051,7 @@ karemade:
 
 		    if (flags.bypasses) clear_bypasses();
 		    if(Glib) glibr();
-			if (uswapwep && !Weldproof && uswapwep->cursed) {
+			if (uswapwep && !Weldproof && uswapwep->cursed && u.twoweap) {
 				uswapwep->bknown = TRUE;
 				drop_uswapwep();
 			}
@@ -3294,6 +3360,8 @@ karemade:
 ////////////////////////////////////////////////////////////////////////////////////////////////
 	for (mtmp = fmon; mtmp; mtmp = nxtmon){
 		nxtmon = mtmp->nmon;
+		if(DEADMONSTER(mtmp))
+			continue;
 		if(mtmp->mtyp == PM_HELLCAT){
 			if(!isdark(mtmp->mx,mtmp->my) && !mtmp->minvis){
 				mtmp->minvis = TRUE;
@@ -3330,7 +3398,12 @@ karemade:
 			mtmp->mappearance = 0;
 			newsym(mtmp->mx, mtmp->my);
 		}
-		if(mtmp->m_insight_level > u.uinsight
+		if(mtmp->m_insight_level > Insight && !mtmp->mcan && mtmp->mtyp == PM_TRANSCENDENT_TETTIGON){
+			set_mon_data(mtmp, PM_UNMASKED_TETTIGON);
+			mtmp->m_insight_level -= 35;
+			newsym(x(mtmp), y(mtmp));
+		}
+		if(mtmp->m_insight_level > Insight
 		  || (mtmp->mtyp == PM_WALKING_DELIRIUM && BlockableClearThoughts)
 		  || (mtmp->mtyp == PM_STRANGER && !quest_status.touched_artifact)
 		  || ((mtmp->mtyp == PM_PUPPET_EMPEROR_XELETH || mtmp->mtyp == PM_PUPPET_EMPRESS_XEDALLI) && mtmp->mvar_yellow_lifesaved)
@@ -3643,6 +3716,7 @@ newgame(void)
 	flags.panLgod = -1;	/* role_init() will reset this */
 	flags.panNgod = -1;	/* role_init() will reset this */
 	flags.panCgod = -1;	/* role_init() will reset this */
+	flags.panVgod = -1;	/* role_init() will reset this */
 	role_init(TRUE);		/* must be before init_dungeons(), u_init(),
 				 * and init_artifacts() */
 	
@@ -4501,11 +4575,20 @@ printAttacks(char *buf, struct permonst *ptr)
 				if(attk->lev_req > 0){
 					Sprintf(eos(buf), "level %d+", attk->lev_req);
 				}
-				if(attk->lev_req > 0 && attk->ins_req > 0){
+				if(attk->lev_req > 0 && (attk->ins_req > 0 || attk->san_req != 0)){
 					Sprintf(eos(buf), " and ");
 				}
 				if(attk->ins_req > 0){
 					Sprintf(eos(buf), "%d+ [[insight]]", attk->ins_req);
+				}
+				if((attk->lev_req > 0 || attk->ins_req > 0) && attk->san_req != 0){
+					Sprintf(eos(buf), " and ");
+				}
+				if(attk->san_req < 0){
+					Sprintf(eos(buf), "<%d [[sanity]]", -1*attk->san_req);
+				}
+				if(attk->san_req > 0){
+					Sprintf(eos(buf), ">%d [[sanity]]", attk->san_req);
 				}
 			Sprintf(eos(buf), ")");
 		}
@@ -4545,6 +4628,7 @@ cthulhu_mind_blast(void)
 		if (DEADMONSTER(mon)) continue;
 		if (is_mind_flayer(mon->data)) continue;
 		if (mindless_mon(mon)) continue;
+		if(is_tettigon(mon->data) && rn2(20)) continue;
 		if (mon_resistance(mon,TELEPAT) || !rn2(5)){
 			mon->mhp -= d(nd,15);
 			if (mon->mhp <= 0) mondied(mon);
@@ -4652,8 +4736,12 @@ unseen_actions(struct monst *mon)
 		unbodied_heal(mon);
 	else if(mon->mux == u.uz.dnum && mon->muy == u.uz.dlevel && mon->mtyp == PM_ALKILITH)
 		alkilith_spawn(mon);
+	else if(mon->mux == u.uz.dnum && mon->muy == u.uz.dlevel && mon->mtyp == PM_INCARNATOR_MAGGOT)
+		incarnator_action(mon);
 	else if(mon->mux == u.uz.dnum && mon->muy == u.uz.dlevel && mon->mtyp == PM_MOUTH_OF_THE_GOAT)
 		goat_sacrifice(mon);
+	else if(mon->mux == u.uz.dnum && mon->muy == u.uz.dlevel && mon->mtyp == PM_RAGE_WALKER && (check_insight() || (!rn2(u.uevent.udemigod ? 25 : 50) && roll_generic_madness(TRUE))))
+		make_rage_walker_polts(u.uz.rage+3);
 	else if(mon->mtyp == PM_STRANGER)
 		palid_stranger(mon);
 	else if(mon->mtyp == PM_PUPPET_EMPEROR_XELETH || mon->mtyp == PM_PUPPET_EMPRESS_XEDALLI)
@@ -4684,6 +4772,7 @@ blessed_spawn(struct monst *mon)
 	}
 }
 
+static
 void
 alkilith_spawn(struct monst *mon)
 {
@@ -4700,7 +4789,7 @@ alkilith_spawn(struct monst *mon)
 				if(hates_holy_mon(mtmp) || taxes_sanity(mtmp->data))
 					continue;
 				if(!mtmp->mconf && dist2(xlocale, ylocale, mtmp->mx, mtmp->my) <= 36){
-					if(!resist(mtmp, 0, 0, FALSE)){
+					if(!mm_resist(mtmp, mon, 0, FALSE)){
 						if(canspotmon(mtmp)){
 							pline("%s staggers!", Monnam(mtmp));
 							mtmp->mconf = TRUE;
@@ -4726,6 +4815,59 @@ alkilith_spawn(struct monst *mon)
 					set_malign(mtmp);
 				}
 			}
+		}
+	}
+}
+
+void
+incarnator_spawn(xchar xlocale, xchar ylocale, boolean death)
+{
+	struct monst *mtmp;
+	static const int orcs[] = {PM_HILL_ORC, PM_MORDOR_ORC, PM_ORC_SHAMAN, PM_ORC_CAPTAIN, PM_URUK_HAI, PM_URUK_CAPTAIN, PM_MORDOR_ORC_ELITE, PM_MORDOR_SHAMAN, PM_MORDOR_MARSHAL};
+	int orc = ROLL_FROM(orcs);
+	if(mvitals[orc].died > rnd(death ? 200 : 500)){
+		mvitals[orc].died--;
+		mtmp = makemon(&mons[orc], xlocale, ylocale, MM_ADJACENTOK|MM_NOCOUNTBIRTH|NO_MINVENT);
+		if(mtmp){
+			static const int orc_weapons[] = {ORCISH_DAGGER, ORCISH_SHORT_SWORD, ORCISH_SPEAR};
+			struct obj *otmp;
+			mtmp->mpeaceful = 0;
+			set_malign(mtmp);
+
+			otmp = mongets(mtmp, ROLL_FROM(orc_weapons), NO_MKOBJ_FLAGS);
+			if(otmp){
+				set_material_gm(otmp, rn2(3) ? BONE : MINERAL);
+			}
+
+			otmp = mongets(mtmp, ORCISH_HELM, NO_MKOBJ_FLAGS);
+			if(otmp){
+				set_material_gm(otmp, rn2(3) ? BONE : MINERAL);
+			}
+
+			otmp = mongets(mtmp, rn2(2) ? ORCISH_CHAIN_MAIL : ORCISH_RING_MAIL, NO_MKOBJ_FLAGS);
+			if(otmp){
+				set_material_gm(otmp, rn2(3) ? BONE : MINERAL);
+			}
+
+			otmp = mongets(mtmp, ORCISH_SHIELD, NO_MKOBJ_FLAGS);
+			if(otmp){
+				set_material_gm(otmp, rn2(3) ? BONE : MINERAL);
+			}
+		}
+	}
+}
+
+static
+void
+incarnator_action(struct monst *mon)
+{
+	xchar xlocale, ylocale, xyloc;
+	xyloc	= mon->mtrack[0].x;
+	xlocale = mon->mtrack[1].x;
+	ylocale = mon->mtrack[1].y;
+	if(xyloc == MIGR_EXACT_XY){
+		if(!mon->mpeaceful && !rn2(6)){
+			incarnator_spawn(xlocale, ylocale, FALSE);
 		}
 	}
 }
@@ -5435,7 +5577,7 @@ palid_stranger(struct monst *mon)
 			return;
 		}
 		/* The Stranger arrives from other levels and appears as soon as you gain enough insight */
-		if(mon->m_insight_level <= u.uinsight && quest_status.touched_artifact){
+		if(mon->m_insight_level <= Insight && quest_status.touched_artifact){
 			for(mtmp = migrating_mons; mtmp; mtmp = mtmp2){
 				mtmp2 = mtmp->nmon;
 				if (mtmp == mon) {
@@ -5520,7 +5662,7 @@ sib_follow(struct monst *mon)
 		return;
 	}
 	/* Arrives from other levels (and from death) and appears as soon as you gain enough insight */
-	if(mon->m_insight_level <= u.uinsight && (!mon->mvar_yellow_lifesaved || !rn2(55))){
+	if(mon->m_insight_level <= Insight && (!mon->mvar_yellow_lifesaved || !rn2(55))){
 		mon->mvar_yellow_lifesaved = FALSE;
 		for(mtmp = migrating_mons; mtmp; mtmp = mtmp2){
 			mtmp2 = mtmp->nmon;
@@ -5579,7 +5721,7 @@ invisible_twin_act(struct monst *mon)
 			return;
 		}
 		/* Arrives from other levels and appears as soon as you gain enough insight */
-		if(mon->m_insight_level <= u.uinsight && u.specialSealsActive&SEAL_YOG_SOTHOTH){
+		if(mon->m_insight_level <= Insight && u.specialSealsActive&SEAL_YOG_SOTHOTH){
 			for(mtmp = migrating_mons; mtmp; mtmp = mtmp2){
 				mtmp2 = mtmp->nmon;
 				if (mtmp == mon) {
@@ -6362,6 +6504,92 @@ dojellysting(struct monst *magr)
 	return;
 }
 
+static void
+dorotattack(struct monst *magr, struct attack * attk, int max, int mult)
+{
+	struct monst *mdef;
+	extern const int clockwisex[8];
+	extern const int clockwisey[8];
+	int i = rnd(8),j;
+	int ax, ay;
+	boolean youagr = (magr == &youmonst);
+	boolean youdef;
+	boolean attacked = FALSE;
+	struct permonst *pa;
+
+	pa = youagr ? youracedata : magr->data;
+
+	//Attack all surrounding foes
+	for(j=8*mult;j>=1;j--){
+		ax = x(magr)+clockwisex[(i+j)%8];
+		ay = y(magr)+clockwisey[(i+j)%8];
+		if(youagr && u.ustuck && u.uswallow)
+			mdef = u.ustuck;
+		else if(!isok(ax, ay))
+			continue;
+		else if(onscary(ax, ay, magr))
+			continue;
+		else mdef = m_at(ax, ay);
+		
+		if(u.ux == ax && u.uy == ay)
+			mdef = &youmonst;
+		
+		if(!mdef)
+			continue;
+		
+		if(rn2(2)) //1/2 chance to just skip anyway, stings are too powerful if they attack too frequently.
+			continue;
+
+		youdef = (mdef == &youmonst);
+
+		if(youagr && (mdef->mpeaceful))
+			continue;
+		if(youdef && (magr->mpeaceful))
+			continue;
+		if(youdef && Invulnerable)
+			continue;
+		if(!youagr && !youdef && ((mdef->mpeaceful == magr->mpeaceful) || (!!mdef->mtame == !!magr->mtame)))
+			continue;
+
+		if(youdef && u.uswallow)
+			continue;
+		if(!youdef && nonthreat(mdef))
+			continue;
+
+		if(attk->aatyp != AT_MAGC && attk->aatyp != AT_GAZE){
+			if((touch_petrifies(mdef->data)
+				|| mdef->mtyp == PM_MEDUSA)
+			 && (youagr ? !Stone_resistance : !resists_ston(magr))
+			) continue;
+			
+			if(mdef->mtyp == PM_PALE_NIGHT)
+				continue;
+		}
+		
+		xmeleehity(magr, mdef, attk, (struct obj **)0, -1, 0, FALSE);
+		// Limited attacks
+		if(--max <= 0)
+			return;
+	}
+	return;
+}
+
+void
+dorotbite(struct monst *magr)
+{
+	struct attack * attk;
+	struct attack symbiote = { AT_OBIT, AD_DISE, 1, 3 };
+	dorotattack(magr, &symbiote, 1, 1);
+}
+
+void
+dorotsting(struct monst *magr)
+{
+	struct attack * attk;
+	struct attack symbiote = { AT_STNG, AD_DISE, 1, 4 };
+	dorotattack(magr, &symbiote, 1, 1);
+}
+
 void
 dokraken_mon(struct monst *magr)
 {
@@ -6743,5 +6971,143 @@ dostorm(struct monst *magr)
 
 }
 
+void
+dochain_lashes(struct monst *magr)
+{
+	struct monst *mdef;
+	extern const int clockwisex[8];
+	extern const int clockwisey[8];
+	struct attack attkbuff = {AT_WEAP, AD_ELEC, 3, 6};
+	int i = rnd(8),j;
+	int ax, ay, n;
+	int chain_count = 0;
+	struct obj *ofirst;
+	struct obj *chain;
+	boolean youagr = (magr == &youmonst);
+	boolean youdef;
+	struct permonst *pa;
+	
+	pa = youagr ? youracedata : magr->data;
+	ofirst = youagr ? invent : magr->minvent;
+	
+	// Find chains etc:
+	for(chain = ofirst; chain; chain = chain->nobj){
+		if(chain->otyp == CHAIN)
+			chain_count+=4;
+		else if(chain->otyp == BALL)
+			chain_count++;
+	}
+	if(!chain_count)
+		return;
+	chain_count = rnd(chain_count);
+	for(chain = ofirst; chain; chain = chain->nobj){
+		if(chain->otyp == CHAIN)
+			chain_count-=4;
+		else if(chain->otyp == BALL)
+			chain_count--;
+		if(chain_count <= 0)
+			break;
+	}
+	if(!chain)
+		return;
+	
+	for(j=8;j>=1;j--){
+		ax = x(magr)+clockwisex[(i+j)%8];
+		ay = y(magr)+clockwisey[(i+j)%8];
+		if(youagr && u.ustuck && u.uswallow)
+			mdef = u.ustuck;
+		else if(!isok(ax, ay))
+			continue;
+		else if(onscary(ax, ay, magr))
+			continue;
+		else mdef = m_at(ax, ay);
+		
+		if(u.ux == ax && u.uy == ay)
+			mdef = &youmonst;
+		
+		if(!mdef)
+			continue;
+		
+		if(!rn2(3))
+			continue;
+		
+		youdef = (mdef == &youmonst);
+
+		if(youagr && (mdef->mpeaceful))
+			continue;
+		if(youdef && (magr->mpeaceful))
+			continue;
+		if(youdef && Invulnerable)
+			continue;
+		if(!youagr && !youdef && ((mdef->mpeaceful == magr->mpeaceful) || (!!mdef->mtame == !!magr->mtame)))
+			continue;
+
+		if(youdef && u.uswallow)
+			continue;
+		if(!youdef && nonthreat(mdef))
+			continue;
+
+		if(mdef->mtyp == PM_PALE_NIGHT)
+			continue;
+
+		xmeleehity(magr, mdef, &attkbuff, &chain, +3, 0, FALSE);
+	}
+}
+
+void
+make_rage_walker_polts(int rage)
+{
+	struct obj *otmp, *nobj;
+	struct monst *polt;
+	int ox, oy;
+	boolean created = FALSE;
+	int otyp = ELVEN_BROADSWORD;
+	int otyp_index = 0;
+	int elven_weapon_types[] = {ELVEN_BROADSWORD, ELVEN_SHORT_SWORD, ELVEN_SPEAR, ELVEN_SICKLE, ELVEN_SCIMITAR, HIGH_ELVEN_WARSWORD, ELVEN_LANCE, ELVEN_MACE};
+	while(rage > 0){
+		if(!otyp){
+			polt = makemon(&mons[PM_POLTERGEIST], 0, 0, MM_ADJACENTOK|NO_MINVENT);
+			otmp = mksobj(ROLL_FROM(elven_weapon_types), NO_MKOBJ_FLAGS);
+			set_material_gm(otmp, IRON);
+			rage--;
+			if(otmp->spe < 3)
+				otmp->spe = 3;
+			curse(otmp);
+			mpickobj(polt, otmp);
+			m_dowear(polt, TRUE);
+			continue;
+		}
+		created = FALSE;
+		for(ox = 0; ox < COLNO && rage > 0; ox++){
+		for(oy = 0; oy < ROWNO && rage > 0; oy++){
+			otmp =  level.objects[ox][oy];
+			if(!otmp)
+				continue;
+			for(; otmp; otmp = otmp->nexthere){
+				if(otmp->otyp == otyp){
+					polt = makemon(&mons[PM_POLTERGEIST], otmp->ox, otmp->oy, MM_ADJACENTOK|NO_MINVENT);
+					obj_extract_self(otmp);
+					set_material_gm(otmp, IRON);
+					rage--;
+					if(otmp->spe < 3)
+						otmp->spe = 3;
+					curse(otmp);
+					mpickobj(polt, otmp);
+					m_dowear(polt, TRUE);
+					created = TRUE;
+					break; //Break nexthere loop, continue location loop
+				}
+			}
+		}}
+		if(!created){
+			otyp_index++;
+			if(otyp_index < SIZE(elven_weapon_types)){
+				otyp = elven_weapon_types[otyp_index];
+			}
+			else otyp = 0;
+		}
+	}
+	doredraw(); //Just moved a bunch of items
+}
 
 /*allmain.c*/

@@ -432,7 +432,7 @@ do_mname(void)
 
 static const char callable[] = {
 	SCROLL_CLASS, TILE_CLASS, POTION_CLASS, WAND_CLASS, RING_CLASS, AMULET_CLASS,
-	GEM_CLASS, SPBOOK_CLASS, ARMOR_CLASS, TOOL_CLASS, 0 };
+	GEM_CLASS, SPBOOK_CLASS, ARMOR_CLASS, BELT_CLASS, TOOL_CLASS, 0 };
 
 boolean
 objtyp_is_callable(int i)
@@ -799,6 +799,7 @@ oname(struct obj *obj, const char *name)
 		}
 	}
 	if (carried(obj)) update_inventory();
+	fix_object(obj);
 	return obj;
 }
 
@@ -963,6 +964,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == CORDYCEPS)			Sprintf(buf2, "%s's sporulating corpse", buf);
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s the finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
+		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "%s the swollen", buf);
 		else											Strcpy(buf2, buf);
 	}
 	else {
@@ -996,6 +998,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == CORDYCEPS)			Sprintf(buf2, "%s cordyceps", buf);
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
+		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "swollen %s", buf);
 		else											Strcpy(buf2, buf);
 	}
 

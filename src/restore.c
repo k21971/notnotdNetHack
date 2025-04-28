@@ -891,7 +891,7 @@ getlev(int fd, int pid, int lev, boolean ghostly)
 				/* reset peaceful/malign relative to new character */
 				if(!mtmp->isshk)
 					/* shopkeepers will reset based on name */
-					mtmp->mpeaceful = peace_minded(mtmp->data);
+					mtmp->mpeaceful = peace_minded(mtmp);
 				set_malign(mtmp);
 			} else if (monstermoves > omoves){
 				mon_catchup_elapsed_time(mtmp, monstermoves - omoves);

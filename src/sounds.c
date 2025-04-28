@@ -515,7 +515,7 @@ dosounds(void)
 					if (resists_death(tmpm)) {
 						// if (canseemon(tmpm))
 							// pline("%s seems no deader than before.", Monnam(tmpm));
-					} else if (!(resists_magm(tmpm) || resist(tmpm, 0, 0, FALSE))) {
+					} else if (!(resists_magm(tmpm) || mm_resist(tmpm, mtmp, 0, FALSE))) {
 							tmpm->mhp = -1;
 						monkilled(tmpm, "", AD_SPEL);
 			break;
@@ -1611,7 +1611,7 @@ asGuardian:
 						if (resists_death(tmpm)) {
 							// if (canseemon(tmpm))
 								// pline("%s seems no deader than before.", Monnam(tmpm));
-						} else if (!(resisted = (resists_magm(tmpm) || resist(tmpm, 0, 0, FALSE))) &&
+						} else if (!(resisted = (resists_magm(tmpm) || mm_resist(tmpm, mtmp, 0, FALSE))) &&
 								   rn2(mtmp->m_lev) > 12) {
 								tmpm->mhp = -1;
 							monkilled(tmpm, "", AD_SPEL);
@@ -1823,7 +1823,7 @@ asGuardian:
 			}
 			switch(rnd(4)){
 				case 1:
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s screams melodiously.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s screams melodiously.", Monnam(mtmp));
 					else pline("%s sings the song of broken eyes.", Monnam(mtmp));
 					
 					for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
@@ -1843,7 +1843,7 @@ asGuardian:
 					}
 				break;
 				case 2:
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s sings a resonant note.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s sings a resonant note.", Monnam(mtmp));
 					else pline("%s sings a harmless song of ruin.", Monnam(mtmp));
 					int trycount;
 					for(i = rnd(5); i > 0; i--){
@@ -1870,7 +1870,7 @@ asGuardian:
 				break;
 				case 3:{
 					struct obj *ispe = mksobj(SPE_TURN_UNDEAD, MKOBJ_NOINIT);
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s wails deafeningly.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s wails deafeningly.", Monnam(mtmp));
 					else pline("%s sings the song of the day of repentance.", Monnam(mtmp));
 					//Rapture invisible creatures
 					for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
@@ -1904,7 +1904,7 @@ asGuardian:
 					}
 				}break;
 				case 4:
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s screams furiously.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s screams furiously.", Monnam(mtmp));
 					else pline("%s sings the song of bloodied prayers.", Monnam(mtmp));
 					
 					for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
@@ -1939,7 +1939,7 @@ asGuardian:
 					if(!inrange) break;
 					if (!canspotmon(mtmp) && distmin(u.ux,u.uy,mtmp->mx,mtmp->my) < 5)
 						map_invisible(mtmp->mx, mtmp->my);
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s screeches discordantly.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s screeches discordantly.", Monnam(mtmp));
 					else pline("%s sings a song of courage.", Monnam(mtmp));
 					if(mtmp->mtyp != PM_INTONER) mtmp->mspec_used = rn1(10,10);
 
@@ -1993,7 +1993,7 @@ asGuardian:
 					if(!inrange) break;
 					if (!canspotmon(mtmp) && distmin(u.ux,u.uy,mtmp->mx,mtmp->my) < 5)
 						map_invisible(mtmp->mx, mtmp->my);
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s whistles shrilly.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s whistles shrilly.", Monnam(mtmp));
 					else pline("%s sings a song of good health.", Monnam(mtmp));
 					if(mtmp->mtyp != PM_INTONER) mtmp->mspec_used = rn1(10,10);
 
@@ -2051,7 +2051,7 @@ asGuardian:
 					if(!inrange) break;
 					if (!canspotmon(mtmp) && distmin(u.ux,u.uy,mtmp->mx,mtmp->my) < 5 && !Invulnerable)
 						map_invisible(mtmp->mx, mtmp->my);
-					if(ptr->mtyp == PM_INTONER && u.uinsight > Insanity+10) pline("%s laughs frantically.", Monnam(mtmp));
+					if(ptr->mtyp == PM_INTONER && Insight > Insanity+10) pline("%s laughs frantically.", Monnam(mtmp));
 					else pline("%s sings a song of haste.", Monnam(mtmp));
 					if(mtmp->mtyp != PM_INTONER) mtmp->mspec_used = rn1(10,10);
 					
@@ -2133,7 +2133,7 @@ asGuardian:
 
 					for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
 						if(tmpm != mtmp && !DEADMONSTER(tmpm)){
-							if ( mtmp->mpeaceful != tmpm->mpeaceful && distmin(mtmp->mx,mtmp->my,tmpm->mx,tmpm->my) < 4 && !resist(tmpm, 0, 0, FALSE)) {
+							if ( mtmp->mpeaceful != tmpm->mpeaceful && distmin(mtmp->mx,mtmp->my,tmpm->mx,tmpm->my) < 4 && !mm_resist(tmpm, mtmp, 0, FALSE)) {
 								dmg = 0;
 								switch(u.oonaenergy){
 									case AD_FIRE:
@@ -2249,7 +2249,7 @@ asGuardian:
 					for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
 						if(tmpm != mtmp && !DEADMONSTER(tmpm)){
 							if(!mindless_mon(tmpm) && tmpm->data->mmove){
-								if ( mtmp->mpeaceful != tmpm->mpeaceful && distmin(mtmp->mx,mtmp->my,tmpm->mx,tmpm->my) < 4 && !resist(tmpm, 0, 0, FALSE)) {
+								if ( mtmp->mpeaceful != tmpm->mpeaceful && distmin(mtmp->mx,mtmp->my,tmpm->mx,tmpm->my) < 4 && !mm_resist(tmpm, mtmp, 0, FALSE)) {
 									tmpm->movement -= 12;
 									tmpm->permspeed = MSLOW;
 									tmpm->mspeed = MSLOW;
@@ -6182,6 +6182,9 @@ dobinding(int tx, int ty)
 					if (uwep->opoisoned & OPOISON_BASIC)
 						uwep->opoisoned &= ~OPOISON_BASIC;
 					u.sealTimeout[YMIR-FIRST_SEAL] = moves + bindingPeriod;
+					if(moves>5000){
+						IMPURITY_UP(u.uimp_rot)
+					}
 				} else {
 					if(!Blind) pline("The eye closes.");
 					else pline("But nothing else occurs.");

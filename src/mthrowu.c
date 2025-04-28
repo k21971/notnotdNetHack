@@ -379,7 +379,7 @@ m_pole_range(struct monst *magr)
 		return 8;
 	}
 	
-	if(magr->mformication || magr->mscorpions)
+	if(magr->mformication || magr->mscorpions || magr->mcaterpillars)
 		return 4;
 
 	switch (m_martial_skill(magr->data)) {
@@ -488,7 +488,7 @@ hits_bars(
 	if (whodidit ? hero_breaks(otmp, x, y, FALSE) : breaks(otmp, x, y))
 	    *obj_p = otmp = 0;		/* object is now gone */
 	    /* breakage makes its own noises */
-	else if (obj_type == BOULDER || obj_type == STATUE || obj_type == HEAVY_IRON_BALL)
+	else if (obj_type == BOULDER || obj_type == STATUE || obj_type == BALL)
 	    pline("Whang!");
 	else if (otmp->oclass == COIN_CLASS ||
 		otmp->obj_material == GOLD ||

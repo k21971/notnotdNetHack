@@ -642,6 +642,7 @@ savelife(int how)
 		HStrangled &= ~TIMEOUT;
 		delayed_killer = 0;
 	}
+	make_invulnerable(HSanctuary + 1, TRUE);
 	nomovemsg = "You survived that attempt on your life.";
 	flags.move |= MOVE_INSTANT;
 	if(multi > 0) multi = 0; else multi = -1;
@@ -1136,6 +1137,18 @@ done(int how)
 			      humanoid(youracedata) ? "ring-" : "",
 			      body_part(FINGER));
 			obj->spe--;
+		} else if(check_rot(ROT_CENT) && !(mvitals[PM_CENTIPEDE].mvflags & G_GENOD) && !HUnchanging){
+			lsvd = LSVD_MISC;
+			if (how == DISINTEGRATED) pline("A monstrous centipede crawls out of your dust!");
+			else pline("A monstrous centipede crawls out of your rotting body!");
+			struct obj *otmp, *nobj;
+			for(otmp = invent; otmp; otmp = nobj){
+				nobj = otmp->nobj;
+				obj_extract_and_unequip_self(otmp);
+				dropy(otmp);
+			}
+			polymon(PM_CENTIPEDE);
+			remove_rot(ROT_CENT);
 		} else if(check_mutation(ABHORRENT_SPORE) && !(mvitals[PM_DARK_YOUNG].mvflags & G_GENOD)){
 			lsvd = LSVD_SPOR;
 			if (how == DISINTEGRATED) pline("Your dust is consumed by the abhorrent spore!");
@@ -1167,8 +1180,6 @@ done(int how)
 				calc_total_maxhp();
 			}
 		}
-		if(youmonst.movement < 12)
-			youmonst.movement = 12;
 		savelife(how);
 		if (how == GENOCIDED)
 			pline("Unfortunately you are still genocided...");

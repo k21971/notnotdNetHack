@@ -57,7 +57,7 @@ static int ready_weapon(struct obj *, boolean);
 /* probably should be renamed */
 #define erodeable_wep(optr)	((optr)->oclass == WEAPON_CLASS \
 				|| is_weptool(optr) \
-				|| (optr)->otyp == HEAVY_IRON_BALL \
+				|| (optr)->otyp == BALL \
 				|| (optr)->otyp == CHAIN)
 
 /* used by welded(), and also while wielding */

@@ -1524,6 +1524,9 @@ steedintrap(struct trap *trap, struct obj *otmp)
 					pline("The cold-iron sears %s!", 	//half cold-iron damage
 						mon_nam(mtmp));
 				}
+				if(hates_iron(mtmp->data) && tt == SPIKED_PIT){
+					mtmp->mironmarked = TRUE;
+				}
 				if (mtmp->mhp <= 0 ||
 					thitm(mtmp, rnd((tt == PIT) ? 6 : 10) + ((tt == SPIKED_PIT && hates_iron(mtmp->data)) ? rnd(mtmp->m_lev) : 0), FALSE))
 					trapkilled = TRUE;
@@ -2349,6 +2352,9 @@ glovecheck:		    target = which_armor(mtmp, W_ARMG);
 				if (in_sight && hates_iron(mtmp->data) && tt == SPIKED_PIT) {
 					pline("The cold-iron sears %s!",
 						mon_nam(mtmp));
+				}
+				if(hates_iron(mtmp->data) && tt == SPIKED_PIT){
+					mtmp->mironmarked = TRUE;
 				}
 				mselftouch(mtmp, "Falling, ", FALSE);
 				if (mtmp->mhp <= 0 ||
@@ -3874,6 +3880,31 @@ remove_trap_ammo(struct trap *ttmp)
 	}
 	newsym(ttmp->tx, ttmp->ty);
 	deltrap(ttmp);
+}
+
+/* Extract an object from a trap, and leave free for future use 
+	If this resutls in an empty trap, destroy the trap.
+*/
+void
+obj_extract_self_from_trap(struct obj *obj)
+{
+	struct obj *otmp;
+	struct obj **ppointer;
+
+	struct trap *ttmp = obj->otrap;
+	
+	for (ppointer = &(ttmp->ammo), otmp = ttmp->ammo; otmp; ppointer = &(otmp->nobj), otmp = otmp->nobj) {
+		if(otmp == obj)
+			break;
+	}
+	if(!otmp)
+		panic("obj_extract_self_from_trap: obj is not contained by the trap indicated by its own otrap field");
+	extract_nobj(otmp, ppointer);
+	otmp->otrap = 0;
+	if(!ttmp->ammo){
+		newsym(ttmp->tx, ttmp->ty);
+		deltrap(ttmp);
+	}
 }
 
 void

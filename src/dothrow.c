@@ -473,7 +473,7 @@ hurtle_step(void * arg, int x, int y)
     }
 
     if ((mon = m_at(x, y)) != 0) {
-		if(Role_if(PM_MONK) && !Upolyd && !mon->mpeaceful && canseemon(mon)){
+		if(((Role_if(PM_MONK) && !Upolyd) || activeFightingForm(FFORM_ATARU)) && !mon->mpeaceful && canseemon(mon)){
 			u.dx = x - u.ux;
 			u.dy = y - u.uy;
 			flags.forcefight = TRUE;

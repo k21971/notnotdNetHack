@@ -782,7 +782,8 @@ play_song(void)
 
 	///* songs only have effect after the 1st turn */
 	//if (song_delay <= songs[song_played].level+2) 
-	switch (song_being_played()) {
+	int song_id = song_being_played();
+	switch (song_id) {
 		case SNG_SLEEP:
 			sleep_song(distance);
 			break;
@@ -815,6 +816,10 @@ play_song(void)
 			break;
 		}
 
+	if(ACURR(A_CHA) == 25)
+		u.bladesong = monstermoves + 8 + songs[song_id].level;
+	else
+		u.bladesong = monstermoves + (ACURR(A_CHA) - 10)/2 + songs[song_id].level;
 	song_delay--;
 	if (song_delay <= 0) {
 		reset_song();

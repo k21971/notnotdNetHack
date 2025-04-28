@@ -545,7 +545,8 @@ smithing_object(struct obj *obj)
 	menu_item *selected;
 	anything any;
 	int selection;
-	boolean upgradeable = obj->oclass == WEAPON_CLASS || is_weptool(obj) || obj->oclass == ARMOR_CLASS;
+	boolean upgradeable = obj->oclass == WEAPON_CLASS || is_weptool(obj) || obj->oclass == ARMOR_CLASS || obj->otyp == KIDNEY_BELT || (obj->oclass == RING_CLASS && is_chargeable(obj));
+	boolean opropable = (obj->oclass == WEAPON_CLASS || is_weptool(obj) || obj->otyp == NIGHTMARE_S_BULLET_MOLD) && !is_ammo(obj);
 	boolean upgrade_gem_required; 
 
 	while(TRUE){
@@ -553,7 +554,7 @@ smithing_object(struct obj *obj)
 		start_menu(tmpwin);
 		any.a_void = 0;		/* zero out all bits */
 		n = 0;
-		upgrade_gem_required = (obj->spe >= smithing_bonus()) || (!is_metallic(obj) && obj->oclass == ARMOR_CLASS);
+		upgrade_gem_required = (obj->spe >= smithing_bonus()) || (!is_metallic(obj) && obj->oclass == ARMOR_CLASS) || obj->oclass == RING_CLASS;
 
 		// Sprintf(buf, "Functions");
 		// add_menu(tmpwin, NO_GLYPH, &any, 0, 0, ATR_BOLD, buf, MENU_UNSELECTED);
@@ -587,7 +588,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_fire(obj))
 		){
 			n++;
@@ -598,7 +599,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_cold(obj))
 		){
 			n++;
@@ -609,7 +610,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_lightning(obj))
 		){
 			n++;
@@ -620,7 +621,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_acid(obj))
 		){
 			n++;
@@ -631,7 +632,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_magic(obj))
 		){
 			n++;
@@ -660,7 +661,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_sothoth(obj))
 		){
 			n++;
@@ -680,7 +681,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if((obj->oclass == WEAPON_CLASS || is_weptool(obj))
+		if(opropable
 			&& (u.ublood_smithing && have_blood_smithing_buc(obj))
 		){
 			n++;
@@ -700,7 +701,7 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if(check_oprop(obj, OPROP_SMITHU)){
+		if(check_oprop(obj, OPROP_SMITHU) && !is_ammo(obj)){
 			n++;
 			incntlet = 'e';
 			Sprintf(buf, "Extract energy from %s", xname(obj));
@@ -923,6 +924,18 @@ smithing_object(struct obj *obj)
 			}
 			break;
 			case SOTHOTH_OPROP:{
+				int spellnum = 0;
+				struct obj *crystal = (struct obj *) 0;
+				get_blood_smithing_x(OPROP_SOTHW, &crystal, &spellnum);
+
+				if(crystal){
+					useup(crystal);
+				}
+				add_oprop(obj, OPROP_SOTHW);
+				use_skill(P_SMITHING, 1);
+			}
+			break;
+			case FLAME_OPROP:{
 				int spellnum = 0;
 				struct obj *crystal = (struct obj *) 0;
 				get_blood_smithing_x(OPROP_SOTHW, &crystal, &spellnum);
@@ -1372,7 +1385,7 @@ dipforge(struct obj *obj)
 
 	/* If punished and wielding a hammer, there's a good chance
 	 * you can use a forge to free yourself */
-	if (Punished && obj->otyp == HEAVY_IRON_BALL) {
+	if (Punished && obj->otyp == BALL) {
 		if ((uwep && !is_hammer(uwep)) || !uwep) { /* sometimes drop a hint */
 			if (!rn2(4))
 				pline("You'll need a hammer to be able to break the chain.");

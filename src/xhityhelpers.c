@@ -319,6 +319,16 @@ madness_cant_attack(struct monst *mon)
 		pline("You're afraid to go near that wormy thing!");
 		return TRUE;
 	}
+
+	if (mon->mtyp == PM_UNMASKED_TETTIGON
+		&& canspotmon(mon)
+		&& !ClearThoughts
+		&& !roll_generic_madness(TRUE)
+		&& !roll_impurity(TRUE)
+	){
+		You("can't bring yourself to strike %s!", mon_nam(mon));
+		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -497,7 +507,7 @@ steal_it(struct monst *mdef, struct attack *mattk)
 				  Monnam(mdef), mhis(mdef));
 	    }
 
-		if(near_capacity() < calc_capacity(otmp->owt)){
+		if(near_capacity() < calc_capacity(otmp->owt) || u.uavoid_theft){
 			You("steal %s %s and drop it to the %s.",
 				  s_suffix(mon_nam(mdef)), xname(otmp), surface(u.ux, u.uy));
 			if(otmp->otyp == CORPSE && touch_petrifies(&mons[otmp->corpsenm]) && !uarmg && !Stone_resistance){
@@ -1017,6 +1027,7 @@ attk_protection(int aatyp)
 	case AT_DSPR:
 	case AT_ESPR:
 	case AT_WISP:
+	case AT_VOMT:
 	case AT_REND:		/* If the previous attacks were OK, this one is too */
 		w_mask = ~0L;		/* special case; no defense needed */
 		break;
@@ -1391,6 +1402,7 @@ hatesobjdmg(struct monst *mdef, struct obj *otmp, struct monst *magr)
 			ndice = khakharadice;
 		/* calculate */
 		dmg += vd(ndice, diesize);
+		mdef->mironmarked = TRUE;
 	}
 	if (hates_holy_mon(mdef) &&
 		otmp->blessed) {
@@ -1458,7 +1470,7 @@ hatesobjdmg(struct monst *mdef, struct obj *otmp, struct monst *magr)
 		if (is_self_righteous(otmp) && 
 			(otmp->otyp != CHURCH_SHORTSWORD || !(resist_pierce(pd) && !resist_slash(pd)))
 		)
-			diesize *= otmp->otyp == CHURCH_SHORTSWORD && u.uinsight >= 40 ? 5 : 2.5;
+			diesize *= otmp->otyp == CHURCH_SHORTSWORD && Insight >= 40 ? 5 : 2.5;
 		/* calculate dice */
 		dmg += vd(ndice, diesize);
 	}
@@ -1527,7 +1539,7 @@ hatesobjdmg(struct monst *mdef, struct obj *otmp, struct monst *magr)
 		if (is_self_righteous(otmp) && 
 			(otmp->otyp != CHURCH_SHORTSWORD || !(resist_pierce(pd) && !resist_slash(pd)))
 		)
-			diesize *= otmp->otyp == CHURCH_SHORTSWORD && u.uinsight >= 40 ? 5 : 2.5;
+			diesize *= otmp->otyp == CHURCH_SHORTSWORD && Insight >= 40 ? 5 : 2.5;
 		/* calculate */
 		if (ndice)
 			dmg += vd(ndice, diesize);
@@ -2002,7 +2014,6 @@ destroy_item(struct monst *mtmp, int osym, int dmgtyp)
 
 	if (osym == RING_CLASS && dmgtyp == AD_ELEC)
 		return MM_MISS; /*Rings aren't destroyed by electrical damage anymore*/
-
 	if (ProtectItems(mtmp) && (osym == POTION_CLASS || osym == SCROLL_CLASS || osym == WAND_CLASS)){
 		return MM_MISS;
 	}
@@ -2580,11 +2591,11 @@ hit_with_cclaw(struct monst *magr, struct obj *otmp, int tarx, int tary, int toh
 	)
 		return result;
 	if(is_streaming_merc(otmp) && otmp->oartifact == ART_AMALGAMATED_SKIES && mlev(magr) > 20 && (
-		(youagr && u.uinsight > 20 && YOU_MERC_SPECIAL)
+		(youagr && Insight > 20 && YOU_MERC_SPECIAL)
 		|| (!youagr && insightful(magr->data) && is_chaotic_mon(magr)))
 	){
 		merc_mult++;
-		if((youagr ? (u.uinsight > 60) : (mlev(magr) > 30)))
+		if((youagr ? (Insight > 60) : (mlev(magr) > 30)))
 			merc_mult++;
 	}
 	dx *= merc_mult;
@@ -2618,7 +2629,7 @@ hit_with_cclaw(struct monst *magr, struct obj *otmp, int tarx, int tary, int toh
 	}
 	dx /= merc_mult;
 	dy /= merc_mult;
-	if(u.uinsight >= 30){
+	if(Insight >= 30){
 		//45 degree rotation
 		nx = sgn(dx+dy);
 		ny = sgn(dy-dx);
@@ -2825,7 +2836,7 @@ hit_with_iwarp(struct monst *magr, struct obj *otmp, int tarx, int tary, int toh
 			result |= subresult&(MM_AGR_DIED|MM_AGR_STOP);
 		}
 	}
-	if(u.uinsight >= 45){
+	if(Insight >= 45){
 		//90 degree rotation
 		nx = -dy;
 		ny = dx;
@@ -2881,7 +2892,7 @@ hit_with_iwarp(struct monst *magr, struct obj *otmp, int tarx, int tary, int toh
 			}
 		}
 	}
-	if(u.uinsight >= 57){
+	if(Insight >= 57){
 		//45 degree rotation
 		nx = sgn(dx+dy);
 		ny = sgn(dy-dx);
@@ -2937,7 +2948,7 @@ hit_with_iwarp(struct monst *magr, struct obj *otmp, int tarx, int tary, int toh
 			}
 		}
 	}
-	if(u.uinsight >= 70){
+	if(Insight >= 70){
 		//135 degree rotation
 		//x = xcos0 - ysin0
 		//x = x*(-0.7) - y*(0.7)
@@ -3048,7 +3059,7 @@ hit_with_rblood(struct monst *magr, struct obj *otmp, int tarx, int tary, int to
 			/* handle MM_AGR_DIED and MM_AGR_STOP by adding them to the overall result, ignore other outcomes */
 			result |= subresult&(MM_AGR_DIED|MM_AGR_STOP);
 		}
-		if(u.uinsight >= 40
+		if(Insight >= 40
 		  && ((youagr) ? couldsee(tarx + dx, tary + dy) : clear_path(magr->mx, magr->my, tarx + dx, tary + dy))
 		){
 			explode(tarx + dx, tary + dy, AD_FIRE, -1, d(6,6), EXPL_FIERY, 1);
@@ -3104,7 +3115,7 @@ hit_with_cblood(struct monst *magr, struct obj *otmp, int tarx, int tary, int to
 			/* handle MM_AGR_DIED and MM_AGR_STOP by adding them to the overall result, ignore other outcomes */
 			result |= subresult&(MM_AGR_DIED|MM_AGR_STOP);
 		}
-		int n = (u.uinsight - 20)/15;
+		int n = (Insight - 20)/15;
 		if (n > 2)
 			n = 2;
 		for(int i = 0; i < n; i++){
@@ -3317,7 +3328,7 @@ hit_with_cclaw_streaming(struct monst *magr, struct obj *otmp, int tarx, int tar
 			result |= subresult&(MM_AGR_DIED|MM_AGR_STOP);
 		}
 	}
-	if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && (youagr ? (u.uinsight > 60) : (mlev(magr) > 30)) && isok(tarx + 2*dx, tary + 2*dy)){
+	if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && (youagr ? (Insight > 60) : (mlev(magr) > 30)) && isok(tarx + 2*dx, tary + 2*dy)){
 		tarx += dx;
 		tary += dy;
 		struct monst *mdef2 = !youagr ? m_u_at(tarx + dx, tary + dy) : 
@@ -3359,7 +3370,7 @@ hit_with_streaming(struct monst *magr, struct obj *otmp, int tarx, int tary, int
 	int dy = sgn(tary - y(magr));
 	int nx, ny;
 	int result = 0;
-	if(u.uinsight >= 15 && otmp->oartifact != ART_AMALGAMATED_SKIES && is_cclub_able(otmp)){
+	if(Insight >= 15 && otmp->oartifact != ART_AMALGAMATED_SKIES && is_cclub_able(otmp)){
 		return hit_with_cclaw_streaming(magr, otmp, tarx, tary, tohitmod, attk);
 	}
 	if(!(isok(tarx - dx, tary - dy) &&
@@ -3392,7 +3403,7 @@ hit_with_streaming(struct monst *magr, struct obj *otmp, int tarx, int tary, int
 			result |= subresult&(MM_AGR_DIED|MM_AGR_STOP);
 		}
 	}
-	if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && (youagr ? (u.uinsight > 60) : (mlev(magr) > 30)) && isok(tarx + 2*dx, tary + 2*dy)){
+	if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && (youagr ? (Insight > 60) : (mlev(magr) > 30)) && isok(tarx + 2*dx, tary + 2*dy)){
 		tarx += dx;
 		tary += dy;
 		struct monst *mdef2 = !youagr ? m_u_at(tarx + dx, tary + dy) : 

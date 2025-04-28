@@ -50,7 +50,7 @@ can_saddle(struct monst *mtmp, struct obj *otmp)
 			) && 
 			(ptr->msize >= MZ_MEDIUM) &&
 			!(humanoid(ptr) && ptr->mtyp != PM_SPROW) &&
-			!amorphous(ptr) && !is_whirly(ptr) && 
+			!amorphous(ptr) && !is_gaseous_noequip(ptr) && 
 			((otmp && check_oprop(otmp, OPROP_PHSEW)) || !(noncorporeal(ptr) || unsolid(ptr)))
 			);
 }

@@ -676,7 +676,7 @@ init_mplayer_gear(register struct permonst *ptr, boolean female, boolean special
 #ifdef PM_CONVICT
 	case PM_CONVICT:
 		if (rn2(4)) *weapon = FLAIL;
-		else if(rn2(3)) *weapon = HEAVY_IRON_BALL;
+		else if(rn2(3)) *weapon = BALL;
 		else *weapon = SPOON;
 		if(special){
 			*helm = find_vhelm();
@@ -911,8 +911,8 @@ init_mplayer_gear(register struct permonst *ptr, boolean female, boolean special
 			break;
 		}
 		*armor = JACKET;
-		*helm = FEDORA;
-		*cloak = CLOAK;
+		*helm = TRICORN;
+		*cloak = CAPELET;
 		*gloves = GLOVES;
 		*boots = HIGH_BOOTS;
 	break;

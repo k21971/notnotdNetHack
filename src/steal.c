@@ -228,6 +228,8 @@ steal(
 {
 	struct obj *otmp;
 	int tmp, could_petrify, named = 0, armordelay;
+	if(!mtmp)
+		return 0;
 	boolean charms = (is_neuter(mtmp->data) || flags.female == mtmp->female);
 	boolean mi_only = is_chuul(mtmp->data);
 	if(mtmp->mtyp == PM_ALRUNES) charms = !charms;
@@ -351,6 +353,7 @@ gotobj:
 		case TOOL_CLASS:
 		case AMULET_CLASS:
 		case RING_CLASS:
+		case BELT_CLASS:
 		case FOOD_CLASS: /* meat ring */
 		    remove_worn_item(otmp, TRUE);
 		    break;

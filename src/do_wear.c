@@ -259,6 +259,8 @@ Cloak_on(void)
 	case CLOAK_OF_MAGIC_RESISTANCE:
 	case ROBE:
 	case CLOAK:
+	case CAPELET:
+	case HOODED_CAPELET:
 	case LEO_NEMAEUS_HIDE:
 	case WHITE_FACELESS_ROBE:
 	case BLACK_FACELESS_ROBE:
@@ -344,6 +346,8 @@ Cloak_off(void)
 	case OILSKIN_CLOAK:
 	case ROBE:
 	case CLOAK:
+	case CAPELET:
+	case HOODED_CAPELET:
 	case LEO_NEMAEUS_HIDE:
 	case WHITE_FACELESS_ROBE:
 	case BLACK_FACELESS_ROBE:
@@ -390,6 +394,7 @@ Helmet_on(void)
 	adj_abon(uarmh, uarmh->spe);
     switch(uarmh->otyp) {
 	case FEDORA:
+	case TRICORN:
 	case SHEMAGH:
 	case HELMET:
 	case DROVEN_HELM:
@@ -398,6 +403,7 @@ Helmet_on(void)
 	case CRYSTAL_HELM:
 	case PONTIFF_S_CROWN:
 	case FACELESS_HELM:
+	case FACELESS_HOOD:
 	case SEDGE_HAT:
 	case WAR_HAT:
 	case WIDE_HAT:
@@ -416,6 +422,12 @@ Helmet_on(void)
 	case HELM_OF_BRILLIANCE:
 	case SUNLIGHT_MAGGOT:
 	case STRIPED_HAT:
+		break;
+	case TOP_HAT:
+	case ESCOFFION:
+	case HENNIN:
+		ABON(A_CHA) += 1;
+		flags.botl = 1;
 		break;
 	case CORNUTHAUM:
 		/* people think marked wizards know what they're talking
@@ -514,6 +526,7 @@ Helmet_off(void)
 
     switch(uarmh->otyp) {
 	case FEDORA:
+	case TRICORN:
 	case SHEMAGH:
 	case HELMET:
 	case DROVEN_HELM:
@@ -522,6 +535,7 @@ Helmet_off(void)
 	case CRYSTAL_HELM:
 	case PONTIFF_S_CROWN:
 	case FACELESS_HELM:
+	case FACELESS_HOOD:
 	case SEDGE_HAT:
 	case WAR_HAT:
 	case WIDE_HAT:
@@ -538,6 +552,12 @@ Helmet_off(void)
 	case SUNLIGHT_MAGGOT:
 	case STRIPED_HAT:
 	    break;
+	case TOP_HAT:
+	case ESCOFFION:
+	case HENNIN:
+		ABON(A_CHA) -= 1;
+		flags.botl = 1;
+		break;
 	case DUNCE_CAP:
 	    flags.botl = 1;
 	    break;
@@ -573,7 +593,7 @@ Helmet_off(void)
 	if (Blind) {
 		if (was_blind) {
 			/* "still cannot see" needs the helmet to possibly have been the cause of your blindness */
-			if ((otmp->otyp == CRYSTAL_HELM && is_opaque(otmp)) ||
+			if (((otmp->otyp == CRYSTAL_HELM || otmp->otyp == FACELESS_HOOD) && is_opaque(otmp)) ||
 				(otmp->otyp == PLASTEEL_HELM && is_opaque(otmp) && otmp->obj_material != objects[otmp->otyp].oc_material))
 				You("still cannot see.");
 		}
@@ -2276,7 +2296,7 @@ doputon(void)
 		Blindf_on(otmp);
 		return MOVE_STANDARD;
 	}
-	if (is_worn(otmp))
+	if (is_worn(otmp, 0))
 	    prinv((char *)0, otmp, 0L);
 	return MOVE_STANDARD;
 }
@@ -2635,10 +2655,10 @@ base_uac(void)
 		}
 		if(has_spear_point(uwep,JET)) uac -= 2 + uwep->spe/2;
 		else if(uwep->oartifact == ART_LASH_OF_THE_COLD_WASTE){
-			if(u.uinsight >= 20)
+			if(Insight >= 20)
 				uac -= 10;
-			else if(u.uinsight > 10)
-				uac -= u.uinsight - 10;
+			else if(Insight > 10)
+				uac -= Insight - 10;
 		}
 		if(!flat_foot){
 			if((is_rapier(uwep) && arti_phasing(uwep)) || 
@@ -2836,6 +2856,9 @@ find_ac(void)
 		)
 			uac -= 3;//+1 bonus to shield size
 	}
+	if(!uarms && uwep && CHECK_ETRAIT(uwep, &youmonst, ETRAIT_BLADEDANCE) && Race_if(PM_ELF)){
+		uac -= ROLL_ETRAIT(uwep, &youmonst, 3, 1);
+	}
 	if (uarmg)	uac -= arm_ac_bonus(uarmg);
 	if (uarmu)	uac -= arm_ac_bonus(uarmu);
 	if (ubelt)	uac -= arm_ac_bonus(ubelt);
@@ -2935,7 +2958,7 @@ base_nat_udr(void)
 			else udr += (u.ulevel)/6;
 		}
 	}
-	if(uarm && uarm->oartifact == ART_SCORPION_CARAPACE && check_carapace_mod(uarm, CPROP_IMPURITY) && u.uinsight >= 5){
+	if(uarm && uarm->oartifact == ART_SCORPION_CARAPACE && check_carapace_mod(uarm, CPROP_IMPURITY) && Insight >= 5){
 		udr += 3;
 	}
 	if(check_preservation(PRESERVE_GAIN_DR)){
@@ -2970,10 +2993,10 @@ base_udr(void)
 		if(uwep->oartifact == ART_LANCE_OF_LONGINUS) udr += max((uwep->spe)/2,0);
 		if(has_spear_point(uwep,JET)) udr += 2 + uwep->spe/2;
 		else if(uwep->oartifact == ART_LASH_OF_THE_COLD_WASTE){
-			if(u.uinsight >= 40)
+			if(Insight >= 40)
 				udr += 5;
-			else if(u.uinsight > 20)
-				udr += (u.uinsight - 20)/4;
+			else if(Insight > 20)
+				udr += (Insight - 20)/4;
 		}
 	}
 	if (HProtection & INTRINSIC) udr += (u.ublessed)/2;
@@ -3355,7 +3378,7 @@ some_armor(struct monst *victim)
 	otmp = (victim == &youmonst) ? uarmf : which_armor(victim, W_ARMF);
 	if(otmp && (!otmph || !rn2(4))) otmph = otmp;
 	otmp = (victim == &youmonst) ? ubelt : which_armor(victim, W_BELT);
-	if(otmp && (!otmph || !rn2(4))) otmph = otmp;
+	if(otmp && otmp->otyp == KIDNEY_BELT && (!otmph || !rn2(4))) otmph = otmp;
 	otmp = (victim == &youmonst) ? uarms : which_armor(victim, W_ARMS);
 	if(otmp && (!otmph || !rn2(4))) otmph = otmp;
 	return(otmph);
@@ -4531,7 +4554,9 @@ adj_abon(register struct obj *otmp, register schar delta)
 				flags.botl = 1;
 			}
 		}
-		if (otmp->otyp == find_gcirclet() || otmp->oartifact == ART_CROWN_OF_THE_PERCIPIENT){
+		if (otmp->otyp == find_gcirclet() || otmp->oartifact == ART_CROWN_OF_THE_PERCIPIENT
+		 || otmp->otyp == TOP_HAT || otmp->otyp == ESCOFFION || otmp->otyp == HENNIN
+		){
 			if (delta) {
 				ABON(A_CHA) += (delta);
 				flags.botl = 1;
@@ -5666,16 +5691,16 @@ doibite_ghosts(struct monst *magr, struct obj *wep)
 void
 doliving_ibite_arm(struct monst *magr, struct obj *wep, boolean invoked)
 {
-	if(u.uinsight >= 60 && invoked){
+	if(Insight >= 60 && invoked){
 		//summon ghosts
 		doibite_ghosts(magr, wep);
 	}
 
-	if(u.uinsight >= 50 && !rn2(20)){
+	if(Insight >= 50 && !rn2(20)){
 		//cast spell
 		doibite_cast(magr, wep);
 	}
-	else if(u.uinsight >= 40 || invoked){
+	else if(Insight >= 40 || invoked){
 		//hit targets
 		doibite_thrash(magr, wep);
 	}
@@ -5941,7 +5966,7 @@ doliving_percipient(struct monst *magr, struct obj *wep, boolean invoked)
 	boolean youdef;
 	
 	/*Must have some insight or all targets will be skipped.*/
-	if(u.uinsight < 1)
+	if(Insight < 1)
 		return;
 	
 	for(j=8;j>=1;j--){
@@ -5968,7 +5993,7 @@ doliving_percipient(struct monst *magr, struct obj *wep, boolean invoked)
 		if(!youdef && nonthreat(mdef))
 			continue;
 		
-		if(rn2(101) >= u.uinsight)
+		if(rn2(101) >= Insight)
 			continue;
 		
 		if(youdef && u.uen > 0){
@@ -6000,7 +6025,7 @@ doliving_fallingstar(struct monst *magr, struct obj *wep, boolean invoked)
 		if(wep == MON_WEP(magr)) delta = 3;
 	}
 	
-	if (!invoked && u.uinsight < rnd(100)) return;
+	if (!invoked && Insight < rnd(100)) return;
 	
 	for(i = x-delta; i <= x+delta; i++)
 		for(j = y-delta; j <= y+delta; j++){
@@ -6040,7 +6065,7 @@ doliving_fallingstar(struct monst *magr, struct obj *wep, boolean invoked)
 					return; //oops!
 			}
 			
-			if(u.uinsight >= 50 && invoked && !rn2(4) && m_online(magr, mdef, x(mdef), y(mdef), TRUE, TRUE)){
+			if(Insight >= 50 && invoked && !rn2(4) && m_online(magr, mdef, x(mdef), y(mdef), TRUE, TRUE)){
 				pline("A torrent of energy erupts from the jaws!");
 				struct zapdata beam;
 				basiczap(&beam, AD_MAGM, ZAP_BREATH, 6);
@@ -6101,10 +6126,10 @@ doliving_armor_salve(struct monst *mon, struct obj *salve)
 	if(rn2(180))
 		return;
 
-	if(u.uinsight >= 18 && salve->spe < 6){
+	if(Insight >= 18 && salve->spe < 6){
 		salve->spe++;
 	}
-	else if(u.uinsight >= 66 && salve->spe >= 6){
+	else if(Insight >= 66 && salve->spe >= 6){
 		for(struct obj *otmp = yours ? invent : mon->minvent; otmp; otmp = otmp->nobj){
 			if(salve_target(otmp) && rn2(2)){
 				if(yours) pline("%s crawls across %s.", Yname2(salve), yname(otmp));

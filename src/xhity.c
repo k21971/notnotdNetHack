@@ -48,7 +48,7 @@ static const int DjemSo_counterattack[] = {  5, 10, 20 };
 static const int Shien_counterattack[]  = {  5, 10, 20 };
 static const int Soresu_counterattack[] = { 10, 15, 25 };
 /* Misc attacks */
-struct attack noattack = { 0, 0, 0, 0 };
+const struct attack noattack = { 0, 0, 0, 0 };
 struct attack basicattack  = { AT_WEAP, AD_PHYS, 1, 4 };
 struct attack grapple = { AT_HUGS, AD_PHYS, 0, 6 };	/* for grappler's grasp */
 struct attack acu_tent = { AT_TENT, AD_DRIN, 1, 4 };	/* for acu tentacles */
@@ -270,13 +270,13 @@ attack2(struct monst *mdef)
 		if (!DEADMONSTER(mdef) && u.sealsActive&SEAL_SHIRO){
 			int i, dx, dy;
 			struct obj *otmp;
-			for (i = rnd(8); i>0; i--){
+			for (i = rnd(8); i>0 && !DEADMONSTER(mdef); i--){
 				dx = rn2(3) - 1;
 				dy = rn2(3) - 1;
 				otmp = mksobj(ROCK, NO_MKOBJ_FLAGS);
 				otmp->blessed = 0;
 				otmp->cursed = 0;
-				if ((dx || dy) && !DEADMONSTER(mdef)){
+				if ((dx || dy) && isok(x(mdef) + dx, y(mdef) + dy)){
 					projectile(&youmonst, otmp, (void *)0, HMON_PROJECTILE|HMON_FIRED, x(mdef) + dx, y(mdef) + dy, -dx, -dy, 0, 1, TRUE, FALSE, FALSE);
 				}
 				else {
@@ -769,10 +769,10 @@ xattacky(struct monst *magr, struct monst *mdef, int tarx, int tary)
 				boolean devaloop = (aatyp == AT_DEVA);
 				do {
 					bhitpos.x = tarx; bhitpos.y = tary;
-					if(ranged && otmp && is_cclub_able(otmp) && u.uinsight >= 15)
+					if(ranged && otmp && is_cclub_able(otmp) && Insight >= 15)
 						otmp->otyp = CLAWED_HAND;
 					result = xmeleehity(magr, mdef, attk, &otmp, vis, tohitmod, ranged);
-					if(ranged && otmp && is_cclub_able(otmp) && u.uinsight >= 15)
+					if(ranged && otmp && is_cclub_able(otmp) && Insight >= 15)
 						otmp->otyp = otmp->oartifact == ART_AMALGAMATED_SKIES ? TWO_HANDED_SWORD : CLUB;
 					/* Marionette causes an additional weapon strike to a monster behind the original target */
 					/* this can attack peaceful/tame creatures without warning */
@@ -801,22 +801,22 @@ xattacky(struct monst *magr, struct monst *mdef, int tarx, int tary)
 					/* Mercurial weapons may hit additional targets */
 					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && otmp && is_streaming_merc(otmp)){
 						if(magr && mlev(magr) > 20 && (
-							(youagr && u.uinsight > 20 && YOU_MERC_SPECIAL)
+							(youagr && Insight > 20 && YOU_MERC_SPECIAL)
 							|| (!youagr && insightful(magr->data) && is_chaotic_mon(magr))
 						)){
 							result |= hit_with_streaming(magr, otmp, tarx, tary, tohitmod, attk)&(MM_AGR_DIED|MM_AGR_STOP);
 						}
 					}
 					/* Rakuyo hit additional targets, if your insight is high enough to percieve the blood */
-					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && u.uinsight >= 20 && otmp && rakuyo_prop(otmp)){
+					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 20 && otmp && rakuyo_prop(otmp)){
 						result |= hit_with_rblood(magr, otmp, tarx, tary, tohitmod, attk)&(MM_AGR_DIED|MM_AGR_STOP);
 					}
 					/* Club-claw insight weapons strike additional targets if your insight is high enough to perceive the claw */
-					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && u.uinsight >= 15 && otmp && is_cclub_able(otmp)){
+					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 15 && otmp && is_cclub_able(otmp)){
 						result |= hit_with_cclaw(magr, otmp, tarx, tary, tohitmod, attk)&(MM_AGR_DIED|MM_AGR_STOP);
 					}
 					/* Isamusei hit additional targets, if your insight is high enough to percieve the distortions */
-					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && u.uinsight >= 22 && otmp && otmp->otyp == ISAMUSEI){
+					if(!ranged && !(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 22 && otmp && otmp->otyp == ISAMUSEI){
 						result |= hit_with_iwarp(magr, otmp, tarx, tary, tohitmod, attk)&(MM_AGR_DIED|MM_AGR_STOP);
 					}
 					/* Soldier's katar may shoot additional targets */
@@ -863,6 +863,7 @@ xattacky(struct monst *magr, struct monst *mdef, int tarx, int tary)
 									result |= subresult&(MM_AGR_DIED|MM_AGR_STOP);
 								}
 							}
+							i++;
 						}
 					}
 					/* Cleaving weapon trait can cause melee attacks to hit an additional neighboring monster, if the blow kills the primary target */
@@ -1023,6 +1024,7 @@ xattacky(struct monst *magr, struct monst *mdef, int tarx, int tary)
 		case AT_WISP:	// 
 		case AT_HITS:	// always hits
 		case AT_TUCH:	// uses touch accuracy
+		case AT_VOMT:	// uses touch accuracy
 		case AT_SRPR:	// uses touch accuracy
 		case AT_XSPR:	// uses touch accuracy
 		case AT_MSPR:	// uses touch accuracy
@@ -1690,6 +1692,7 @@ getnextspiritattack(boolean fresh)
 #define PASV_ECHIDNA	9
 #define PASV_FAFNIR		10
 #define PASV_EDEN		11
+#define NOATTACK		12
 	static struct attack spiritattack[] =
 	{
 		{ AT_BUTT, AD_PHYS, 1, 9 },
@@ -1703,7 +1706,8 @@ getnextspiritattack(boolean fresh)
 		{ AT_NONE, AD_SHDW, 4, 8 },
 		{ AT_NONE, AD_ACID, 1, 1 },	/* actually 1d(spiritDsize) */
 		{ AT_NONE, AD_FIRE, 1, 1 }, /* actually 1d(spiritDsize) */
-		{ AT_NONE, AD_SLVR, 1, 20 }
+		{ AT_NONE, AD_SLVR, 1, 20 },
+		{ AT_NONE, AD_PHYS, 0, 0 } /* noattack */
 	};
 	int i;					/* loop counter */
 	static int indexnum;	/* which attack index to return -- kept between calls of this function */
@@ -1815,7 +1819,7 @@ getnextspiritattack(boolean fresh)
 	}
 		
 	/* Default case: no attack */
-	return &noattack;
+	return &spiritattack[NOATTACK];
 }
 
 /* getattk()
@@ -1943,8 +1947,39 @@ getattk(
 	}
 	/*Some attacks have insight requirements*/
 	/*PCs can gain monster insight attacks, since insight is always about the PC's perceptions*/
-	if(attk->ins_req > u.uinsight){
+	if(attk->ins_req > Insight){
 		GETNEXT
+	}
+	/*Some attacks have sanity requirements*/
+	if(attk->san_req > 0){
+		if(youdef || by_the_book){
+			if(NightmareAware_Sanity < attk->san_req){
+				GETNEXT
+			}
+		}
+		else if(mdef){
+			if(mdef->encouraged < attk->san_req/10){
+				GETNEXT
+			}
+		}
+		else {
+			GETNEXT
+		}
+	}
+	else if(attk->san_req < 0){
+		if(youdef || by_the_book){
+			if(NightmareAware_Sanity > -1*attk->san_req){
+				GETNEXT
+			}
+		}
+		else if(mdef){
+			if(mdef->encouraged > -1*attk->san_req/10){
+				GETNEXT
+			}
+		}
+		else {
+			GETNEXT
+		}
 	}
 	/* khaamnun tanninim switch to sucking memories after dragging target in close */
 	if (pa->mtyp == PM_KHAAMNUN_TANNIN
@@ -1970,9 +2005,9 @@ getattk(
 		attk->aatyp = AT_DEVA;
 	}
 	/* Carcosan courtiers gain extra dice on their tentacles. */
-	if(pa->mtyp == PM_CARCOSAN_COURTIER && attk->aatyp == AT_TENT && u.uinsight > 5){
-		if(u.uinsight < 25){
-			attk->damn = u.uinsight/5;
+	if(pa->mtyp == PM_CARCOSAN_COURTIER && attk->aatyp == AT_TENT && Insight > 5){
+		if(Insight < 25){
+			attk->damn = Insight/5;
 		}
 		else {
 			attk->damn = 5;
@@ -1988,7 +2023,8 @@ getattk(
 		*indexnum >= 2 &&
 		!isdark(x(magr), y(magr))
 	) {
-		return &noattack;
+		*attk = noattack;
+		return attk;
 	}
 	if(magr->mforgetful && (attk->adtyp == AD_MAGM || attk->adtyp == AD_SPEL)){
 		GETNEXT
@@ -2279,7 +2315,11 @@ getattk(
 		}
 	}
 	/* Dream leech dream leeches disappear when cancelled */
-	if(has_template(magr, DREAM_LEECH) && magr->mcan &&attk->aatyp == AT_TUCH && attk->adtyp == AT_TUCH){
+	if(has_template(magr, DREAM_LEECH) && magr->mcan &&attk->aatyp == AT_TUCH && attk->adtyp == AD_DRIN){
+		GETNEXT
+	}
+	/* Tettigon touch attack is magical and can be cancelled */
+	if(magr->mtyp == PM_TETTIGON_LEGATUS && magr->mcan &&attk->aatyp == AT_TUCH){
 		GETNEXT
 	}
 	/* Skip kicks with wounded legs */
@@ -2288,6 +2328,10 @@ getattk(
 	}
 	/* Skip attacks if stunned */
 	if(!youagr && magr->mstun && !by_the_book && !rn2(6)){
+		GETNEXT
+	}
+	/* Man flies actually have only a 1/10th chance to barf */
+	if(pa->mtyp == PM_MAN_FLY && attk->aatyp == AT_VOMT && !by_the_book && rn2(10)){
 		GETNEXT
 	}
 		
@@ -2337,7 +2381,8 @@ getattk(
 		}
 		else if (check_subout(subout, SUBOUT_GOATSPWN)){
 			/* If spellcasting, stop after the first index */
-			return &noattack;
+			*attk = noattack;
+			return attk;
 		}
 	}
 	if(!by_the_book && attk->aatyp == AT_BKGT){
@@ -2444,7 +2489,7 @@ getattk(
 		}
 	}
 	/* Blibdoolpoolp switches to a worse attack routine at high insight -- shown in pokedex */
-	if (pa->mtyp == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH && *indexnum < NATTK && u.uinsight >= 54) {
+	if (pa->mtyp == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH && *indexnum < NATTK && Insight >= 54) {
 		static const struct attack blib_alternate[NATTK] = {
 			{ AT_CLAW, AD_SQUE, 4, 8, 0, 0, 1 },
 			{ AT_CLAW, AD_SQUE, 4, 8, 0, 1, 0 },
@@ -2734,6 +2779,18 @@ getattk(
 		add_subout(subout, SUBOUT_OCT);
 	}
 
+	/* Player may get rot stinger attack */
+	if (youagr && is_null_attk(attk) && !by_the_book && check_rot(ROT_STING)
+		&& !check_subout(subout, SUBOUT_ROT_STING)
+	) {
+		attk->aatyp = AT_STNG;
+		attk->adtyp = AD_DISE;
+		attk->damn = 1;
+		attk->damd = 4;
+		fromlist = FALSE;
+		add_subout(subout, SUBOUT_ROT_STING);
+	}
+
 	/* Player may get brain sucker attack */
 	if (youagr && is_null_attk(attk) && !by_the_book && u.brainsuckers && active_glyph(LUMEN)
 		&& !check_subout(subout, SUBOUT_BRAINSUCK)
@@ -2746,19 +2803,46 @@ getattk(
 		add_subout(subout, SUBOUT_BRAINSUCK);
 	}
 
+	/* Player may get rot vomit attack */
+	if (youagr && is_null_attk(attk) && !by_the_book && check_rot(ROT_VOMIT) && (umechanoid || u.uhs < WEAK)
+		&& !check_subout(subout, SUBOUT_ROT_VOMIT)
+	) {
+		if(!rn2(10)){
+			attk->aatyp = AT_VOMT;
+			attk->adtyp = AD_DISE;
+			attk->damn = 1;
+			attk->damd = 1;
+			fromlist = FALSE;
+			make_sick(0L, (char *) 0, TRUE, SICK_VOMITABLE);
+			if(!umechanoid) morehungry(20*get_uhungersizemod());
+		}
+		add_subout(subout, SUBOUT_ROT_VOMIT);
+	}
+
 	/* players can get a whole host of spirit attacks */
 	if (youagr && is_null_attk(attk) && !by_the_book) {
 		/* this assumes that getattk() will not be interrupted with youagr when already called with youagr */
 		if (!check_subout(subout, SUBOUT_SPIRITS)) {
-			attk = getnextspiritattack(TRUE);
+			*attk = *(getnextspiritattack(TRUE));
 			add_subout(subout, SUBOUT_SPIRITS);
 		}
 		else {
-			attk = getnextspiritattack(FALSE);
+			*attk = *(getnextspiritattack(FALSE));
 		}
 		fromlist = FALSE;
 	}
 
+	/* Player may get rot spores passive attack */
+	if (youagr && is_null_attk(attk) && !by_the_book && check_rot(ROT_SPORES)
+		&& !check_subout(subout, SUBOUT_ROT_SPORES)
+	) {
+		attk->aatyp = AT_NONE;
+		attk->adtyp = AD_DISE;
+		attk->damn = 1;
+		attk->damd = 1;
+		fromlist = FALSE;
+		add_subout(subout, SUBOUT_ROT_SPORES);
+	}
 	/* some pseudonatural's claws become more-damaging tentacles */
 	if (!youagr && has_template(magr, PSEUDONATURAL) && (
 		attk->aatyp == AT_CLAW && (magr->m_id + *indexnum) % 4 == 0)
@@ -2921,6 +3005,8 @@ xymissmsg(struct monst *magr, struct monst *mdef, struct attack *attk, int vis, 
 	if (youagr) {
 		if (compat)
 			You("pretend to be friendly to %s.", mon_nam(mdef));
+		else if (youdef)
+			You("fail to hit yourself. How embarrassing!");
 		else if (flags.verbose)
 			You("miss %s.", mon_nam(mdef));
 		else
@@ -2971,6 +3057,7 @@ xyhitmsg(struct monst *magr, struct monst *mdef, struct attack *attk)
 	boolean youagr = (magr == &youmonst);
 	boolean youdef = (mdef == &youmonst);
 	struct permonst * pa = youagr ? youracedata : magr->data;
+	struct permonst * pd = youdef ? youracedata : mdef->data;
 	int compat;
 
 	/* AT_NONE is silent */
@@ -3115,7 +3202,7 @@ xyhitmsg(struct monst *magr, struct monst *mdef, struct attack *attk)
 		case AT_OBIT:
 			pline("%s %s bites %s!",
 				(youagr ? "Your" : s_suffix(Monnam(magr))),
-				(attk->adtyp == AD_MAGM ? "skirt" : magr->mtyp == PM_MEDUSA ? "hair" : magr->mtyp == PM_MOON_S_CHOSEN ? "cranial wolfpack" : magr->mtyp == PM_HYGIEIAN_ARCHON ? "snake" : magr->mtyp == PM_ANCIENT_NAGA ? "canopy" : "snake head"),
+				(attk->adtyp == AD_MAGM ? "skirt" : magr->mtyp == PM_MEDUSA ? "hair" : magr->mtyp == PM_MOON_S_CHOSEN ? "cranial wolfpack" : magr->mtyp == PM_HYGIEIAN_ARCHON ? "snake" : magr->mtyp == PM_ANCIENT_NAGA ? "canopy" : attk->adtyp == AD_DISE ? "centipede" : "snake head"),
 				((youdef && !youagr) ? "you" : mon_nam_too(mdef, magr))
 				);
 			break;
@@ -3125,6 +3212,14 @@ xyhitmsg(struct monst *magr, struct monst *mdef, struct attack *attk)
 				(youagr ? "" : "s"),
 				((youdef && !youagr) ? "you" : mon_nam_too(mdef, magr)),
 				(youagr ? "your" : mhis(magr))
+				);
+			break;
+		case AT_VOMT:
+			pline("%s vomit%s %s %s!",
+				(youagr ? "You" : Monnam(magr)),
+				(youagr ? "" : "s"),
+				(pd->msize > pa->msize ? "on" : "all over"),
+				((youdef && !youagr) ? "you" : mon_nam_too(mdef, magr))
 				);
 			break;
 		case AT_TONG:
@@ -3161,6 +3256,13 @@ xyhitmsg(struct monst *magr, struct monst *mdef, struct attack *attk)
 					(youagr ? "" : "s"),
 					((youdef && !youagr) ? "you" : mon_nam_too(mdef, magr)),
 					(youagr ? "your" : mhis(magr))
+					);
+			}
+			else if(attk->adtyp == AD_PLYS){
+				pline("%s lick%s %s!",
+					(youagr ? "You" : Monnam(magr)),
+					(youagr ? "" : "s"),
+					((youdef && !youagr) ? "you" : mon_nam_too(mdef, magr))
 					);
 			}
 			else {
@@ -3403,6 +3505,11 @@ xdamagey(
 	const char * oldkiller = killer;
 	killer = 0;
 
+	if(dmg > 0 && youdef && youagr){
+		dmg = (dmg - ACURR(A_DEX))/2;
+		dmg = max(1, dmg);
+	}
+
 	/* if defender is already dead, avoid re-killing them; just note that they are dead */
 	if (*hp(mdef) < 1) {
 		return (MM_HIT|MM_DEF_DIED);
@@ -3423,6 +3530,7 @@ xdamagey(
 	if (youdef) {
 		stop_occupation();
 		flags.botl = 1;
+		u.total_damage += dmg;
 		if (dmg > 0 && magr)
 			magr->mhurtu = TRUE;
 		/* the golden knight saves you from dying from hp loss */
@@ -3803,7 +3911,7 @@ tohitval(
 			(u.sealsActive&SEAL_EVE) ||
 			(weapon->otyp == DAGGER && Role_if(PM_ROGUE)) ||
 			(weapon->otyp == DART && Role_if(PM_TOURIST)) ||
-			(weapon->otyp == HEAVY_IRON_BALL && Role_if(PM_CONVICT))
+			(weapon->otyp == BALL && Role_if(PM_CONVICT))
 			)) {
 			base_acc = mlev(magr);
 		}
@@ -3892,8 +4000,8 @@ tohitval(
 			if(attk && is_insight_tentacle_at(attk->aatyp)
 				&& (u.sealsActive&SEAL_OSE)
 			){
-				if(u.uinsight)
-					bons_acc += rnd(min(u.uinsight, mlev(magr)));
+				if(Insight)
+					bons_acc += rnd(min(Insight, mlev(magr)));
 				if (ACURR(A_CHA) == 25) bons_acc += 8;
 				else bons_acc += max(0, (ACURR(A_CHA) - 10) / 2);
 			}
@@ -3935,7 +4043,7 @@ tohitval(
 		/* monster-only accuracy bonuses */
 		else {
 			/* martial-trained foes are accurate */
-			if(magr->mformication || magr->mscorpions)
+			if(magr->mformication || magr->mscorpions || magr->mcaterpillars)
 				bons_acc -= 2;
 			else switch(m_martial_skill(pa)) {
 			case P_UNSKILLED: bons_acc += 0; break;
@@ -4097,7 +4205,7 @@ tohitval(
 		}
 		/* some objects are more likely to hit than others */
 		switch (weapon->otyp) {
-		case HEAVY_IRON_BALL:
+		case BALL:
 			if (weapon != uball)
 				rang_acc += 2;
 			break;
@@ -4197,8 +4305,8 @@ tohitval(
 
 				if (is_insight_weapon(launcher) && (youagr ? (Role_if(PM_MADMAN) || u.sealsActive&SEAL_OSE || mvitals[PM_MOON_S_CHOSEN].died) : insightful(magr->data))){
 					if(youagr){
-						if(u.uinsight)
-							wepn_acc += rnd(min(u.uinsight, mlev(magr)));
+						if(Insight)
+							wepn_acc += rnd(min(Insight, mlev(magr)));
 					}
 					else {
 						wepn_acc += rnd(mlev(magr));
@@ -4314,6 +4422,11 @@ tohitval(
 		if (otmp && otmp->otyp == find_cboots())
 			wepn_acc++;
 	}
+	
+
+	if(youdef && youagr){
+		bons_acc += 2000; //Auto hit.
+	}
 
 
 	/* find defender's AC */
@@ -4324,6 +4437,7 @@ tohitval(
 		(melee && youagr && weapon && weapon->otyp == LONG_SWORD && activeFightingForm(FFORM_HALF_SWORD)) ||
 		(melee && attk->aatyp == AT_TUCH) ||
 		(melee && attk->aatyp == AT_VINE) ||
+		(melee && attk->aatyp == AT_VOMT) ||
 		(melee && spirit_rapier_at(attk->aatyp)) ||
 		(weapon && !valid_weapon(weapon))	/* potions, cream pies, rubber chickens, eggs, etc. */
 	) {
@@ -4334,6 +4448,9 @@ tohitval(
 			defn_acc += base_mac(mdef);
 		}
 		if(shield_margin) *shield_margin = -1;
+		if(melee && attk->aatyp == AT_VOMT){
+			defn_acc += 5;
+		}
 	}
 	/* do not ignore worn armor */
 	else {
@@ -4542,6 +4659,7 @@ xmeleehity(
 	case AT_MSPR:	// uses touch accuracy
 	case AT_DSPR:	// uses touch accuracy
 	case AT_ESPR:	// uses touch accuracy
+	case AT_VOMT:	// uses touch accuracy
 	/* ranged attack types that are also melee */
 	case AT_LNCK:
 	case AT_5SBT:
@@ -5383,6 +5501,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		/* acid */
 	case AD_EACD:
 	case AD_ACID:
+	case AD_OMUD:
 		/* print a basic hit message */
 		if (vis && dohitmsg) {
 			xyhitmsg(magr, mdef, originalattk);
@@ -5391,9 +5510,11 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		if ((notmcan && !rn2(3)) || attk->adtyp == AD_EACD) {
 			/* someone's splashed -- print mesage message! */
 			if (vis) {
-				Sprintf(buf, "%s%s covered in acid",
+				Sprintf(buf, "%s%s covered in %s",
 					(youdef ? "You" : Monnam(mdef)),
-					(youdef ? "'re" : " is"));
+					(youdef ? "'re" : " is"),
+					(attk->adtyp == AD_OMUD ? "writhing tarry mud" : "acid")
+				);
 			}
 			if (Acid_res(mdef)) {
 				if (attk->adtyp == AD_EACD)
@@ -5404,7 +5525,10 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 			/* print message */
 			if (youdef){
 				if (dmg == 0) {
-					Strcat(buf, ", but it seems harmless.");
+					if(attk->adtyp == AD_OMUD)
+						Strcat(buf, ".");
+					else
+						Strcat(buf, ", but it seems harmless.");
 				}
 				else if (Acid_res(mdef)) {
 					Strcat(buf, "! It stings!");
@@ -5429,6 +5553,12 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 				pline("%s", buf);
 				if (dmg == 0 && !youdef)
 					shieldeff(mdef->mx, mdef->my);
+				if(attk->adtyp == AD_OMUD){
+					pline("It begins stabbing %s with bone daggers!", youdef ? "you" : mon_nam(mdef));
+				}
+			}
+			if(attk->adtyp == AD_OMUD){
+				mdef->momud = TRUE;
 			}
 
 			/* erode armor, if inventory isn't protected */
@@ -5475,6 +5605,9 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 			xyhitmsg(magr, mdef, originalattk);
 		}
 		/* asymetric: diseasemu prints out messages, applies sickness to player*/
+		if(originalattk->aatyp == AT_VOMT){
+			mdef->mcaterpillars = TRUE;
+		}
 		if (youdef) {
 			if (!diseasemu(pa))
 				dmg = 0;
@@ -5493,6 +5626,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 					pline("%s is afflicted by disease!",
 						Monnam(mdef));
 				}
+				if(!rn2(10)) dmg += 100;
 				if(!youagr && mdef->mhp < mdef->mhpmax/2 && ((magr->mspores && !rn2(20)) || has_template(magr, SPORE_ZOMBIE) || has_template(magr, CORDYCEPS)))
 					mdef->mspores = TRUE;
 			}
@@ -6277,6 +6411,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		return xmeleehurty(magr, mdef, &alt_attk, originalattk, weapon_p, FALSE, dmg, dieroll, vis, ranged);
 
 		/* various poisons */
+	case AD_PFBT:
 	case AD_SVPN:
 	case AD_DRST:
 	case AD_DRDX:
@@ -6286,6 +6421,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		switch (attk->adtyp)
 		{
 		case AD_SVPN:	ptmp = !rn2(3) ? A_STR : rn2(2) ? A_DEX : A_CON; break;
+		case AD_PFBT:
 		case AD_DRST:	ptmp = A_STR; break;
 		case AD_DRDX:	ptmp = A_DEX; break;
 		case AD_EDRC:
@@ -6331,6 +6467,9 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 					else {
 						if (vis)
 							pline_The("poison was deadly...");
+						if(youagr){
+							IMPURITY_UP(u.uimp_poison)
+						}
 						mdef->mhp = 0;
 					}
 					/* if the poison killed, deal with the maybe-dead monster and return early */
@@ -6349,7 +6488,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 			}
 		}
 		/* make physical attack without hitmsg */
-		alt_attk.adtyp = AD_PHYS;
+		alt_attk.adtyp = attk->adtyp == AD_PFBT ? AD_DISE : AD_PHYS;
 		return xmeleehurty(magr, mdef, &alt_attk, originalattk, weapon_p, FALSE, dmg, dieroll, vis, ranged);
 
 	case AD_VAMP:
@@ -6857,7 +6996,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		if(youdef){
 			//Lifts the veil
 			lift_veil();
-			hits = rn2(u.uinsight) >= 10;
+			hits = rn2(Insight) >= 10;
 		}
 		else {
 			//Just do a level check for monsters
@@ -6888,7 +7027,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 					dmg = rnd(u.ulevel);
 				else
 					dmg = rnd(monstr[magr->mtyp]);
-				if(resist(mdef, 0, 0, NOTELL))
+				if(mm_resist(mdef, magr, 0, NOTELL))
 					dmg = max(1, dmg/2);
 			}
 			switch(rn2(9)){
@@ -7980,16 +8119,18 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		}
 		int dx = x(magr) - x(mdef);
 		int dy = y(magr) - y(mdef);
+		int dist = 1;
 		
 		if(attk->adtyp == AD_PUSH){
 			dx *= -1;
 			dy *= -1;
+			dist = rnd(3);
 		}
 		
 		if(youdef)
-			hurtle(sgn(dx), sgn(dy), 1, FALSE, FALSE);
+			hurtle(sgn(dx), sgn(dy), dist, FALSE, FALSE);
 		else {
-			mhurtle(mdef, sgn(dx), sgn(dy), 1, FALSE);
+			mhurtle(mdef, sgn(dx), sgn(dy), dist, FALSE);
 			if (DEADMONSTER(mdef))
 				return MM_DEF_DIED;
 			if(MIGRATINGMONSTER(mdef))
@@ -9498,7 +9639,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 			xyhitmsg(magr, mdef, originalattk);
 		}
 		/* big picture: can stunlock monsters, can't stunlock you because it uses the Screaming status effect */
-		if((!nonliving(pd) || is_android(pd) || has_template(mdef, TOMB_HERD)) 
+		if((!nonliving(pd) || is_android(pd)) 
 			&& pd->mflagsa != MA_ELEMENTAL /*not a PURE elemental like a vortex, sphere, or elemental*/
 			&& !has_template(mdef, TOMB_HERD) /*not a statue-piloting thingy */
 			&& !is_great_old_one(pd)
@@ -9826,9 +9967,10 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 						(youagr ? "Your" : s_suffix(Monnam(magr))),
 						(youdef ? "you" : mon_nam(mdef))
 						);
-					result = xdamagey(magr, mdef, attk, d(rnd(5), (mlev(mdef) + 1) / 2));
-					if (result&(MM_DEF_DIED|MM_DEF_LSVD)) return result;
 				}
+				mdef->mironmarked = TRUE;
+				result = xdamagey(magr, mdef, attk, d(rnd(5), (mlev(mdef) + 1) / 2));
+				if (result&(MM_DEF_DIED|MM_DEF_LSVD)) return result;
 			}
 		}
 		/* 1/5 chance of radiant feathers */
@@ -9844,6 +9986,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 					pline("The cold iron rachises sear %s.",
 						(youdef ? "you" : mon_nam(mdef)));
 				}
+				mdef->mironmarked = TRUE;
 				result = xdamagey(magr, mdef, attk, d(5, mlev(mdef)));
 				if (result&(MM_DEF_DIED|MM_DEF_LSVD)) return result;
 			}
@@ -9943,7 +10086,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 					}
 				}
 				else {
-					if (!resists_magm(mdef) && !resist(mdef, 0, 0, 0)) {
+					if (!resists_magm(mdef) && !mm_resist(mdef, magr, 0, 0)) {
 						/* heal Death to full */
 						heal(magr, *hpmax(magr));
 						/* instakill */
@@ -10067,7 +10210,7 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 		}
 		else {
 			/* arbitrarily reduce defender's hp (by 1/2 if not sickres, by 3/4 if sickres) */
-			if (!resist(mdef, 0, 0, NOTELL)) {
+			if (!mm_resist(mdef, magr, 0, NOTELL)) {
 				*hpmax(mdef) = min(*hpmax(mdef) * (Sick_res(mdef) ? 2 : 3) / 4, mlev(mdef));
 				if (*hp(mdef) > *hpmax(mdef))
 					*hp(mdef) = *hpmax(mdef);
@@ -10527,6 +10670,17 @@ xengulfhity(struct monst *magr, struct monst *mdef, struct attack *attk, int vis
 				it take longer for you to be digested, but
 				you'll end up trapped inside for longer too */
 				tim_tmp += -u.uac + 10 + (ACURR(A_CON) / 3 - 1);
+				if(magr->mtyp == PM_NAMELESS_GNAWER){
+					int nid = u.ualign.sins + u.uimpurity;
+					if(u.ualign.record < 0)
+						nid -= u.ualign.record; //Increases score
+					if(u.ualign.record >= 20)
+						tim_tmp += 1;
+					for (; nid > 0 && tim_tmp > 2; nid/=2){//Digests faster
+						tim_tmp--;
+					}
+					
+				}
 				if(thick_skinned(youracedata) || u.sealsActive&SEAL_ECHIDNA)
 					tim_tmp += 2;
 			}
@@ -10666,8 +10820,8 @@ xengulfhurty(
 		if (youdef) {
 			if (pa && pa->mtyp == PM_METROID_QUEEN && !Drain_resistance) {
 				losexp("life force drain", TRUE, FALSE, FALSE);
-				magr->mhpmax += d(1, 4);
-				magr->mhp += d(1, 6);
+				magr->mhpmax += d(1, (hd_size(youracedata)+1)/2);
+				magr->mhp += d(1, hd_size(youracedata));
 				if (magr->mhp > magr->mhpmax) magr->mhp = magr->mhpmax;
 				if (magr->mtame){
 					EDOG(magr)->hungrytime += 100;  //400/4 = human nut/4
@@ -11104,6 +11258,18 @@ xengulfhurty(
 					Monnam(mdef));
 			}
 		}
+		else if (pa && pa->mtyp == PM_LUMINESCENT_SWARM) {
+			if (youdef) {
+				You("are bitten and stung by the swarming insects!");
+				exercise(A_STR, FALSE);
+				exercise(A_DEX, FALSE);
+				exercise(A_CON, FALSE);
+			}
+			else if (vis&VIS_MDEF) {
+				pline("%s is bitten and stung by the swarming insects!",
+					Monnam(mdef));
+			}
+		}
 		else {
 			if (youdef) {
 				You("are pummeled with debris!");
@@ -11453,6 +11619,7 @@ xengulfhurty(
 			if (!Sick_res(mdef)) {
 				if (vis&VIS_MDEF)
 					pline("%s is afflicted by disease!", Monnam(mdef));
+				if(!rn2(10)) dmg += 100;
 			}
 		}
 		if(pa->mtyp == PM_JUIBLEX){
@@ -12005,14 +12172,7 @@ expl_common:
 }
 
 void
-getgazeinfo(
-	int aatyp, int adtyp,
-	struct permonst *pa,
-	struct monst *magr,
-	struct monst *mdef,
-	boolean *needs_magr_eyes,
-	boolean *needs_mdef_eyes,
-	boolean *needs_uncancelled)
+getgazeinfo(int aatyp, int adtyp, struct permonst *pa, struct monst *magr, struct monst *mdef, boolean *needs_magr_eyes, boolean *needs_mdef_eyes, boolean *needs_magr_head, boolean *needs_uncancelled)
 {
 #define maybeset(b, tf) if(b) {*(b)=tf;}
 	boolean adjacent = FALSE;
@@ -12059,6 +12219,12 @@ getgazeinfo(
 	case AD_DRIN:
 		maybeset(needs_magr_eyes, TRUE);
 		maybeset(needs_mdef_eyes, TRUE);
+		break;
+		/* seeing the monster's face is dangerous */
+	case AD_PAIN:
+		maybeset(needs_magr_eyes, FALSE);
+		maybeset(needs_mdef_eyes, TRUE);
+		maybeset(needs_magr_head, TRUE);
 		break;
 		/* the monster staring *at* something is dangerous */
 	case AD_FIRE:
@@ -12123,6 +12289,7 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 
 	boolean needs_magr_eyes = TRUE;		/* when TRUE, mdef is protected if magr is blind */
 	boolean needs_mdef_eyes = TRUE;		/* when TRUE, mdef is protected by being blind */
+	boolean needs_magr_head = FALSE;		/* when TRUE, mdef is protected if magr's head is covered */
 	boolean needs_uncancelled = TRUE;	/* when TRUE, attack cannot happen when cancelled */
 	boolean maybe_not = (!youagr && pa->mtyp != PM_DEMOGORGON);		/* when TRUE, occasionally doesn't use gaze attack at all */
 	boolean cooldown = TRUE;			/* when TRUE, attack may set cooldown */
@@ -12131,6 +12298,8 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 		AD_CONF, AD_SLOW, AD_STUN, AD_BLND, AD_FIRE, AD_FIRE,
 		AD_COLD, AD_COLD, AD_ELEC, AD_ELEC, AD_HALU, AD_SLEE };
 	static const int elementalgazeattacks[] = { AD_FIRE, AD_COLD, AD_ELEC };
+	struct obj *ahelm = youagr ? uarmh : which_armor(magr, W_ARMH);
+	struct obj *acloak = youagr ? uarmc : which_armor(magr, W_ARMC);
 
 	char buf[BUFSZ];
 	struct attack alt_attk;
@@ -12148,6 +12317,8 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 		return MM_MISS;
 	/* at the very least, all gaze attacks need a clear line of sight */
 	if (!clear_path(x(magr), y(magr), x(mdef), y(mdef)))
+		return MM_MISS;
+	if (youdef && Invulnerable)
 		return MM_MISS;
 
 	/* fix up adtyps for some gazes */
@@ -12167,7 +12338,7 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 		break;
 	}
 	/* get eyes, uncancelledness */
-	getgazeinfo(attk->aatyp, adtyp, pa, magr, mdef, &needs_magr_eyes, &needs_mdef_eyes, &needs_uncancelled);
+	getgazeinfo(attk->aatyp, adtyp, pa, magr, mdef, &needs_magr_eyes, &needs_mdef_eyes, &needs_magr_head, &needs_uncancelled);
 
 	/* widegazes cannot fail, and don't use mspec_used */
 	if (attk->aatyp == AT_WDGZ){
@@ -12177,6 +12348,8 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 
 	/* these gazes are actually hacks and only work vs the player */
 	if (!youdef && (adtyp == AD_WTCH || adtyp == AD_MIST))
+		return MM_MISS;
+	if (adtyp == AD_SSUN && ((youdef ? Invis : mdef->minvis) && !(youagr ? See_invisible(x(mdef), y(mdef)) : mon_resistance(magr, SEE_INVIS)) ))
 		return MM_MISS;
 	if (/* needs_magr_eyes:   magr must have eyes and can actively see mdef */
 		(needs_magr_eyes && !(
@@ -12196,6 +12369,12 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 			(youdef ? canseemon(magr) : youagr ? mon_can_see_you(mdef) : mon_can_see_mon(mdef, magr)) &&
 			(!(youdef ? Sleeping : mdef->msleeping)) &&
 			(!Gaze_res(mdef)) /* wearing the Eyes, nearly anything is safe to see */
+		))
+		||
+		/* needs_mdef_eyes:   mdef must have eyes and can actively see magr */
+		(needs_magr_head && (
+			( (ahelm && FacelessHelm(ahelm)) || (acloak && FacelessCloak(acloak)) ) || /* wearing a faceless helm or cloak (cloak even if headless) */
+			(Gaze_res(mdef)) /* wearing the Eyes, nearly anything is safe to see */
 		))
 		){
 		/* gaze fails because the appropriate gazer/gazee eye (contact?) is not available */
@@ -12373,8 +12552,11 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 		break;
 	case AD_SSUN:
 		/* requires reflectable light */
-		if (!levl[x(magr)][y(magr)].lit)
+		if (dimness(x(magr), y(magr))  > 0)
 			return MM_MISS;
+		
+		if (!levl[x(magr)][y(magr)].lit)
+			dmg = (dmg+1)/2;
 
 		/* message and blind */
 		if (youdef) {
@@ -12414,7 +12596,7 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 				dmg = 0;
 		}
 		/* damage inventory */
-		if (!UseInvFire_res(mdef) && !(youdef ? Reflecting : mon_resistance(mdef, REFLECTING))) {
+		if (levl[x(magr)][y(magr)].lit && !UseInvFire_res(mdef) && !(youdef ? Reflecting : mon_resistance(mdef, REFLECTING))) {
 			if ((int)mlev(magr) > rn2(20))
 				destroy_item(mdef, SCROLL_CLASS, AD_FIRE);
 			if ((int)mlev(magr) > rn2(20))
@@ -13403,6 +13585,67 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 		}
 		break;
 
+	/*crushing pain*/
+	case AD_PAIN:
+		if (distmin(x(magr), y(magr), x(mdef), y(mdef)) > BOLT_LIM)
+			return MM_MISS;
+
+		if (youdef) {
+			Your("mind is imploding from the sight of %s visage!", s_suffix(mon_nam(magr)));
+			// make_blinded((long)dmg, FALSE);
+			// stop_occupation();
+			// make_stunned((long)d(1, 3), TRUE);
+			if(!HScreaming){
+				if (!is_silent(pd)){
+					You("%s from the pain!", humanoid_torso(pd) ? "scream" : "shriek");
+				}
+				else {
+					You("writhe in pain!");
+				}
+				change_usanity(-dmg, TRUE); //May result in screaming being set, or other minor madness
+				HScreaming += dmg;
+			}
+			else {
+				HScreaming += 2;
+				change_usanity(-2, FALSE);
+			}
+			if(!u.veil && !mvitals[monsndx(magr->data)].vis_insight){
+				mvitals[monsndx(magr->data)].vis_insight = TRUE;
+				uchar insight = u_insight_gain(magr);
+				mvitals[monsndx(magr->data)].insight_gained += insight;
+				change_uinsight(insight);
+			}
+			stop_occupation();
+		}
+		else {
+			if((nonliving(pd) && !is_android(pd)) 
+				|| has_template(mdef, TOMB_HERD) /*not a statue-piloting thingy */
+				|| is_primordial(pd)
+				|| is_alienist(pd)
+				|| is_great_old_one(pd)
+			){
+				return MM_MISS;
+			}
+			unsigned int oldspeed = mdef->mspeed;
+			if(mdef->movement > 0 && mdef->mcanmove){
+				if (!is_silent_mon(mdef)){
+					if (canseemon(mdef))
+						pline("%s %s in pain!", Monnam(mdef), humanoid_torso(mdef->data) ? "screams" : "shrieks");
+					else You_hear("%s %s in pain!", mdef->mtame ? noit_mon_nam(mdef) : mon_nam(mdef), humanoid_torso(mdef->data) ? "screaming" : "shrieking");
+				}
+				else {
+					if (canseemon(mdef))
+						pline("%s writhes in pain!", Monnam(mdef));
+				}
+			}
+
+			mdef->movement = max(mdef->movement - 2*dmg, -12);
+		}
+		/* apply half damage (both) */
+		dmg = reduce_dmg(mdef,dmg,TRUE,TRUE);
+		return xdamagey(magr, mdef, attk, dmg);
+		break;
+
 	case AD_SEDU:
 		if (!youdef)
 			return MM_MISS;
@@ -14204,7 +14447,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 	/* FIGURE OUT WHAT APPLIES */
 	/* what kind of attack is being made? */
 	if (weapon) {
-		if(CHECK_ETRAIT(weapon, magr, ETRAIT_BRACED)
+		if(magr && CHECK_ETRAIT(weapon, magr, ETRAIT_BRACED)
 			&& ROLL_ETRAIT(weapon, magr, TRUE, !rn2(10))
 			&& magr != mdef
 			&& ((!youdef && mdef->mprev_attk.x == sgn(x(magr) - x(mdef)) && mdef->mprev_attk.y == sgn(y(magr) - y(mdef)))
@@ -14313,7 +14556,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 			precision_mult += max(P_SKILL(objects[launcher->otyp].oc_skill) - 2, 0);
 		}
 		else {
-			if(!magr->mformication && !magr->mscorpions)
+			if(!magr->mformication && !magr->mscorpions && !magr->mcaterpillars)
 				precision_mult += max(m_martial_skill(magr->data)-2, 0);
 		}
 		
@@ -14682,6 +14925,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 		artinstance[ART_SKY_REFLECTED].ZerthMaterials |= ZMAT_IRON;
 		if (hates_iron(pd) &&
 			obj_is_material(otmp, IRON) &&
+			!(youdef && u.sealsActive&SEAL_EDEN) &&
 			!(is_lightsaber(otmp) && litsaber(otmp))) {
 			ironobj |= slot;
 		}
@@ -14752,6 +14996,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 				/* Simurgh's iron claws, for the player attacking with bared hands */
 				ironobj |= W_SKIN;
 				seardmg += rnd(mlev(mdef));
+				mdef->mironmarked = TRUE;
 			}
 		}
 
@@ -15631,8 +15876,15 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 		otmp = (youagr ? uarmf : which_armor(magr, W_ARMF));
 		if (otmp) {
 			basedmg += otmp->spe;
-			if (otmp->otyp == KICKING_BOOTS || (otmp->otyp == IMPERIAL_ELVEN_BOOTS && check_imp_mod(otmp, IEA_KICKING))){
+			if (otmp->otyp == KICKING_BOOTS){
 				basedmg += rnd(6) + rnd(5) + (bigmonst(pd) ? 0 : 1);
+			}
+			if(otmp->otyp == IMPERIAL_ELVEN_BOOTS && check_imp_mod(otmp, IEA_KICKING)){
+				basedmg += rnd(6) + (bigmonst(pd) ? 0 : 1);
+				if(mdef && !resists_magm(mdef) && !resist(mdef, RING_CLASS, 0, NOTELL)){
+					//Half spell etc.
+					elemdmg += d(2,12) + otmp->spe;
+				}
 			}
 			if (otmp->otyp == STILETTOS || otmp->otyp == HEELED_BOOTS){
 				basedmg += rnd(bigmonst(pd) ? 2 : 6);
@@ -15844,8 +16096,8 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 					if(attk && is_insight_tentacle_at(attk->aatyp)
 						&& (u.sealsActive&SEAL_OSE)
 					){
-						if(u.uinsight)
-							bonsdmg += rnd(min(u.uinsight, mlev(magr)));
+						if(Insight)
+							bonsdmg += rnd(min(Insight, mlev(magr)));
 						if (ACURR(A_CHA) == 25) bonsdmg += 8;
 						else bonsdmg += max(0, (ACURR(A_CHA) - 10) / 2);
 					}
@@ -16037,6 +16289,8 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 				tratdmg += bleeddmg;
 				if (wizard && (iflags.wizcombatdebug & WIZCOMBATDEBUG_DMG) && WIZCOMBATDEBUG_APPLIES(magr, mdef))
 					pline("Bleeding wound!");
+				if (vis) 
+					pline("%s sustained a bleeding wound in the fighting!", youdef ? "You" : Monnam(mdef));
 				if(youdef){
 					mdef->mbleed += bleeddmg;
 				}
@@ -16063,6 +16317,60 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 				tratdmg += weapon_dmg_roll(&wdice, youdef);
 				if(youagr)
 					tratdmg += weapon_dam_bonus(weapon, weapon_type(weapon));
+			}
+			if(CHECK_ETRAIT(weapon, magr, ETRAIT_BLADESONG)){
+				struct weapon_dice wdice;
+				/* grab the weapon dice from dmgval_core */
+				dmgval_core(&wdice, bigmonst(pd), weapon, weapon->otyp, magr);
+				/* Maybe add to the tratdmg counter */
+				if(youagr){
+					long timeout = u.bladesong + (Race_if(PM_ELF) ? 3 : 0);
+					if(timeout >= monstermoves && 
+						(Race_if(PM_ELF) ?
+						 (timeout >= monstermoves+4 || ROLL_ETRAIT(weapon, magr, TRUE, rn2((monstermoves+6) - u.bladesong))):
+						 (timeout >= monstermoves+10 || ROLL_ETRAIT(weapon, magr, TRUE, rn2((monstermoves+10) - u.bladesong)))
+						)
+					){
+						tratdmg += weapon_dmg_roll(&wdice, youdef);
+						tratdmg += weapon_dam_bonus(weapon, weapon_type(weapon));
+						if (wizard && (iflags.wizcombatdebug & WIZCOMBATDEBUG_DMG) && WIZCOMBATDEBUG_APPLIES(magr, mdef))
+							pline("Blade song!");
+					}
+				}
+				else if(is_elf(pa) && magr->mspec_used && ROLL_ETRAIT(weapon, magr, TRUE, !rn2(3))){
+					if (wizard && (iflags.wizcombatdebug & WIZCOMBATDEBUG_DMG) && WIZCOMBATDEBUG_APPLIES(magr, mdef))
+						pline("Blade song!");
+					tratdmg += weapon_dmg_roll(&wdice, youdef);
+				}
+			}
+			if(CHECK_ETRAIT(weapon, magr, ETRAIT_BLADEDANCE)){
+				struct weapon_dice wdice;
+				/* grab the weapon dice from dmgval_core */
+				dmgval_core(&wdice, bigmonst(pd), weapon, weapon->otyp, magr);
+				/* Maybe add to the tratdmg counter */
+				if(youagr){
+					int dx1 = u.prev_dir.x;
+					int dy1 = u.prev_dir.y;
+					//Note: allows thrown etc.
+					int dx = x(mdef) - x(magr);
+					int dy = y(mdef) - y(magr);
+					if((dx != dx1 || dy != dy1) && (dx1 || dy1)){
+						int tmpdmg;
+						tmpdmg = weapon_dmg_roll(&wdice, youdef);
+						tmpdmg += weapon_dam_bonus(weapon, weapon_type(weapon));
+						if(Race_if(PM_ELF))
+							tmpdmg += (ACURR(A_CHA)+1)/2;
+						tratdmg += ROLL_ETRAIT(weapon, magr, tmpdmg, (tmpdmg+2)/3);
+						if (wizard && (iflags.wizcombatdebug & WIZCOMBATDEBUG_DMG) && WIZCOMBATDEBUG_APPLIES(magr, mdef))
+							pline("Blade dance!");
+						You("twirl and strike!");
+					}
+				}
+				else if(is_elf(pa) && ROLL_ETRAIT(weapon, magr, rn2(3), !rn2(3))){
+					tratdmg += weapon_dmg_roll(&wdice, youdef);
+					if (wizard && (iflags.wizcombatdebug & WIZCOMBATDEBUG_DMG) && WIZCOMBATDEBUG_APPLIES(magr, mdef))
+						pline("Blade dance!");
+				}
 			}
 			if(braced_weapon){
 				struct weapon_dice wdice;
@@ -16103,6 +16411,10 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 	}
 	/* ARTIFACT HIT BLOCK */
 	/* this must come after skills are trained, as this can kill the defender and cause a return */
+	if(youagr && melee){
+		if(check_rot(ROT_FEAST))
+			healup((*hpmax(magr))*.016, 0, TRUE, FALSE);
+	}
 	if (valid_weapon_attack || unarmed_punch || unarmed_kick || unarmed_butt)
 	{
 		int returnvalue = 0;
@@ -16113,16 +16425,16 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 				doguidance(mdef, basedmg);
 			if(weapon){
 				if(weapon->oartifact == ART_HOLY_MOONLIGHT_SWORD){
-					if(u.uinsight >= 40)
+					if(Insight >= 40)
 						doguidance(mdef, active_glyph(GUIDANCE) ? basedmg : basedmg/2);
 					else if(active_glyph(GUIDANCE)){
-						doguidance(mdef, (u.uinsight*basedmg)/40);
+						doguidance(mdef, (Insight*basedmg)/40);
 					}
 					else {
-						doguidance(mdef, (u.uinsight*basedmg)/80);
+						doguidance(mdef, (Insight*basedmg)/80);
 					}
 				}
-				else if(weapon->otyp == CHURCH_BLADE && u.uinsight >= 40){
+				else if(weapon->otyp == CHURCH_BLADE && Insight >= 40){
 					doguidance(mdef, active_glyph(GUIDANCE) ? basedmg/2 : basedmg/4);
 				}
 			}
@@ -16249,8 +16561,8 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 		/* madmen do extra damage with insight weapons */
 		if (valid_weapon_attack && is_insight_weapon(weapon) && !recursed && magr && (youagr ? (Role_if(PM_MADMAN) || u.sealsActive&SEAL_OSE || mvitals[PM_MOON_S_CHOSEN].died) : insightful(magr->data))){
 			if(youagr){
-				if(u.uinsight)
-					bonsdmg += d(1, (min(u.uinsight, (bimanual(weapon, youracedata) ? 2 : 1) * mlev(magr))+1)/2);
+				if(Insight)
+					bonsdmg += d(1, (min(Insight, (bimanual(weapon, youracedata) ? 2 : 1) * mlev(magr))+1)/2);
 			}
 			else {
 				bonsdmg += d(1, ((bimanual(weapon, magr->data) ? 2 : 1) * mlev(magr) + 1)/2+1);
@@ -16307,11 +16619,11 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 			|| pd->mtyp == PM_DEEP_ONE || pd->mtyp == PM_DEEPER_ONE
 			|| pd->mtyp == PM_KUO_TOA || pd->mtyp == PM_KUO_TOA_WHIP
 			|| pd->mtyp == PM_BEING_OF_IB || pd->mtyp == PM_PRIEST_OF_IB
-			|| is_mind_flayer(pd)
+			|| is_mind_flayer(pd) || is_were(pd)
 			|| pd->mtyp == PM_BEFOULED_WRAITH || mdef->mtraitor || mdef->mferal
 		)
 	){
-		subtotl *= u.uinsight >= 40 ? 1.5 : 1.2;
+		subtotl *= Insight >= 40 ? 1.5 : 1.2;
 	}
 
 
@@ -16386,7 +16698,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 		if(fired && launcher && valid_weapon_attack && weapon && is_aimable(weapon, attackmask) && dr)
 			dr = max(dr-skill_damage, 0);
 		//Armor-penetrating weapons do 0-1x or 1-2x bonus skill damage to dr (up to +10 vs dr)
-		if(valid_weapon_attack && weapon && CHECK_ETRAIT(weapon, magr, ETRAIT_PENETRATE_ARMOR) && ROLL_ETRAIT(weapon, magr, TRUE, rn2(2))){
+		if(valid_weapon_attack && weapon && magr && CHECK_ETRAIT(weapon, magr, ETRAIT_PENETRATE_ARMOR) && ROLL_ETRAIT(weapon, magr, TRUE, rn2(2))){
 			dr = max_ints(dr - (ROLL_ETRAIT(weapon, magr, rnd(2), 1) * skill_damage), 0);
 		}
 		
@@ -17311,14 +17623,19 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 						int attrib = (
 							!rn2(3) ?	A_STR :
 							!rn2(2) ?	A_CON :
-									A_DEX);
+										A_DEX);
 						int amnt = rnd(ACURR(attrib) / 5);
-
+	
 						if (adjattrib(attrib, -amnt, 1))
 							pline_The("poison was quite debilitating...");
+						IMPURITY_UP(u.uimp_poison)
 					}
-					else if ((vis&VIS_MDEF) && lethaldamage)
+					else if ((vis&VIS_MDEF) && lethaldamage) {
 						pline_The("poison was deadly...");
+						if(youagr){
+							IMPURITY_UP(u.uimp_poison)
+						}
+					}
 					break;
 				case OPOISON_DIRE:
 					if (youdef) {
@@ -17328,24 +17645,29 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 										A_DEX);
 						if (!rn2(10) && attrib != A_CHA) {
 							int drain = attrib == A_CON ? -2 : -rn1(3, 3);
-						if(Poison_resistance)
-							drain = (drain - 1)/2;
-						else
-							drain -= 4;
-
-						adjattrib(A_CON, drain, 1);
+							if(Poison_resistance)
+								drain = (drain - 1)/2;
+							else
+								drain -= 4;
+	
+							adjattrib(A_CON, drain, 1);
+							IMPURITY_UP(u.uimp_poison)
 						}
 						int amnt = rn1(3, 3);
 						if(Poison_resistance)
 							amnt = (amnt + 1)/2;
 						else
 							amnt += 2;
-
+	
 						if (adjattrib(attrib, -amnt, 1))
 							pline_The("poison was quite debilitating...");
 					}
-					else if ((vis&VIS_MDEF) && lethaldamage)
+					else if ((vis&VIS_MDEF) && lethaldamage){
 						pline_The("poison was deadly...");
+						if(youagr){
+							IMPURITY_UP(u.uimp_poison)
+						}
+					}
 					break;
 				case OPOISON_FILTH:
 					if (youdef) {
@@ -17353,8 +17675,12 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 						make_sick(Sick ? Sick / 2L + 1L : (long)rn1(ACURR(A_CON), 20),
 							"filth-coated weapon", TRUE, SICK_NONVOMITABLE);
 					}
-					else if ((vis&VIS_MDEF) && lethaldamage)
+					else if ((vis&VIS_MDEF) && lethaldamage){
 						pline_The("tainted filth was deadly...");
+						if(youagr){
+							IMPURITY_UP(u.uimp_dirtiness)
+						}
+					}
 					break;
 				case OPOISON_SLEEP:
 					if (youdef) {
@@ -17374,7 +17700,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 					else {
 						if (canseemon(mdef) && !is_blind(mdef))
 							pline("It seems %s has gone blind!", mon_nam(mdef));
-
+	
 						register int btmp = 64 + rn2(32) +
 							rn2(32) * !resist(mdef, POTION_CLASS, 0, NOTELL);
 						btmp += mdef->mblinded;
@@ -17427,6 +17753,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 							You("are freaked out!");
 						if(Stunned)
 							You("stagger.");
+	
 					}
 					else {
 						if (canseemon(mdef))
@@ -17552,7 +17879,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 	/* Use the mercy blade */
 	/* this can print a message, can possibly kill monster, returning immediately */
 	if(mercy_blade){
-		if(u.uinsight >= 50 && (youdef || lethaldamage || !resist(mdef, youagr ? SPBOOK_CLASS : WEAPON_CLASS, 0, TRUE))){
+		if(Insight >= 50 && (youdef || lethaldamage || !resist(mdef, youagr ? SPBOOK_CLASS : WEAPON_CLASS, 0, TRUE))){
 			mercy_blade_conflict(mdef, magr, wepspe, lethaldamage);
 		}
 		//Might have died in mvm combat, for example, attacking a cockatrice.
@@ -17798,6 +18125,7 @@ calculate_poison(
 	boolean youdef = (mdef == &youmonst);
 	struct permonst * pa = (magr ? (youagr ? youracedata : magr->data) : (struct permonst *)0);
 	struct permonst * pd = youdef ? youracedata : mdef->data;
+
 	/* Apply object's poison */
 	if (poisonedobj && (!insubstantial(pd) || hits_insubstantial(magr, mdef, attk, poisonedobj))) {
 		p->poisons |= poisonedobj->opoisoned;
@@ -17815,22 +18143,22 @@ calculate_poison(
 			p->poisons |= OPOISON_ACID;
 		if (poisonedobj->otyp == FANG_OF_APEP)
 			p->poisons |= OPOISON_DIRE;
-		if (poisonedobj->otyp == TOOTH && poisonedobj->ovar1_tooth_type == SERPENT_TOOTH && u.uinsight >= 20 && poisonedobj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(poisonedobj, magr, ETRAIT_FOCUS_FIRE))
+		if (poisonedobj->otyp == TOOTH && poisonedobj->ovar1_tooth_type == SERPENT_TOOTH && Insight >= 20 && magr && poisonedobj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(poisonedobj, magr, ETRAIT_FOCUS_FIRE))
 			p->poisons |= OPOISON_DIRE;
 		if (poisonedobj->otyp == GREATCLUB){
 			p->poisons |= OPOISON_BASIC;
 			//All greatclubs upgrade to filth due to your influence on the world
-			if(u.uinsight >= 20 && u.uimpurity >= 20){
+			if(Insight >= 20 && u.uimpurity >= 20){
 				p->poisons |= OPOISON_FILTH;
 			}
 		}
 		if (poisonedobj->otyp == CHIKAGE && poisonedobj->obj_material == HEMARGYOS){
 			p->poisons |= OPOISON_BASIC;
 			if(youagr){
-				if(u.uinsight >= 20 && u.uimpurity >= 10){
+				if(Insight >= 20 && u.uimpurity >= 10){
 					p->poisons |= OPOISON_FILTH;
 				}
-				if(u.uinsight >= 50 && *hp(magr) <= (u.uimpurity*(*hpmax(magr)))/50){
+				if(Insight >= 50 && *hp(magr) <= (u.uimpurity*(*hpmax(magr)))/50){
 					p->poisons |= OPOISON_DIRE;
 				}
 			}
@@ -18180,7 +18508,8 @@ xpassivey(
 					Sprintf(buf, "unwisely drained %s", pd->mname);
 					killer = buf;
 					killer_format = NO_KILLER_PREFIX;
-					newres = xdamagey(mdef, magr, &noattack, 9999);
+					struct attack na = noattack;
+					newres = xdamagey(mdef, magr, &na, 9999);
 					if (newres&MM_DEF_DIED)
 						result |= MM_AGR_DIED;	/* attacker died */
 					if (newres&MM_DEF_LSVD)
@@ -18695,8 +19024,8 @@ xpassivehity(
 				if (dmg < 1)
 					dmg = 1;
 				dmg = reduce_dmg(mdef,dmg,TRUE,FALSE);
-
-				newres = xdamagey(mdef, magr, &noattack, dmg);
+				struct attack na = noattack;
+				newres = xdamagey(mdef, magr, &na, dmg);
 				if (newres&MM_DEF_DIED)
 					result |= MM_AGR_DIED;	/* attacker died */
 				if (newres&MM_DEF_LSVD)
@@ -18979,7 +19308,8 @@ xpassivehity(
 						dmg = 1;
 					dmg = reduce_dmg(mdef,dmg,TRUE,FALSE);
 
-					newres = xdamagey(mdef, magr, &noattack, dmg);
+					struct attack na = noattack;
+					newres = xdamagey(mdef, magr, &na, dmg);
 					if (newres&MM_DEF_DIED)
 						result |= MM_AGR_DIED;	/* attacker died */
 					if (newres&MM_DEF_LSVD)
@@ -19131,6 +19461,7 @@ passive_obj2(
 	struct attack *passive)	/* specific passive attack being used */
 {
 	int i;
+	struct attack passive_buffer = noattack;
 
 	/* if not given, grab passive attack from permonst */
 	if (!passive || is_null_attk(passive))
@@ -19140,7 +19471,7 @@ passive_obj2(
 			return;
 
 		struct permonst * pd = ((mdef == &youmonst) ? youracedata : mdef->data);
-		passive = &noattack;
+		passive = &passive_buffer;
 		for (i = 0; i < NATTK; i++) {
 			if (pd->mattk[i].aatyp == AT_NONE &&
 				!is_null_attk(&(pd->mattk[i]))) {
@@ -19149,7 +19480,7 @@ passive_obj2(
 			}
 		}
 		/* if we failed to get a passive attack, nothing happens. */
-		if (passive == &noattack)
+		if (is_null_attk(passive))
 			return;
 	}
 	/* if not given, get otmp based on attk and magr */
@@ -19730,7 +20061,7 @@ movement_combos(void)
 		}
 	}
 	/* Expert Moves (lunges and knockback charges) */
-	if(!did_combo && u.umoved && !flags.nopick && (multi >= 0)){
+	if((!did_combo || (uwep && is_monk_weapon(uwep))) && u.umoved && !flags.nopick && (multi >= 0)){
 		if (perform_expert_move()) {
 			nomul(0, NULL);
 			u.uattked = TRUE;
@@ -20238,6 +20569,9 @@ mummy_curses_x(struct monst *magr, struct monst *mdef)
 	//Check curse resistance
 	if(Curse_res(mdef, TRUE))
 		return MM_MISS;
+	if(youdef){
+		IMPURITY_UP(u.uimp_curse)
+	}
 	//Roll type
 	switch(magr->mtyp){
 		case PM_HMNYW_PHARAOH:
@@ -20608,7 +20942,7 @@ reduce_dmg(struct monst *mdef, int dmg, boolean physical, boolean magical)
 		dmg = (dmg + 1) / 2;
 	if (magical && Half_spel(mdef))
 		dmg = (dmg + 1) / 2;
-	if (mdef->mtyp == PM_CENTER_OF_ALL && u.uinsight < 32)
+	if (mdef->mtyp == PM_CENTER_OF_ALL && Insight < 32)
 		dmg = (dmg + 1) / 2;
 	if (mdef == &youmonst && u.uvaul_duration){
 		if(physical && magical)

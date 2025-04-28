@@ -177,19 +177,19 @@ doread(void)
 			return MOVE_READ;
 		} else if(scroll->oartifact == ART_HOLY_MOONLIGHT_SWORD && scroll->lamplit){
 			/* Note: you can see the blade even when blind */
-			if(u.uinsight < 2) {
+			if(Insight < 2) {
 				pline("The glowing cyan blade is decorated with faint curves.");
 			}
-			else if(u.uinsight < 5) {
+			else if(Insight < 5) {
 				You("faintly see strange arches inside the cyan blade.");
 			}
-			else if(u.uinsight < 10){
+			else if(Insight < 10){
 				You("can barely see faint bright stars behind the arches inside the cyan blade.");
 			}
-			else if(u.uinsight < 20){
+			else if(Insight < 20){
 				pline("The blade is the deep black of the night sky. You don't know why you ever thought it was cyan.");
 			}
-			else if(u.uinsight < 40){
+			else if(Insight < 40){
 				pline("The distant stars wink and dance among the arches within the black night sky.");
 			}
 			else {
@@ -1974,7 +1974,7 @@ seffects(struct obj *sobj)
 		}
 		s = sobj->cursed ? -1 :
 		    otmp->spe >= 9 ? (rn2(otmp->spe) == 0) :
-		    sobj->blessed ? rnd(3-otmp->spe/3) : 1;
+		    sobj->blessed ? (3-otmp->spe/3) : 1;
 		if (s >= 0 && otmp->otyp >= GRAY_DRAGON_SCALES &&
 					otmp->otyp <= YELLOW_DRAGON_SCALES) {
 			
@@ -2276,7 +2276,7 @@ seffects(struct obj *sobj)
 				       sobj->cursed ? -1 :
 				       !uwep ? 1 :
 				       uwep->spe >= 10 ? (rn2(uwep->spe) == 0) :
-				       sobj->blessed ? rnd(3-uwep->spe/3) : 1);
+				       sobj->blessed ? (3-uwep->spe/3) : 1);
 		break;
 	case SCR_TAMING:
 	case SPE_PACIFY_MONSTER:
@@ -3573,7 +3573,7 @@ punish(register struct obj *sobj)
 		return;
 	}
 	setworn(mkobj(CHAIN_CLASS, TRUE), W_CHAIN);
-    if (((otmp = carrying(HEAVY_IRON_BALL)) != 0) &&(otmp->oartifact ==
+    if (((otmp = carrying(BALL)) != 0) &&(otmp->oartifact ==
      ART_IRON_BALL_OF_LEVITATION)) {
         setworn(otmp, W_BALL);
         Your("%s chains itself to you!", xname(otmp));
@@ -3700,6 +3700,9 @@ create_particular(int x, int y, unsigned long specify_attitude, int specify_deri
 			else if (!strncmpi(bufp, "fulvous ", l = 8)) {
 				undeadtype = YELLOW_TEMPLATE;
 			}
+			else if (!strncmpi(bufp, "swollen ", l = 8)) {
+				undeadtype = SWOLLEN_TEMPLATE;
+			}
 			else if (!strncmpi(bufp, "mad_angel ", l = 10)) {
 				undeadtype = MAD_TEMPLATE;
 			}
@@ -3776,6 +3779,8 @@ create_particular(int x, int y, unsigned long specify_attitude, int specify_deri
 				undeadtype = MAD_TEMPLATE;
 			else if (!strncmpi(p, "witness",	7))
 				undeadtype = FRACTURED;
+			else if (!strncmpi(p, "swollen",	7))
+				undeadtype = SWOLLEN_TEMPLATE;
 			else if (!strncmpi(p, "one", 3) && ((q = rindex(bufp, ' ')) != 0))
 			{
 				*q++ = 0;
