@@ -108,3 +108,5 @@ New option: QUERYTYPE
 New item: striped hat
 	Same effects as a striped shirt (except it's worse because it can't be hidden)
 	Octopode convicts start with it instead of a striped shirt
+Death by overeating removed
+	Includes incantifier overeating and clockwork overwinding
