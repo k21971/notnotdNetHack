@@ -965,6 +965,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s the finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
 		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "%s the swollen", buf);
+		else if (full && template == BLOOD_MON)	Sprintf(buf2, "%s the bloody", buf);
 		else											Strcpy(buf2, buf);
 	}
 	else {
@@ -999,6 +1000,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
 		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "swollen %s", buf);
+		else if (full && template == BLOOD_MON)	Sprintf(buf2, "blood %s", buf);
 		else											Strcpy(buf2, buf);
 	}
 

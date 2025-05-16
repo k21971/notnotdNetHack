@@ -2732,10 +2732,10 @@ rot_corpse(
 				}
 			}
 			if(u.silvergrubs && !rn2(20)){
-				u.silvergrubs = FALSE;
+				set_silvergrubs(FALSE);
 			}
 			if(check_rot(ROT_KIN) && !mindless(&mons[obj->corpsenm]) && !is_animal(&mons[obj->corpsenm]) && (u.silvergrubs || !rn2(100)) && !(mvitals[PM_SILVERGRUB].mvflags&G_GONE && !In_quest(&u.uz))){
-				u.silvergrubs = TRUE;
+				set_silvergrubs(TRUE);
 				makemon(&mons[PM_SILVERGRUB], x, y, NO_MM_FLAGS);
 			}
 		}

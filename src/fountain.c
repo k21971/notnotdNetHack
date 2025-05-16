@@ -299,6 +299,12 @@ have_blood_smithing_sothoth(struct obj * obj)
 }
 
 boolean
+have_blood_smithing_sflame(struct obj * obj)
+{
+	return have_blood_smithing_x(obj, OPROP_SFLMW);
+}
+
+boolean
 have_blood_smithing_x(struct obj * obj, int oprop)
 {
 	int oprop_lesser = 0;
@@ -343,6 +349,9 @@ have_blood_smithing_x(struct obj * obj, int oprop)
 		oprop_alt = OPROP_MAGCW;
 		cult = TRUE;
 	}
+	else if(oprop == OPROP_SFLMW){
+		cult = TRUE;
+	}
 
 	if(!cult && obj->oartifact && !is_malleable_artifact(&artilist[obj->oartifact]))
 		return FALSE;
@@ -370,6 +379,51 @@ have_blood_smithing_x(struct obj * obj, int oprop)
 		return TRUE;
 
 	return FALSE;
+}
+
+boolean
+get_blood_smithing_silverflame(struct obj **crystal, int *spellnum)
+{
+	winid tmpwin;
+	int n, how;
+	menu_item *selected;
+	anything any;
+	int selection;
+
+	tmpwin = create_nhwindow(NHW_MENU);
+	start_menu(tmpwin);
+	any.a_void = 0;		/* zero out all bits */
+	n = 0;
+
+	struct obj *otmp;
+	for(otmp = invent; otmp; otmp = otmp->nobj){
+		if(otmp->otyp == CRYSTAL && check_oprop(otmp, OPROP_SFLMW)){
+			n++;
+			any.a_void = (void *)otmp;	/* must be non-zero */
+			add_menu(tmpwin, NO_GLYPH, &any,
+				otmp->invlet, 0, ATR_NONE, xname(otmp),
+				MENU_UNSELECTED);
+		}
+	}
+	if(!n){
+		destroy_nhwindow(tmpwin);
+		return FALSE;
+	}
+
+	end_menu(tmpwin, "Select flame upgrade item:");
+
+	how = PICK_ONE;
+	n = select_menu(tmpwin, how, &selected);
+	destroy_nhwindow(tmpwin);
+
+	if(n > 0){
+		otmp = (struct obj *) selected[0].item.a_void;
+		free(selected);
+	}
+	else return FALSE;
+
+	*crystal = otmp;
+	return TRUE;
 }
 
 boolean
@@ -420,6 +474,17 @@ get_blood_smithing_x(int oprop, struct obj **crystal, int *spellnum)
 	return FALSE;
 }
 
+boolean
+check_undead_hunter_weapon_skills(void)
+{
+	int skill;
+	for(skill = P_FIRST_WEAPON; skill <= P_LAST_WEAPON; skill++){
+		if(OLD_P_MAX_SKILL(skill) == P_SKILLED)
+			return TRUE;
+	}
+	return FALSE;
+}
+
 void
 expert_undead_hunter_skill(void)
 {
@@ -430,7 +495,7 @@ expert_undead_hunter_skill(void)
 			count++;
 	}
 	if(!count)
-		return; //Apparently upgraded all skills to expert via other means
+		return; //Apparently upgraded all skills to expert
 	count = rn2(count);
 	for(skill = P_FIRST_WEAPON; skill <= P_LAST_WEAPON; skill++){
 		if(OLD_P_MAX_SKILL(skill) == P_SKILLED){
@@ -643,20 +708,22 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if(u.ublood_smithing && have_blood_smithing_hunger(obj)){
-			n++;
-			incntlet = 'h';
-			Sprintf(buf, "Imbue %s with hunger", xname(obj));
-			any.a_int = HUNGER_OPROP;	/* must be non-zero */
-			add_menu(tmpwin, NO_GLYPH, &any,
-				incntlet, 0, ATR_NONE, buf,
-				MENU_UNSELECTED);
-		}
-		if(obj->otyp != CRYSTAL && u.ublood_smithing && check_oprop(obj, OPROP_GOATW)){
+		if(opropable
+			&& (obj->otyp != CRYSTAL && u.ublood_smithing && check_oprop(obj, OPROP_GOATW))
+		){
 			n++;
 			incntlet = 'h';
 			Sprintf(buf, "Extract hunger from %s", xname(obj));
 			any.a_int = EXTRACT_HUNGER;	/* must be non-zero */
+			add_menu(tmpwin, NO_GLYPH, &any,
+				incntlet, 0, ATR_NONE, buf,
+				MENU_UNSELECTED);
+		}
+		else if(opropable && u.ublood_smithing && have_blood_smithing_hunger(obj)){
+			n++;
+			incntlet = 'h';
+			Sprintf(buf, "Imbue %s with hunger", xname(obj));
+			any.a_int = HUNGER_OPROP;	/* must be non-zero */
 			add_menu(tmpwin, NO_GLYPH, &any,
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
@@ -672,11 +739,31 @@ smithing_object(struct obj *obj)
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
 		}
-		if(obj->otyp != CRYSTAL && u.ublood_smithing && check_oprop(obj, OPROP_SOTHW)){
+		if(opropable && obj->otyp != CRYSTAL && u.ublood_smithing && check_oprop(obj, OPROP_SOTHW)){
 			n++;
 			incntlet = 'y';
 			Sprintf(buf, "Extract distant vistas from %s", xname(obj));
 			any.a_int = EXTRACT_SOTHOTH;	/* must be non-zero */
+			add_menu(tmpwin, NO_GLYPH, &any,
+				incntlet, 0, ATR_NONE, buf,
+				MENU_UNSELECTED);
+		}
+		if(opropable
+			&& (u.ublood_smithing && have_blood_smithing_sflame(obj))
+		){
+			n++;
+			incntlet = 'v';
+			Sprintf(buf, "Imbue %s with silver fire", xname(obj));
+			any.a_int = FLAME_OPROP;	/* must be non-zero */
+			add_menu(tmpwin, NO_GLYPH, &any,
+				incntlet, 0, ATR_NONE, buf,
+				MENU_UNSELECTED);
+		}
+		if(opropable && obj->otyp != CRYSTAL && u.ublood_smithing && check_oprop(obj, OPROP_SFLMW)){
+			n++;
+			incntlet = 'v';
+			Sprintf(buf, "Extract the silver fire from %s", xname(obj));
+			any.a_int = EXTRACT_FLAME;	/* must be non-zero */
 			add_menu(tmpwin, NO_GLYPH, &any,
 				incntlet, 0, ATR_NONE, buf,
 				MENU_UNSELECTED);
@@ -729,15 +816,44 @@ smithing_object(struct obj *obj)
 		else return;
 		switch(selection){
 			case MELT_DOWN:{
+				struct obj *on;
+				for(struct obj *o2 = obj->cobj; o2; o2 = on){
+					on = o2->nobj;
+					obj_extract_and_unequip_self(o2);
+					dropy(o2);
+				}
+				if(obj->otyp == CHURCH_HAMMER){
+					obj->otyp = CHURCH_BRICK;
+					fix_object(obj);
+				}
+				if(obj->otyp == CHURCH_BLADE){
+					obj->otyp = CHURCH_SHEATH;
+					fix_object(obj);
+				}
+				int mat1 = obj->obj_material;
+				int quan1 = obj->owt;
+				int mat2 = 0;
+				int quan2 = 0;
+				if((obj->otyp == CANE || obj->otyp == WHIP_SAW) && obj->obj_material != obj->ovar1_alt_mat){
+					mat2 = obj->ovar1_alt_mat;
+					obj->ovar1_alt_mat = obj->obj_material;
+					fix_object(obj);
+					quan1 = obj->owt/2;
+					obj->ovar1_alt_mat = mat2;
+					obj->obj_material = mat2;
+					fix_object(obj);
+					quan2 = obj->owt/2;
+				}
 				struct obj *ingots = mksobj(INGOT, MKOBJ_NOINIT);
-				ingots->quan = obj->owt;
+				ingots->quan = quan1;
 				ingots->dknown = ingots->known = ingots->rknown = ingots->sknown = TRUE;
-				ingots->bknown = obj->bknown;
-				ingots->blessed = obj->blessed;
-				ingots->cursed = obj->cursed;
-				set_material_gm(ingots, obj->obj_material);
+				ingots->bknown = TRUE;
+				if(P_SKILL(P_SMITHING) >= P_EXPERT){
+					ingots->blessed = obj->blessed;
+					ingots->cursed = obj->cursed;
+				}
+				set_material_gm(ingots, mat1);
 				fix_object(ingots);
-				useupall(obj);
 				hold_another_object(ingots, u.uswallow ?
 						   "Oops!  %s out of your reach!" :
 						(Weightless ||
@@ -748,6 +864,29 @@ smithing_object(struct obj *obj)
 							   "Oops!  %s to the floor!",
 							   The(aobjnam(ingots, "slip")),
 							   (const char *)0);
+				if(quan2 > 0){
+					struct obj *ingots = mksobj(INGOT, MKOBJ_NOINIT);
+					ingots->quan = quan2;
+					ingots->dknown = ingots->known = ingots->rknown = ingots->sknown = TRUE;
+					ingots->bknown = TRUE;
+					if(P_SKILL(P_SMITHING) >= P_EXPERT){
+						ingots->blessed = obj->blessed;
+						ingots->cursed = obj->cursed;
+					}
+					set_material_gm(ingots, mat2);
+					fix_object(ingots);
+					hold_another_object(ingots, u.uswallow ?
+							   "Oops!  %s out of your reach!" :
+							(Weightless ||
+							 Is_waterlevel(&u.uz) ||
+							 levl[u.ux][u.uy].typ < IRONBARS ||
+							 levl[u.ux][u.uy].typ >= ICE) ?
+								   "Oops!  %s away from you!" :
+								   "Oops!  %s to the floor!",
+								   The(aobjnam(ingots, "slip")),
+								   (const char *)0);
+				}
+				useupall(obj);
 				exercise(A_STR, TRUE);
 				exercise(A_STR, TRUE);
 				exercise(A_STR, TRUE);
@@ -938,12 +1077,20 @@ smithing_object(struct obj *obj)
 			case FLAME_OPROP:{
 				int spellnum = 0;
 				struct obj *crystal = (struct obj *) 0;
-				get_blood_smithing_x(OPROP_SOTHW, &crystal, &spellnum);
+				if(!get_blood_smithing_silverflame(&crystal, &spellnum))
+					return;
 
+				long oprop_list[] = {OPROP_SFLMW, OPROP_MORTW, OPROP_TDTHW, OPROP_SFUWW};
 				if(crystal){
+					for(int i = 0; i < SIZE(oprop_list); i++)
+						if(check_oprop(crystal, oprop_list[i])){
+							add_oprop(obj, oprop_list[i]);
+						}
 					useup(crystal);
 				}
-				add_oprop(obj, OPROP_SOTHW);
+				else {
+					add_oprop(obj, OPROP_SFLMW);
+				}
 				use_skill(P_SMITHING, 1);
 			}
 			break;
@@ -1096,61 +1243,73 @@ smithing_object(struct obj *obj)
 			break;
 			case EXTRACT_OPROP:{
 				int count_energy = 0;
-				long latest_oprop = 0;
-				long latest_energy = 0;
+#define MAX_ENERGY_OPROPS	5
+				long energy_oprops[MAX_ENERGY_OPROPS+1] = {0};
+				long energy_list[MAX_ENERGY_OPROPS+1] = {0};
+				char *energy_str[MAX_ENERGY_OPROPS+1] = {0};
 				if(check_oprop(obj, OPROP_FIREW) && !is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_FIREW;
+					energy_str[count_energy] = "fire";
+					energy_list[count_energy] = OPROP_FIREW;
 					count_energy++;
-					latest_oprop = OPROP_FIREW;
-					latest_energy = OPROP_FIREW;
 				}
 				else if(check_oprop(obj, OPROP_LESSER_FIREW) && is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_LESSER_FIREW;
+					energy_str[count_energy] = "fire";
+					energy_list[count_energy] = OPROP_FIREW;
 					count_energy++;
-					latest_oprop = OPROP_LESSER_FIREW;
-					latest_energy = OPROP_FIREW;
 				}
 
 				if(check_oprop(obj, OPROP_COLDW) && !is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_COLDW;
+					energy_str[count_energy] = "cold";
+					energy_list[count_energy] = OPROP_COLDW;
 					count_energy++;
-					latest_oprop = OPROP_COLDW;
-					latest_energy = OPROP_COLDW;
 				}
 				else if(check_oprop(obj, OPROP_LESSER_COLDW) && is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_LESSER_COLDW;
+					energy_str[count_energy] = "cold";
+					energy_list[count_energy] = OPROP_COLDW;
 					count_energy++;
-					latest_oprop = OPROP_LESSER_COLDW;
-					latest_energy = OPROP_COLDW;
 				}
 
 				if(check_oprop(obj, OPROP_ELECW) && !is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_ELECW;
+					energy_str[count_energy] = "electricity";
+					energy_list[count_energy] = OPROP_ELECW;
 					count_energy++;
-					latest_oprop = OPROP_ELECW;
-					latest_energy = OPROP_ELECW;
 				}
 				else if(check_oprop(obj, OPROP_LESSER_ELECW) && is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_LESSER_ELECW;
+					energy_str[count_energy] = "electricity";
+					energy_list[count_energy] = OPROP_ELECW;
 					count_energy++;
-					latest_oprop = OPROP_LESSER_ELECW;
-					latest_energy = OPROP_ELECW;
 				}
 
 				if(check_oprop(obj, OPROP_ACIDW) && !is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_ACIDW;
+					energy_str[count_energy] = "acid";
+					energy_list[count_energy] = OPROP_ACIDW;
 					count_energy++;
-					latest_oprop = OPROP_ACIDW;
-					latest_energy = OPROP_ACIDW;
 				}
 				else if(check_oprop(obj, OPROP_LESSER_ACIDW) && is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_LESSER_ACIDW;
+					energy_str[count_energy] = "acid";
+					energy_list[count_energy] = OPROP_ACIDW;
 					count_energy++;
-					latest_oprop = OPROP_LESSER_ACIDW;
-					latest_energy = OPROP_ACIDW;
 				}
 
 				if(check_oprop(obj, OPROP_MAGCW) && !is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_MAGCW;
+					energy_str[count_energy] = "magic";
+					energy_list[count_energy] = OPROP_MAGCW;
 					count_energy++;
-					latest_oprop = OPROP_MAGCW;
-					latest_energy = OPROP_MAGCW;
 				}
 				else if(check_oprop(obj, OPROP_LESSER_MAGCW) && is_full_insight_weapon(obj)){
+					energy_oprops[count_energy] = OPROP_LESSER_MAGCW;
+					energy_str[count_energy] = "magic";
+					energy_list[count_energy] = OPROP_MAGCW;
 					count_energy++;
-					latest_oprop = OPROP_LESSER_MAGCW;
-					latest_energy = OPROP_MAGCW;
 				}
 
 				// Didn't have a smith upgrade :(
@@ -1168,8 +1327,31 @@ smithing_object(struct obj *obj)
 				if(count_energy == 0)
 					break;
 				else if(count_energy > 1){
+					winid tmpwin;
+					anything any;
+					any.a_void = 0;         /* zero out all bits */
+					menu_item *selected;
+					char ch = 'a';
+					tmpwin = create_nhwindow(NHW_MENU);
+					start_menu(tmpwin);
+					for(int i = 0; i < count_energy; i++){
+						any.a_int = i;
+						add_menu(tmpwin, NO_GLYPH, &any , ch++, 0, ATR_NONE,
+							 energy_str[i], MENU_UNSELECTED);
+					}
+					end_menu(tmpwin, "Energy types:");
+					n = select_menu(tmpwin, PICK_ONE, &selected);
+					destroy_nhwindow(tmpwin);
+					if(n <= 0){
+						break;
+					}
+					count_energy = selected[0].item.a_int;
+					free(selected);
 				}
-				remove_oprop(obj, latest_oprop);
+				else {
+					count_energy = 0;
+				}
+				remove_oprop(obj, energy_oprops[count_energy]);
 				// if(latest_oprop == OPROP_HOLYW)
 					// remove_oprop(obj, OPROP_UNHYW);
 				// else if(latest_oprop == OPROP_LESSER_HOLYW)
@@ -1177,22 +1359,22 @@ smithing_object(struct obj *obj)
 				remove_oprop(obj, OPROP_INSTW);
 				remove_oprop(obj, OPROP_SMITHU);
 				struct obj *crystal = mksobj(CRYSTAL, MKOBJ_NOINIT);
-				add_oprop(crystal, latest_energy);
+				add_oprop(crystal, energy_list[count_energy]);
 
 				set_material_gm(crystal, GEMSTONE);
-				if(latest_energy == OPROP_FIREW){
+				if(energy_list[count_energy] == OPROP_FIREW){
 					set_submat(crystal, RUBY);
 				}
-				else if(latest_energy == OPROP_COLDW){
+				else if(energy_list[count_energy] == OPROP_COLDW){
 					set_submat(crystal, DIAMOND);
 				}
-				else if(latest_energy == OPROP_ELECW){
+				else if(energy_list[count_energy] == OPROP_ELECW){
 					set_submat(crystal, TOPAZ);
 				}
-				else if(latest_energy == OPROP_ACIDW){
+				else if(energy_list[count_energy] == OPROP_ACIDW){
 					set_submat(crystal, EMERALD);
 				}
-				else if(latest_energy == OPROP_MAGCW){
+				else if(energy_list[count_energy] == OPROP_MAGCW){
 					set_submat(crystal, SAPPHIRE);
 				}
 				// else if(latest_energy == OPROP_HOLYW){
@@ -1233,6 +1415,28 @@ smithing_object(struct obj *obj)
 				struct obj *crystal = mksobj(CRYSTAL, MKOBJ_NOINIT);
 				add_oprop(crystal, OPROP_SOTHW);
 				set_material_gm(crystal, FIRMAMENT);
+
+				hold_another_object(crystal, u.uswallow ?
+						   "Oops!  %s out of your reach!" :
+						(Weightless ||
+						 Is_waterlevel(&u.uz) ||
+						 levl[u.ux][u.uy].typ < IRONBARS ||
+						 levl[u.ux][u.uy].typ >= ICE) ?
+							   "Oops!  %s away from you!" :
+							   "Oops!  %s to the floor!",
+							   The(aobjnam(crystal, "slip")),
+							   (const char *)0);
+			}
+			break;
+			case EXTRACT_FLAME:{
+				struct obj *crystal = mksobj(CRYSTAL, MKOBJ_NOINIT);
+				set_material_gm(crystal, SILVER);
+				long oprop_list[] = {OPROP_SFLMW, OPROP_MORTW, OPROP_TDTHW, OPROP_SFUWW};
+				for(int i = 0; i < SIZE(oprop_list); i++)
+					if(check_oprop(obj, oprop_list[i])){
+						remove_oprop(obj, oprop_list[i]);
+						add_oprop(crystal, oprop_list[i]);
+					}
 
 				hold_another_object(crystal, u.uswallow ?
 						   "Oops!  %s out of your reach!" :

@@ -1805,6 +1805,29 @@ misc_levelport:
 	    onquest();
 	assign_level(&u.uz0, &u.uz); /* reset u.uz0 */
 
+	//Restock -- Dummied out for now, I'm not confident this won't play horribly without further tuning
+	long timeline = monstermoves;
+	/*int spawn_freq = random_frequency();
+	if(Role_if(PM_ANACHRONONAUT) && Infuture)
+		timeline = quest_status.time_doing_quest;
+	if(spawn_freq && spawn_freq <= 70 && timeline > level.lastmove){
+		int delta = timeline - level.lastmove;
+		if(delta >= spawn_freq){
+			extern const int monstr[];
+			int count = 0;
+			int target = level_difficulty()*3;
+			for(struct monst *mtmp = fmon; mtmp && count < target; mtmp = mtmp->nmon){
+				if(!mtmp->mtame)
+					count += monstr[mtmp->mtyp]/(mtmp->mpeaceful ? 2 : 1);
+			}
+			for (delta = delta/spawn_freq; delta > 0 && count < target; delta--){
+				if(rn2(3+(count*30)/target)){
+					count += spawn_random_monster();
+				}
+			}
+		}
+	}*/
+	level.lastmove = timeline;
 #ifdef INSURANCE
 	save_currentstate();
 #endif

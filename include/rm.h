@@ -606,6 +606,7 @@ typedef struct
     struct monst	*monlist;
     struct damage	*damagelist;
     struct levelflags	flags;
+    long	lastmove;
 }
 dlevel_t;
 

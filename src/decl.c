@@ -3,6 +3,7 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+#include "hashmap.h"
 
 int (*afternmv)(void);
 int (*occupation)(void);
@@ -147,6 +148,8 @@ struct permonst upermonst = DUMMY;
 struct flag flags = DUMMY;
 struct instance_flags iflags = DUMMY;
 struct you u = DUMMY;
+
+struct hashmap_s *itemmap = 0;
 
 /* objects that have been stored in a magic chest */
 struct obj *magic_chest_objs[10] = {0};

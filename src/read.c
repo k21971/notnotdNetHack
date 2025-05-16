@@ -1291,6 +1291,7 @@ recharge(struct obj *obj, int curse_bless)
 		break;
 	    case MAGIC_MARKER:
 	    case TINNING_KIT:
+	    case DISSECTION_KIT:
 	    case EXPENSIVE_CAMERA:
 		if (is_cursed) stripspe(obj);
 		else if (rechrg && obj->otyp == MAGIC_MARKER) {	/* previously recharged */
@@ -2177,8 +2178,13 @@ seffects(struct obj *sobj)
 		} else {
 			if(!confused && u.sealsActive&SEAL_MARIONETTE){
 				unbind(SEAL_MARIONETTE,TRUE);
-			} 
-			if(!confused) u.wimage = 0;
+			}
+			if(!confused){
+				u.wimage = 0;
+				if(youmonst.mbleed)
+					Your("accursed wound closes up.");
+				youmonst.mbleed = 0;
+			}
 		    for (obj = invent; obj; obj = obj->nobj) {
 			long long wornmask;
 #ifdef GOLDOBJ
@@ -3624,6 +3630,9 @@ cant_create(int *mtype, boolean revival)
 		return TRUE;
 	} else if (*mtype==PM_HUNTING_HORROR_TAIL) {	/* for create_particular() */
 		*mtype = PM_HUNTING_HORROR;
+		return TRUE;
+	} else if (*mtype==PM_CHORISTER_TRAIN) {	/* for create_particular() */
+		*mtype = PM_CHORISTER_JELLY;
 		return TRUE;
 	}
 	return FALSE;

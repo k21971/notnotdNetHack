@@ -55,6 +55,8 @@ long get_status_duration(long long mask) {
 		return Catapsi;
 	case BL_MASK_DIMLOCK:
 		return DimensionalLock;
+	case BL_MASK_BLEED:
+		return youmonst.mbleed - 1; //Off by one error caused by the way in which bleed procs
 	default:
 		return 0;
 	}
@@ -74,6 +76,8 @@ long long get_status_mask(void) {
 		if (u.usick_type & SICK_NONVOMITABLE)
 			mask |= BL_MASK_ILL;
 	}
+	if(youmonst.mbleed > 1)  //Off by one error caused by the way in which bleed procs
+		mask |= BL_MASK_BLEED;
 	if(Blind && !StumbleBlind)
 		mask |= BL_MASK_BLIND;
 	if(Stunned && !StaggerShock)

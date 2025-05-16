@@ -4,6 +4,7 @@
 
 #include "hack.h"
 #include "lev.h"
+#include "hashmap.h"
 #include "tcap.h" /* for TERMLIB and ASCIIGRAPH */
 
 
@@ -111,6 +112,7 @@ inven_inuse(boolean quietly)
 #endif /* GOLDOBJ */
 	    if (otmp->in_use) {
 		if (!quietly) pline("Finishing off %s...", xname(otmp));
+		otmp->in_use = FALSE;
 		useup(otmp);
 	    }
 	}
@@ -404,6 +406,10 @@ restgamestate(
 	has_loaded_bones = flags.end_around;
 	flags.end_around = 2;
 	if (remember_discover) discover = remember_discover;
+
+	extern struct hashmap_s *itemmap;
+	itemmap = malloc(sizeof(struct hashmap_s));
+	hashmap_create(32, itemmap);
 
 	role_init(FALSE);	/* Reset the initial role, race, gender, and alignment */
 	
@@ -787,6 +793,7 @@ getlev(int fd, int pid, int lev, boolean ghostly)
 	mread(fd, (void *)&updest, sizeof(dest_area));
 	mread(fd, (void *)&dndest, sizeof(dest_area));
 	mread(fd, (void *)&level.flags, sizeof(level.flags));
+	mread(fd, (void *)&level.lastmove, sizeof(level.lastmove));
 	mread(fd, (void *)doors, sizeof(doors));
 	mread(fd, (void *)&altarindex, sizeof(int));
 	mread(fd, (void *)altars, sizeof(altars));

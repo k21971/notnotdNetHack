@@ -448,6 +448,7 @@ savelev(int fd, int lev, int mode)
 	bwrite(fd,(void *) &updest,sizeof(dest_area));
 	bwrite(fd,(void *) &dndest,sizeof(dest_area));
 	bwrite(fd,(void *) &level.flags,sizeof(level.flags));
+	bwrite(fd,(void *) &level.lastmove,sizeof(level.lastmove));
 	bwrite(fd, (void *) doors, sizeof(doors));
 	bwrite(fd,(void *) &altarindex, sizeof(int));
 	bwrite(fd, (void *) altars, sizeof(altars));

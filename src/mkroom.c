@@ -53,7 +53,7 @@ static void mkmch(int);
 static void mkwrk(int);
 static void mkaph(int);
 static void mklostitem(int);
-static void mklawfossil(int);
+static void mklawfossil(int, int);
 static void mkcamp(int);
 static void mklolthsepulcher(void);
 static void mkmivaultlolth(void);
@@ -493,6 +493,8 @@ mkyourblood(void)
 {
 	struct obj *otmp = mksobj(POT_BLOOD, MKOBJ_NOINIT);
 	otmp->corpsenm = youracedata->mtyp;
+	bless(otmp);
+	fully_identify_obj(otmp);
 	return otmp;
 }
 
@@ -5941,7 +5943,7 @@ mklostitem(int typ)
 }
 
 void
-mklawfossil(int typ)
+mklawfossil(int typ, int pm)
 {
 	int x, y, tries = 0, good = FALSE;
 	struct obj *otmp;
@@ -5951,13 +5953,11 @@ mklawfossil(int typ)
 		tries++;
 		if(isok(x,y) && levl[x][y].typ == typ)
 			good = TRUE;
-		else continue;
-		
-		otmp = mksobj(FOSSIL, NO_MKOBJ_FLAGS);
-		otmp->corpsenm = PM_ANCIENT_NUPPERIBO;
-		fix_object(otmp);
-		place_object(otmp, x, y);
 	}
+	otmp = mksobj(FOSSIL, NO_MKOBJ_FLAGS);
+	otmp->corpsenm = pm;
+	fix_object(otmp);
+	place_object(otmp, x, y);
 }
 
 static void
@@ -6469,6 +6469,9 @@ place_law_features(void)
 	int n;
 	if(Is_path(&u.uz)){
 		int cutoff = (on_level(&path3_level,&u.uz) && is_june()) ? min_ints(3, rn2(9)): rn2(9);
+		if(on_level(&path1_level,&u.uz)){
+			mklawfossil(STONE, PM_VERMIURGE);
+		}
 		for(n = 4; n > 0; n--)
 			mkaph(cutoff >= n);
 		if(!rn2(10)){
@@ -6497,7 +6500,7 @@ place_law_features(void)
 		// if(1){
 			n = 5 - int_sqrt(rnd(24));
 			for(; n > 0; n--)
-				mklawfossil(STONE);
+				mklawfossil(STONE, PM_ANCIENT_NUPPERIBO);
 		}
 		if(!rn2(20))
 			mksobj(HYPERBOREAN_DIAL, NO_MKOBJ_FLAGS);

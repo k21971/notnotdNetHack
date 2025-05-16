@@ -110,6 +110,9 @@ dochugw(register struct monst *mtmp)
 	}
 #endif /* 0 */
 
+	if(mtmp->mtyp == PM_CHORISTER_JELLY && mtmp->m_insight_level == 0){
+		mtmp->m_insight_level = 33 + rnd(11);
+	}
 	/* a similar check is in monster_nearby() in hack.c */
 	/* check whether hero notices monster and stops current activity */
 	if (occupation && !rd && !Confusion &&

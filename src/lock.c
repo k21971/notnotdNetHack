@@ -378,17 +378,18 @@ reset_pick(void)
 
 /* pick a tool for autounlock */
 struct obj *
-autokey(boolean opening) /* True: key, pick, or card; False: key or pick */
+autokey(boolean opening) /* True: key, pick, artikey, or card; False: key, pick, or artikey */
 {
-    struct obj *o, *key, *pick, *card;
+    struct obj *o, *key, *pick, *artikey, *card;
 
     /* mundane item or regular artifact or own role's quest artifact */
-    key = pick = card = (struct obj *) 0;
+    key = pick = artikey = card = (struct obj *) 0;
     for (o = invent; o; o = o->nobj) {
 		if (!touch_artifact(o, &youmonst, TRUE)) continue;
         switch (o->otyp) {
             case SKELETON_KEY:
-                if (!key)  key = o;
+                if (!key && !o->oartifact)  key = o;
+				if (!artikey && o->oartifact)  artikey = o;
                 break;
             case LOCK_PICK:
                 if (!pick) pick = o;
@@ -402,7 +403,7 @@ autokey(boolean opening) /* True: key, pick, or card; False: key or pick */
     }
     if (!opening)
         card = 0;
-    return key ? key : pick ? pick : card ? card : 0;
+    return key ? key : pick ? pick : artikey ? artikey : card ? card : 0;
 }
 
 /*

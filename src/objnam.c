@@ -1097,7 +1097,7 @@ add_properties_words(struct obj *obj, char *buf, boolean dofull)
 		if (check_oprop(obj, OPROP_LESSER_ACIDW))
 			Strcat(buf, "acrid ");
 		
-		if (check_oprop(obj, OPROP_GOATW)){
+		if (check_oprop(obj, OPROP_GOATW) && !(obj->where == OBJ_INVENT && GOAT_BAD)){
 			switch(goat_weapon_damage_turn(obj)){
 				case AD_EACD:
 					Strcat(buf, "drooling ");
@@ -1114,7 +1114,7 @@ add_properties_words(struct obj *obj, char *buf, boolean dofull)
 			}
 		}
 		
-		if (check_oprop(obj, OPROP_SOTHW)){
+		if (check_oprop(obj, OPROP_SOTHW) && !(obj->where == OBJ_INVENT && YOG_BAD)){
 			switch(soth_weapon_damage_turn(obj)){
 				case AD_STTP:
 					Strcat(buf, "starry ");
@@ -5703,6 +5703,7 @@ typfnd:
 	if (mntmp >= LOW_PM) {
 		if (mntmp == PM_LONG_WORM_TAIL) mntmp = PM_LONG_WORM;
 		if (mntmp == PM_HUNTING_HORROR_TAIL) mntmp = PM_HUNTING_HORROR;
+		if (mntmp == PM_CHORISTER_TRAIN) mntmp = PM_CHORISTER_JELLY;
 
 		switch (typ) {
 		case TIN:

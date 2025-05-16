@@ -902,8 +902,10 @@ domonnoise(struct monst *mtmp, boolean chatting)
 	if(chatting && (soundtype == MS_SONG || soundtype == MS_OONA)){
 		if(mtmp->mfaction == QUEST_FACTION)
 			soundtype = MS_GUARDIAN;
-		if(mtmp->mtyp == urole.guardnum)
+		else if(mtmp->mtyp == urole.guardnum)
 			soundtype = MS_GUARDIAN;
+		else if(mtmp->mtyp == PM_CHORISTER_JELLY)
+			soundtype = MS_SILENT;
 		else soundtype = MS_HUMANOID;
 	}
 
@@ -1922,7 +1924,7 @@ asGuardian:
 				break;
 			}
 		} else if(!(mtmp->mspec_used) || mtmp->mtyp == PM_INTONER){
-			switch(rnd(3)){
+			switch(rnd(mtmp->mtyp == PM_CHORISTER_JELLY ? 2 : 3)){
 				case 1:
 					if(mtmp->mtame && distmin(mtmp->mx,mtmp->my,u.ux,u.uy) < 5 && !Invulnerable){
 						inrange=TRUE;
@@ -6800,6 +6802,10 @@ bindspirit(int floorID)
 		set_spirit_powers(sealID);
 		return;
 	}
+	else if (floorID == YOG_SOTHOTH) {
+		spirit_type = ALIGN_SPIRIT;
+		spirit_type = OTHER_SPIRIT;
+	}
 	else if (
 		floorID == COSMOS ||
 		floorID == LIVING_CRYSTAL ||
@@ -6807,7 +6813,6 @@ bindspirit(int floorID)
 		floorID == MISKA ||
 		floorID == NUDZIRATH ||
 		floorID == ALIGNMENT_THING ||
-		floorID == YOG_SOTHOTH ||
 		floorID == UNKNOWN_GOD
 		) {
 		spirit_type = ALIGN_SPIRIT;

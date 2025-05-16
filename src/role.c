@@ -2198,10 +2198,10 @@ role_init(int newgame)
 	/* Fix up the god names */
 	if (flags.pantheon == -1) {		/* new game */
 	    flags.pantheon = flags.initrole;	/* use own gods */
-	    while (!roles[flags.pantheon].lgod 	/* unless they're missing */
+	    while ((!roles[flags.pantheon].lgod || 	/* unless they're missing */
+					(!Role_if(PM_UNDEAD_HUNTER) && philosophy_index(roles[flags.pantheon].lgod)))
 			&& !(Race_if(PM_DROW) && !Role_if(PM_ANACHRONONAUT))
 			&& !(Race_if(PM_ELF) && !Role_if(PM_ANACHRONONAUT))
-			&& (!Role_if(PM_UNDEAD_HUNTER) && philosophy_index(roles[flags.pantheon].lgod))
 			&& !Role_if(PM_EXILE)
 		) flags.pantheon = randrole(0);
 	    flags.panLgod = flags.pantheon;
@@ -2700,8 +2700,7 @@ role_init(int newgame)
 		//Drow noble nemesis is regular monster for anachrononauts
 		mons[PM_ELDER_BRAIN].msound = MS_SILENT;
 		mons[PM_ELDER_BRAIN].geno &= ~G_UNIQ;
-		if (flags.questprogress && Role_if(PM_ANACHRONONAUT))
-			urole.lgod = GOD_ILSENSINE;
+		urole.lgod = GOD_ILSENSINE;
 	}
 
 	if(!Role_if(PM_CAVEMAN)){
@@ -2862,6 +2861,8 @@ give_quest_trophy(void)
 		achieve.trophies |= MAD_QUEST;
 	else if(urole.neminum == PM_MASTER_KAEN)
 		achieve.trophies |= MONK_QUEST;
+	else if(urole.neminum == PM_INDEX_WOLF)
+		achieve.trophies |= UH_QUEST;
 	else if(urole.neminum == PM_CYCLOPS)
 		achieve.trophies |= HEA_QUEST;
 	else if(urole.neminum == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH)
@@ -2878,6 +2879,8 @@ give_ascension_trophy(void)
 		achieve.trophies |= ANA_ASC;
 	else if(Role_if(PM_EXILE))
 		achieve.trophies |= BIN_ASC;
+	else if(Role_if(PM_UNDEAD_HUNTER) && quest_status.moon_close && philosophy_index(u.ualign.god))
+		achieve.trophies |= UH_ASC;
 		
 	if(Race_if(PM_CLOCKWORK_AUTOMATON))
 		achieve.trophies |= CLOCK_ASC;
@@ -2889,6 +2892,7 @@ give_ascension_trophy(void)
 		achieve.trophies |= YUKI_ASC;
         if(Race_if(PM_SALAMANDER) || Race_if(PM_ETHEREALOID) || Race_if(PM_ENT) || Race_if(PM_LEPRECHAUN) || Race_if(PM_OCTOPODE))
 		achieve.new_races = 1;
+
 	int i;
 	int keys = 0;
 	for(i = 0; i<9; i++){

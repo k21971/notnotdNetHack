@@ -558,6 +558,7 @@ show_enlightenment(
 		if(u.spirit[CROWN_SPIRIT]) numBound++;
 		if(u.spirit[GPREM_SPIRIT]) numBound++;
 		if(u.spirit[ALIGN_SPIRIT]) numBound++;
+		if(u.spirit[OTHER_SPIRIT]) numBound++;
 		if(u.spirit[OUTER_SPIRIT]) numBound++;
 		Sprintf(prebuf, "Your soul ");
 		Sprintf(buf, " bound to ");
@@ -588,8 +589,11 @@ show_enlightenment(
 		if(!u.spirit[QUEST_SPIRIT] && u.specialSealsKnown&(SEAL_DAHLVER_NAR|SEAL_ACERERAK|SEAL_BLACK_WEB)){
 			you_are("able to bind with a quest spirit");
 		}
-		if(!u.spirit[ALIGN_SPIRIT] && u.specialSealsKnown&(SEAL_COSMOS|SEAL_LIVING_CRYSTAL|SEAL_TWO_TREES|SEAL_MISKA|SEAL_NUDZIRATH|SEAL_ALIGNMENT_THING|SEAL_UNKNOWN_GOD|SEAL_YOG_SOTHOTH)){
+		if(!u.spirit[ALIGN_SPIRIT] && u.specialSealsKnown&(SEAL_COSMOS|SEAL_LIVING_CRYSTAL|SEAL_TWO_TREES|SEAL_MISKA|SEAL_NUDZIRATH|SEAL_ALIGNMENT_THING|SEAL_UNKNOWN_GOD)){
 			you_are("able to bind with an aligned spirit");
+		}
+		if(!u.spirit[OTHER_SPIRIT] && u.specialSealsKnown&(SEAL_YOG_SOTHOTH)){
+			you_are("able to bind with an other god");
 		}
 		if(!u.spirit[OUTER_SPIRIT] && u.ulevel == 30 && Role_if(PM_EXILE)){
 			you_are("able to bind with the Numina");
@@ -1622,6 +1626,7 @@ resistances_enlightenment(void)
 		if(u.spirit[CROWN_SPIRIT]) numBound++;
 		if(u.spirit[GPREM_SPIRIT]) numBound++;
 		if(u.spirit[ALIGN_SPIRIT]) numBound++;
+		if(u.spirit[OTHER_SPIRIT]) numBound++;
 		if(u.spirit[OUTER_SPIRIT]) numBound++;
 		Sprintf(buf, "Your soul is bound to ");
 		for(i=0;i<QUEST_SPIRIT;i++){
@@ -1923,6 +1928,18 @@ spirits_enlightenment(void)
 		putstr(en_win, 0, "Embassy of Elements");
 		if (u.spirit[CROWN_SPIRIT] != 0L) {
 			addseal(CROWN_SPIRIT);
+		}
+		else {
+			addempty();
+		}
+		putstr(en_win, 0, "");
+	}
+	/* Yog Sothoth's spirit */
+	if (u.specialSealsActive & SEAL_YOG_SOTHOTH)
+	{
+		putstr(en_win, 0, "Other God");
+		if (u.spirit[OTHER_SPIRIT] != 0L) {
+			addseal(OTHER_SPIRIT);
 		}
 		else {
 			addempty();
@@ -3024,6 +3041,7 @@ show_conduct(int final, boolean dumping)
 	CHECK_ACHIEVE(NOB_QUEST,"Rebellion crushed: completed base noble quest")
 	CHECK_ACHIEVE(MAD_QUEST,"Oh good. I'm not crazy: completed madman quest")
 	CHECK_ACHIEVE(MONK_QUEST,"You must defeat Sheng Long to stand a chance: completed monk quest")
+	CHECK_ACHIEVE(UH_QUEST,"Don't think too hard about all of this: completed hunter quest")
 	CHECK_ACHIEVE(HDR_NOB_QUEST,"Family drama: completed hedrow noble quest")
 	CHECK_ACHIEVE(HDR_SHR_QUEST,"On agency: completed hedrow shared quest")
 	CHECK_ACHIEVE(DRO_NOB_QUEST,"Foreshadowing: completed drow noble quest")

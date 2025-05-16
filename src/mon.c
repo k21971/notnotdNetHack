@@ -7777,7 +7777,7 @@ newcham(
 			unstuck(mtmp);
 	}
 
-	if ((mtyp == PM_LONG_WORM || mtyp == PM_HUNTING_HORROR) && 
+	if ((mtyp == PM_LONG_WORM || mtyp == PM_HUNTING_HORROR || mtyp == PM_CHORISTER_JELLY) && 
 		(mtmp->wormno = get_wormno()) != 0) {
 	    /* we can now create worms with tails - 11/91 */
 		initworm(mtmp, mtyp == PM_HUNTING_HORROR ? 2 : rn2(5));
@@ -9119,6 +9119,37 @@ do_auras(struct monst *mon)
 						mtmp->mpeaceful = 0;
 						set_malign(mtmp);
 					}
+				}
+			}
+		}
+	}
+	if(mon->mtyp == PM_CHORISTER_JELLY){
+		struct monst *mtmp;
+		int xlocale = mon->mx, ylocale = mon->my;
+		for(mtmp = fmon; mtmp; mtmp = mtmp->nmon){
+			if(mon->mhp < mon->mhpmax && mon->mpeaceful == mtmp->mpeaceful && !mm_aggression(mtmp, mon))
+				mon->mhp++;
+		}
+		if(mon->mpeaceful){
+			if(dist2(xlocale, ylocale, u.ux, u.uy) <= 64){
+				if(Insanity > 10 && !save_vs_sanloss()){
+					if(canspotmon(mon))
+						You_hear("%s strange chime!", s_suffix(mon_nam(mon)));
+					else You_hear("a strange chiming!");
+					change_usanity(-1, !save_vs_sanloss()); //Second save to avoid minor madness check
+				}
+				else {
+					static long lastheard = 0L;
+					if(lastheard + 10 < moves){
+						if(canspotmon(mon))
+							You_hear("%s chime.", mon_nam(mon));
+						else You_hear("a soft chiming.");
+					}
+					if(rn2(100) < Insanity){
+						change_usanity(rnd(Role_if(PM_MADMAN) ? 6 : Role_if(PM_EXILE) ? 5 : 1), FALSE);
+					}
+					healup(1, 0, FALSE, FALSE);
+					lastheard = moves;
 				}
 			}
 		}

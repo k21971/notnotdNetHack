@@ -487,6 +487,9 @@ unbind_core(long spir, boolean forced, boolean lifesave_forced)
 		} else if(u.spirit[ALIGN_SPIRIT] == spir){
 			u.spirit[ALIGN_SPIRIT]=0;
 			u.spiritT[ALIGN_SPIRIT]=0;
+		} else if(u.spirit[OTHER_SPIRIT] == spir){
+			u.spirit[OTHER_SPIRIT]=0;
+			u.spiritT[OTHER_SPIRIT]=0;
 		} else if(u.spirit[OUTER_SPIRIT] == spir){
 			u.spirit[OUTER_SPIRIT]=0;
 			u.spiritT[OUTER_SPIRIT]=0;
@@ -667,6 +670,8 @@ nh_timeout(void)
 			unbind(u.spirit[QUEST_SPIRIT],0);
 		if(u.spirit[ALIGN_SPIRIT] && u.spiritT[ALIGN_SPIRIT] < moves) 
 			unbind(u.spirit[ALIGN_SPIRIT],0);
+		if(u.spirit[OTHER_SPIRIT] && u.spiritT[OTHER_SPIRIT] < moves) 
+			unbind(u.spirit[OTHER_SPIRIT],0);
 		if(u.spirit[CROWN_SPIRIT] && u.spiritT[CROWN_SPIRIT] < moves) 
 			unbind(u.spirit[CROWN_SPIRIT],0);
 		if(u.spirit[GPREM_SPIRIT] && u.spiritT[GPREM_SPIRIT] < moves) 
@@ -1270,11 +1275,11 @@ hatch_egg(void * arg, long timeout)
 	mon = mon2 = (struct monst *)0;
 	mtyp = big_to_little(egg->corpsenm);
 	if(u.silvergrubs && !rn2(20)){
-		u.silvergrubs = FALSE;
+		set_silvergrubs(FALSE);
 	}
 	if(check_rot(ROT_KIN) && (u.silvergrubs || !rn2(100)) && !(mvitals[PM_MAN_FLY].mvflags&G_GONE && !In_quest(&u.uz))){
 		mtyp = PM_MAN_FLY;
-		u.silvergrubs = TRUE;
+		set_silvergrubs(TRUE);
 	}
 	/* The identity of one's father is learned, not innate */
 	yours = (egg->spe || (!flags.female && carried(egg) && !rn2(2)));

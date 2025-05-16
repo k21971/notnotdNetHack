@@ -184,6 +184,9 @@ is_edible(register struct obj *obj)
 	if(Race_if(PM_INCANTIFIER)) return incantifier_edible(obj);
 	if(magivorous(youracedata)) return incantifier_edible(obj);
 	if(uclockwork) return uclockwork_edible(obj);
+	if(obj->oclass != FOOD_CLASS && obj->oartifact)
+		return FALSE; /*Just skip all artifacts*/
+	
 	if(Role_if(PM_ANACHRONONAUT) && !(Upolyd || Race_if(PM_VAMPIRE))) 
 		return ((obj->otyp >= K_RATION && obj->otyp <= TIN) || (obj->otyp >= SLIME_MOLD && obj->otyp <= TIN && 
 			(obj->obj_material == VEGGY || obj->obj_material == FLESH))); /*Processed foods only*/
@@ -4588,7 +4591,7 @@ floorfood(	/* get food from floor or pack */
 		Sprintf(qbuf, "There is a bear trap here (%s); eat it?",
 			(u.utrap && u.utraptype == TT_BEARTRAP) ?
 				"holding you" : "armed");
-		if ((c = yn_function(qbuf,ynqchars,'n')) == 'y') {
+		if ((c = yn(qbuf)) == 'y') {
 		    u.utrap = u.utraptype = 0;
 		    deltrap(ttmp);
 		    return mksobj(BEARTRAP, NO_MKOBJ_FLAGS);
@@ -4605,7 +4608,7 @@ floorfood(	/* get food from floor or pack */
 		else
 		    Sprintf(qbuf, "There are %ld gold pieces here; eat them?",
 			    gold->quan);
-		if ((c = yn_function(qbuf,ynqchars,'n')) == 'y') {
+		if ((c = yn(qbuf)) == 'y') {
 		    return gold;
 		} else if (c == 'q') {
 		    return (struct obj *)0;
@@ -4629,7 +4632,7 @@ floorfood(	/* get food from floor or pack */
 				otense(otmp, "are"),
 				doname(otmp), verb,
 				(otmp->quan == 1L) ? "it" : "one");
-			if((c = yn_function(qbuf,ynqchars,'n')) == 'y')
+			if((c = yn(qbuf)) == 'y')
 				return(otmp);
 			else if(c == 'q')
 				return((struct obj *) 0);

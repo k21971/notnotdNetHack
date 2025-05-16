@@ -8,6 +8,8 @@
 #include "func_tab.h"
 #include <ctype.h>
 #include <strings.h>
+#include "hashmap.h"
+#include "hashutil.h"
 
 /* Dialog windows for curses interface */
 
@@ -1391,16 +1393,51 @@ boolean
 get_menu_coloring(char *str, int *color, int *attr)
 {
     struct menucoloring *tmpmc;
-
-    if (iflags.use_menu_color)
-        for (tmpmc = menu_colorings; tmpmc; tmpmc = tmpmc->next)
+    extern struct hashmap_s *itemmap;
+    struct menucolor_attribs *stored;
+    if (itemmap && iflags.use_menu_color){
+        stored = (struct menucolor_attribs *)hashmap_get(itemmap, str, strlen(str));
+        if(stored != NULL){
+            if(stored->hit){
+                *color = stored->color;
+                *attr = curses_convert_attr(stored->attr);
+                stored->lastused = moves;
+                return TRUE;
+            }
+            else {
+                return FALSE;
+            }
+        }
+        for (tmpmc = menu_colorings; tmpmc; tmpmc = tmpmc->next){
             if (tmpmc->is_regexp
                 ? regexec(&tmpmc->match, str, 0, NULL, 0) == 0
                 : pmatch(tmpmc->pattern, str)) {
                 *color = tmpmc->color;
                 *attr = curses_convert_attr(tmpmc->attr);
+                if(itemmap){
+                    int keylen = strlen(str);
+                    stored = malloc(sizeof(struct menucolor_attribs));
+                    stored->key = malloc(keylen);
+                    memcpy((void *)stored->key, str, keylen);
+                    stored->color = tmpmc->color;
+                    stored->attr = tmpmc->attr;
+                    stored->lastused = moves;
+                    stored->hit = TRUE;
+                    hashmap_put(itemmap, stored->key, keylen, stored);
+                }
                 return TRUE;
             }
+        }
+        if(itemmap){
+            int keylen = strlen(str);
+            stored = malloc(sizeof(struct menucolor_attribs));
+            stored->key = malloc(keylen);
+            memcpy((void *)stored->key, str, keylen);
+            stored->lastused = moves;
+            stored->hit = FALSE;
+            hashmap_put(itemmap, stored->key, keylen, stored);
+        }
+    }
     return FALSE;
 }
 

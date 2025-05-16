@@ -260,6 +260,8 @@ m_to_e(struct monst *mtmp, int x, int y, struct entity *etmp)
 		if (mtmp->wormno && (x != mtmp->mx || y != mtmp->my))
 			etmp->edata = mtmp->mtyp == PM_HUNTING_HORROR ? 
 				&mons[PM_HUNTING_HORROR_TAIL] :
+				mtmp->mtyp == PM_CHORISTER_JELLY ? 
+				&mons[PM_CHORISTER_TRAIN] :
 				&mons[PM_LONG_WORM_TAIL];
 		else
 			etmp->edata = mtmp->data;

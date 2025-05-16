@@ -4918,7 +4918,7 @@ cast_spell(
 				rays);
 			int ndmg;
 			for(i = 0; i < n; i++){
-				ndmg = d(n, hd_size(mdef->data)) - (youdef ? roll_udr(magr, ROLL_SLOT) : roll_mdr(mdef, magr, ROLL_SLOT));
+				ndmg = d(1, hd_size(mdef->data)) - (youdef ? roll_udr(magr, ROLL_SLOT) : roll_mdr(mdef, magr, ROLL_SLOT));
 				if(ndmg < 1)
 					ndmg = 1;
 				dmg += ndmg;

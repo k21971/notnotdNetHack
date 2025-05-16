@@ -835,7 +835,9 @@ struct u_achieve {
 #define	DRO_HEA_QUEST	0x1LL << 50
 #define	MONK_QUEST		0x1LL << 51
 #define	IEA_UPGRADES	0x1LL << 52
-#define ACHIEVE_NUMBER	64
+#define	UH_QUEST		0x1LL << 53
+#define	UH_ASC			0x1LL << 54
+#define ACHIEVE_NUMBER	66
 };
 
 extern struct u_achieve achieve;

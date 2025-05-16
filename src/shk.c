@@ -4345,8 +4345,9 @@ cost_per_charge(
 		if (otmp->spe > 1) tmp /= 4L;
 	} else if (otmp->oclass == SPBOOK_CLASS) {
 		tmp -= tmp / 5L;
-	} else if (otmp->otyp == CAN_OF_GREASE ||
-		   otmp->otyp == TINNING_KIT
+	} else if (otmp->otyp == CAN_OF_GREASE
+		   || otmp->otyp == TINNING_KIT
+		   || otmp->otyp == DISSECTION_KIT
 		   || otmp->otyp == EXPENSIVE_CAMERA
 		   ) {
 		tmp /= 10L;
