@@ -5,7 +5,7 @@ PYTHON = python3
 
 # gprof flags
 # CFLAGS = -pg
-CFLAGS = -g3 -std=gnu17
+CFLAGS = -g3
 
 # gprof flags
 # LDFLAGS += -pg
@@ -33,7 +33,6 @@ CPPFLAGS += -Wno-unused-label
 CPPFLAGS += -Wno-unknown-pragmas
 CPPFLAGS += -Wno-missing-braces
 CPPFLAGS += -Wno-format-overflow
-CPPFLAGS += -std=gnu17
 
 .DELETE_ON_ERROR:
 
