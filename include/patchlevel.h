@@ -53,7 +53,7 @@
  * 3.23.0: Yog-Sothoth cult, Cult revisions and mutations system, Bokrug "cult", Descendant option, Knight fighting styles, Advanced spellcasting fixes, Monk moves are free, Samurai "Kendo", Half dragon level 15 intrinsics, Attack and Passive pet commands, Mercurial weapon insight traits and gith artifact "swords", Scorpion Carapace revision, MC3 nerf, Monster smiths and forges v1, Random Insight monsters, Depths monster gen zone, Variable monster Hit Dice sizes, and misc bug fixes and tweaks.
  * 3.24.0: Undead Hunter role, expert weapon skill traits, belts and belt slot, explosions and wizard tweaks and cult spellcasting, smithing (primarily blood smithing), dungeon restocking, more insight monsters, more ways to get Yog Sothoth, Oracle artifact birthplaces, pommeling style, Dirge interacts with impurity and shubbie, sword-and-pistol handling, HP and healing potion rebalance, Spire restricts artifacts and wands, midas potions, migo mist projectors and generalized clouds, misc minor buffs and bugfixes
  */
-#define PATCHLEVEL	15
+#define PATCHLEVEL	16
 /*
  * Incrementing EDITLEVEL can be used to force invalidation of old bones
  * and save files.
