@@ -782,7 +782,8 @@ play_song(void)
 
 	///* songs only have effect after the 1st turn */
 	//if (song_delay <= songs[song_played].level+2) 
-	switch (song_being_played()) {
+	int song_id = song_being_played();
+	switch (song_id) {
 		case SNG_SLEEP:
 			sleep_song(distance);
 			break;
@@ -815,6 +816,10 @@ play_song(void)
 			break;
 		}
 
+	if(ACURR(A_CHA) == 25)
+		u.bladesong = monstermoves + 8 + songs[song_id].level;
+	else
+		u.bladesong = monstermoves + (ACURR(A_CHA) - 10)/2 + songs[song_id].level;
 	song_delay--;
 	if (song_delay <= 0) {
 		reset_song();
@@ -921,7 +926,7 @@ scary_song(int distance)
 		}
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_FEAR;
+		uwep->ovara_heard |= OHEARD_FEAR;
 	}
 }
 
@@ -962,7 +967,7 @@ slowness_song(int distance)
 	    mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_LETHARGY;
+		uwep->ovara_heard |= OHEARD_LETHARGY;
 	}
 }
 
@@ -984,7 +989,7 @@ haste_song(int distance)
 	    mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_HASTE;
+		uwep->ovara_heard |= OHEARD_HASTE;
 	}
 }
 
@@ -1013,7 +1018,7 @@ heal_song(int distance)
 	    mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_HEALING;
+		uwep->ovara_heard |= OHEARD_HEALING;
 	}
 }
 
@@ -1057,7 +1062,7 @@ encourage_pets(int distance)
 		mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_COURAGE;
+		uwep->ovara_heard |= OHEARD_COURAGE;
 	}
 }
 
@@ -1077,7 +1082,7 @@ confusion_song(int distance)
 		mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_CONFUSE;
+		uwep->ovara_heard |= OHEARD_CONFUSE;
 	}
 }
 
@@ -1098,7 +1103,7 @@ cancel_song(int distance)
 		mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_CANCEL;
+		uwep->ovara_heard |= OHEARD_CANCEL;
 	}
 }
 
@@ -1143,6 +1148,7 @@ rally_song(int distance)
 					mtmp->mfrozen = 0;
 				}
 				if(mtmp->mstdy > 0) mtmp->mstdy = 0;
+				mtmp->mwounded_legs = 0;
 				mtmp->mstun = 0;
 				mtmp->mconf = 0;
 			case P_UNSKILLED:
@@ -1157,7 +1163,7 @@ rally_song(int distance)
 		mtmp = nextmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_RALLY;
+		uwep->ovara_heard |= OHEARD_RALLY;
 	}
 }
 
@@ -1275,7 +1281,7 @@ sleep_song(int distance)
 		mtmp = mtmp->nmon;
 	}
 	if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-		uwep->ovar1_heard |= OHEARD_LETHARGY;
+		uwep->ovara_heard |= OHEARD_LETHARGY;
 	}
 }
 
@@ -1617,9 +1623,9 @@ do_pit:		    chasm = maketrap(x,y,PIT);
 									   if(!cansee(x,y) || mon)
 										   pline("%s is %sed!",
 												   cansee(x,y) ? "It" : Monnam(mtmp),
-												  banish_kill(mtmp->mtyp) ? "banish" : nonliving(mtmp->data) ? "destroy" : "kill");
+												  (banish_kill_mon(mtmp) && !has_template(mtmp, SPARK_SKELETON)) ? "banish" : nonliving(mtmp->data) ? "destroy" : "kill");
 						else {
-										   You("%s %s!", banish_kill(mtmp->mtyp) ? "banish" : nonliving(mtmp->data) ? "destroy" :
+										   You("%s %s!", (banish_kill_mon(mtmp) && !has_template(mtmp, SPARK_SKELETON)) ? "banish" : nonliving(mtmp->data) ? "destroy" :
 											   "kill", mtmp->mtame ?
 							x_monnam(mtmp, ARTICLE_THE, "poor",
 					M_HAS_NAME(mtmp) ? SUPPRESS_SADDLE : 0, FALSE):
@@ -1731,7 +1737,7 @@ do_improvisation(struct obj *instr)
 		put_monsters_to_sleep(u.ulevel * 5);
 		exercise(A_DEX, TRUE);
 		if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-			uwep->ovar1_heard |= OHEARD_LETHARGY;
+			uwep->ovara_heard |= OHEARD_LETHARGY;
 		}
 		break;
 	    } /* else FALLTHRU */
@@ -1762,8 +1768,8 @@ do_improvisation(struct obj *instr)
 		}
 		makeknown(instr->otyp);
 		if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-			if(instr->otyp == FROST_HORN) uwep->ovar1_heard |= OHEARD_FROST;
-			if(instr->otyp == FIRE_HORN) uwep->ovar1_heard |= OHEARD_FIRE;
+			if(instr->otyp == FROST_HORN) uwep->ovara_heard |= OHEARD_FROST;
+			if(instr->otyp == FIRE_HORN) uwep->ovara_heard |= OHEARD_FIRE;
 		}
 		break;
 	    } /* else FALLTHRU */
@@ -1806,7 +1812,7 @@ do_improvisation(struct obj *instr)
 		awaken_monsters(ROWNO * COLNO);
 		makeknown(DRUM_OF_EARTHQUAKE);
 		if(uwep && uwep->oartifact == ART_SINGING_SWORD){
-			uwep->ovar1_heard |= OHEARD_QUAKE;
+			uwep->ovara_heard |= OHEARD_QUAKE;
 		}
 		break;
 	    } /* else FALLTHRU */

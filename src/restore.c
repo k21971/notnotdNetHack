@@ -4,6 +4,7 @@
 
 #include "hack.h"
 #include "lev.h"
+#include "hashmap.h"
 #include "tcap.h" /* for TERMLIB and ASCIIGRAPH */
 
 
@@ -51,6 +52,7 @@ static struct bucket *id_map = 0;
 #include "quest.h"
 
 boolean restoring = FALSE;
+boolean loading_mons = FALSE;
 static struct fruit *oldfruit;
 static long omoves;
 
@@ -110,6 +112,7 @@ inven_inuse(boolean quietly)
 #endif /* GOLDOBJ */
 	    if (otmp->in_use) {
 		if (!quietly) pline("Finishing off %s...", xname(otmp));
+		otmp->in_use = FALSE;
 		useup(otmp);
 	    }
 	}
@@ -250,6 +253,7 @@ restmonchn(register int fd, boolean ghostly)
 	struct permonst *monbegin;
 	boolean moved;
 
+	loading_mons = TRUE;
 	/* get the original base address */
 	mread(fd, (void *)&monbegin, sizeof(monbegin));
 	moved = (monbegin != mons);
@@ -329,6 +333,7 @@ restmonchn(register int fd, boolean ghostly)
 		impossible("Restmonchn: error reading monchn.");
 		mtmp2->nmon = 0;
 	}
+	loading_mons = FALSE;
 	return(first);
 }
 
@@ -401,6 +406,10 @@ restgamestate(
 	has_loaded_bones = flags.end_around;
 	flags.end_around = 2;
 	if (remember_discover) discover = remember_discover;
+
+	extern struct hashmap_s *itemmap;
+	itemmap = malloc(sizeof(struct hashmap_s));
+	hashmap_create(32, itemmap);
 
 	role_init(FALSE);	/* Reset the initial role, race, gender, and alignment */
 	
@@ -784,6 +793,7 @@ getlev(int fd, int pid, int lev, boolean ghostly)
 	mread(fd, (void *)&updest, sizeof(dest_area));
 	mread(fd, (void *)&dndest, sizeof(dest_area));
 	mread(fd, (void *)&level.flags, sizeof(level.flags));
+	mread(fd, (void *)&level.lastmove, sizeof(level.lastmove));
 	mread(fd, (void *)doors, sizeof(doors));
 	mread(fd, (void *)&altarindex, sizeof(int));
 	mread(fd, (void *)altars, sizeof(altars));
@@ -888,7 +898,7 @@ getlev(int fd, int pid, int lev, boolean ghostly)
 				/* reset peaceful/malign relative to new character */
 				if(!mtmp->isshk)
 					/* shopkeepers will reset based on name */
-					mtmp->mpeaceful = peace_minded(mtmp->data);
+					mtmp->mpeaceful = peace_minded(mtmp);
 				set_malign(mtmp);
 			} else if (monstermoves > omoves){
 				mon_catchup_elapsed_time(mtmp, monstermoves - omoves);

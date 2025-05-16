@@ -439,8 +439,34 @@ qt_pager(int msgnum)
 	return;
 }
 
+void
+string_pager(char *string)
+{
+	long	size;
+	winid datawin = create_nhwindow(NHW_TEXT);
+	char buf[BUFSZ];
+	int c = 0;
+	for(int i = 0; string[i]; i++){
+		if(string[i] != '\n'){
+			buf[c] = string[i];
+			c++;
+		}
+		else {
+			buf[c] = '\0';
+			putstr(datawin, 0, (const char *)&buf);
+			c = 0;
+		}
+	}
+	if(c > 0){
+		buf[c] = '\0';
+		putstr(datawin, 0, (const char *)&buf);
+	}
+	display_nhwindow(datawin, TRUE);
+	destroy_nhwindow(datawin);
+}
+
 struct permonst *
-qt_montype(void)
+qt_montype(int x, int y)
 {
 	if(Role_if(PM_ANACHRONONAUT)){
 		switch(rn2(7)){
@@ -665,6 +691,16 @@ qt_montype(void)
 		if (qpm != NON_PM && rn2(5) && !(mvitals[qpm].mvflags & G_GONE && !In_quest(&u.uz)))
 			return (&mons[qpm]);
 		return (mkclass(S_DOG, G_NOHELL));
+	} else if(Role_if(PM_UNDEAD_HUNTER)
+		&& ((u.uz.dlevel < qlocate_level.dlevel && quest_status.time_doing_quest < (mvitals[PM_INDEX_WOLF].died ? UH_QUEST_TIME_1 : UH_QUEST_TIME_0))
+			|| (u.uz.dlevel == qstart_level.dlevel && quest_status.time_doing_quest < UH_QUEST_TIME_2)
+			|| (mvitals[PM_MOON_S_CHOSEN].died)
+		)
+	){
+		if(quest_status.moon_close && *in_rooms(x, y, MORGUE)){
+			return mkclass(rn2(100) ? S_ZOMBIE : S_LICH, G_NOHELL|G_HELL);
+		}
+		return mvitals[PM_MOON_S_CHOSEN].died ? (u.uz.dlevel <= qlocate_level.dlevel ? &mons[PM_FOG_CLOUD] : &mons[PM_MIST_CLOUD]) : &mons[PM_LONG_WORM_TAIL];
 	} else {
 		int qpm;
 		if(Race_if(PM_DROW) && !flags.initgend && Role_if(PM_NOBLEMAN) && on_level(&u.uz, &qstart_level)) return &mons[PM_LONG_WORM_TAIL];
@@ -979,6 +1015,7 @@ chaos_montype(void)
 struct permonst *
 chaos2_montype(void)
 {
+	int diff = (u.ulevel+level_difficulty())/2;
 	if(on_level(&elshava_level,&u.uz)){
 		if(rn2(3))
 			return !(mvitals[PM_FOG_CLOUD].mvflags & G_GONE) ? &mons[PM_FOG_CLOUD] : mkclass(S_VORTEX, G_NOHELL);
@@ -991,6 +1028,10 @@ chaos2_montype(void)
 		else
 			return !(mvitals[PM_NOVIERE_ELADRIN].mvflags & G_GONE) ? &mons[PM_NOVIERE_ELADRIN] : mkclass(S_CHA_ANGEL, G_NOHELL);
 	} else if(In_mithardir_desert(&u.uz)){
+		if(G_C_INST(mons[PM_DESERT_SEER].geno) < Insight && !rn2(10)){
+			if(!toostrong(PM_DESERT_SEER, diff+5))
+				return &mons[PM_DESERT_SEER];
+		}
 		if(rn2(3))
 			return !(mvitals[PM_DUST_VORTEX].mvflags & G_GONE) ? &mons[PM_DUST_VORTEX] : mkclass(S_ZOMBIE, G_NOHELL);
 		else if(rn2(2))
@@ -1021,11 +1062,28 @@ chaos2_montype(void)
 	}
 	return !(mvitals[PM_FOG_CLOUD].mvflags & G_GONE) ? &mons[PM_FOG_CLOUD] : mkclass(S_VORTEX, G_NOHELL);
 }
-
+#define	FOREST_INSIGHT	{ \
+		if(!rn2(66)){\
+			if (moves > 9000 && !(mvitals[PM_INCARNATOR_MAGGOT].mvflags & G_GONE) && !toostrong(PM_INCARNATOR_MAGGOT, diff+5)) \
+				return &mons[PM_INCARNATOR_MAGGOT]; \
+		}\
+}
+#define	DEPTHS_INSIGHT	{ \
+		if(!rn2(20)){\
+			if (!(mvitals[PM_INCARNATOR_MAGGOT].mvflags & G_GONE) && !toostrong(PM_INCARNATOR_MAGGOT, diff+5)) \
+				return &mons[PM_INCARNATOR_MAGGOT]; \
+		}\
+		if(check_insight()){ \
+			if(G_C_INST(mons[PM_NAMELESS_GNAWER].geno) < u.uinsight && !toostrong(PM_NAMELESS_GNAWER, diff+5)) \
+				return &mons[PM_NAMELESS_GNAWER]; \
+		} \
+}
 struct permonst *
 chaos3_montype(void)
 {
+	int diff = (u.ulevel+level_difficulty())/2;
 	if(In_mordor_forest(&u.uz)){
+		FOREST_INSIGHT
 		switch(rn2(20)){
 			case 0:
 			case 1:
@@ -1049,8 +1107,10 @@ chaos3_montype(void)
 			case 19: return &mons[PM_DREAM_QUASIELEMENTAL];
 		}
 	} else if(Is_ford_level(&u.uz)){
+		FOREST_INSIGHT
 		return ford_montype(0);
 	} else if(In_mordor_fields(&u.uz)){
+		FOREST_INSIGHT
 		switch(rn2(8)){
 			case 0: return &mons[PM_ROTHE];
 			case 1: return &mons[PM_MUMAK_CALF];
@@ -1099,6 +1159,7 @@ chaos3_montype(void)
 		on_level(&u.uz, &mordor_depths_1_level)
 		|| on_level(&u.uz, &mordor_depths_2_level)
 	){
+		DEPTHS_INSIGHT
 		switch(rn2(on_level(&u.uz, &mordor_depths_2_level) ? 30 : 20)){
 			case 1:
 			case 2:
@@ -1131,6 +1192,7 @@ chaos3_montype(void)
 			case 29: return &mons[PM_MORDOR_SHAMAN];
 		}
 	} else if(on_level(&u.uz, &mordor_depths_3_level)){
+		DEPTHS_INSIGHT
 		switch(rn2(20)){
 			case 0:
 			case 1:
@@ -1154,6 +1216,7 @@ chaos3_montype(void)
 			case 19: return &mons[PM_MORDOR_SHAMAN];
 		}
 	} else if(on_level(&u.uz, &borehole_1_level)){
+		DEPTHS_INSIGHT
 		switch(rn2(4)){
 			case 0:
 			case 1:
@@ -1161,6 +1224,7 @@ chaos3_montype(void)
 			case 3: return &mons[PM_MORDOR_ORC_ELITE];
 		}
 	} else if(on_level(&u.uz, &borehole_2_level)){
+		DEPTHS_INSIGHT
 		switch(rn2(6)){
 			case 0:
 			case 1:
@@ -1170,6 +1234,7 @@ chaos3_montype(void)
 			case 5: return &mons[PM_ANGBAND_ORC];
 		}
 	} else if(on_level(&u.uz, &borehole_3_level)){
+		DEPTHS_INSIGHT
 		switch(rn2(10)){
 			case 0:
 			case 1:
@@ -1182,6 +1247,8 @@ chaos3_montype(void)
 			case 8: return &mons[PM_ANGBAND_ORC];
 			case 9: return &mons[PM_INVIDIAK];
 		}
+	} else if(on_level(&u.uz, &borehole_4_level)){
+		DEPTHS_INSIGHT
 	}
 	return (struct permonst *)0;
 }
@@ -1494,6 +1561,14 @@ law_montype(void)
 	}
 	else if(on_level(&arcadia1_level,&u.uz)){
 		int chance = d(1,100);
+		int diff = (u.ulevel+level_difficulty())/2;
+		if(check_insight()){
+			if(!night() && !toostrong(PM_TETTIGON_LEGATUS, diff+5))
+				return &mons[PM_TETTIGON_LEGATUS];
+			else if(night() && !toostrong(PM_LUMINESCENT_SWARM, diff+5))
+				return &mons[PM_LUMINESCENT_SWARM];
+		}
+		//No insight event or too strong
 		if(chance <= 20){
 			return !(mvitals[PM_KILLER_BEE].mvflags & G_GONE) ? &mons[PM_KILLER_BEE] : mkclass(S_ANT, 0);
 		}
@@ -1601,4 +1676,24 @@ law_montype(void)
 	return (struct permonst *)0;
 }
 
+struct permonst *
+moon_montype(void)
+{
+	int chance = rnd(100);
+	if(chance > 92)
+		return &mons[PM_MOON_ENTITY_MANIPALP];
+	if(chance > 88)
+		return &mons[PM_MOON_ENTITY_TONGUE];
+	if(chance > 84)
+		return &mons[PM_MOON_ENTITY_EYE_CLUSTER];
+	if(chance > 82)
+		return &mons[PM_FOETID_ANGEL];
+	if(chance > 72)
+		return &mons[PM_AETHER_WOLF];
+	if(chance > 62)
+		return &mons[PM_MIST_WOLF];
+	if(chance > 50)
+		return &mons[PM_MOON_FLEA];
+	return (struct permonst *)0;
+}
 /*questpgr.c*/

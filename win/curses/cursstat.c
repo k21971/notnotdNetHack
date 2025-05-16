@@ -19,7 +19,7 @@ typedef struct nhs {
 
 static attr_t get_trouble_color(const char *);
 static void draw_trouble_str(const char *, const char *);
-static void print_statdiff(const char *append, nhstat *, int, int);
+static void print_statdiff(const char *append, nhstat *, long long, long long);
 static void get_playerrank(char *);
 static int hpen_color(boolean, int, int);
 static void draw_bar(boolean, int, int, const char *);
@@ -119,7 +119,7 @@ get_playerrank(char *rank)
    type is generally STAT_OTHER (generic "do nothing special"),
    but is used if the stat needs to be handled in a special way. */
 static void
-print_statdiff(const char *append, nhstat *stat, int new, int type)
+print_statdiff(const char *append, nhstat *stat, long long new, long long type)
 {
     char buf[BUFSZ];
     WINDOW *win = curses_get_nhwin(STATUS_WIN);
@@ -148,13 +148,13 @@ print_statdiff(const char *append, nhstat *stat, int new, int type)
     wprintw(win, "%s", append);
     if (type == STAT_STR && new > 18) {
         if (new > STR18(100))
-            wprintw(win, "%d", new - 20);
+            wprintw(win, "%lld", new - 20);
         else if (new == STR18(100))
             wprintw(win, "18/**");
         else
             wprintw(win, "18/%02d", (new - 18)*5);
     } else
-        wprintw(win, "%d", new);
+        wprintw(win, "%lld", new);
 
     wattroff(win, attr);
 }

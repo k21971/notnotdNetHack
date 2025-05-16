@@ -46,6 +46,7 @@ static struct Bool_Opt
 	{"autopickup", &flags.pickup, TRUE, SET_IN_GAME},
 	{"apexception_regex", &iflags.ape_regex, FALSE,  SET_IN_FILE},
 	{"autoquiver", &flags.autoquiver, FALSE, SET_IN_GAME},
+	{"autounlock", &flags.autounlock, TRUE, SET_IN_GAME},
 	{"block_forget_map", &iflags.no_forget_map, TRUE, SET_IN_GAME},
 	{"botl_updates", &iflags.botl_updates, TRUE, SET_IN_GAME},
 	{"bones", (boolean *)&iflags.bones, TRUE, SET_IN_GAME},
@@ -376,7 +377,7 @@ static boolean need_redraw; /* for doset() */
 
 
 static char def_inv_order[MAXOCLASSES] = {
-	COIN_CLASS, AMULET_CLASS, WEAPON_CLASS, ARMOR_CLASS, FOOD_CLASS,
+	COIN_CLASS, AMULET_CLASS, WEAPON_CLASS, ARMOR_CLASS, BELT_CLASS, FOOD_CLASS,
 	SCROLL_CLASS, TILE_CLASS, SPBOOK_CLASS, POTION_CLASS, RING_CLASS, WAND_CLASS,
 	TOOL_CLASS, GEM_CLASS, ROCK_CLASS, BALL_CLASS, CHAIN_CLASS, BED_CLASS, SCOIN_CLASS, 0,
 };

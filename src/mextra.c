@@ -252,7 +252,8 @@ unbundle_mextra(struct monst *mtmp, void *mextra_block)
 		/* get length to use */
 		len = mx_list[i].s_size;
 		if (len == -1)	{// was saved
-			len = *((long *)mextra_block);
+			// len = *((long *)mextra_block);
+			memcpy (&len, mextra_block, sizeof(long));
 			mextra_block = mextra_block + sizeof(long);
 		}
 

@@ -229,6 +229,32 @@ zap_flamethrower(struct obj *obj, int shots, int shotlimit)
 	return MOVE_FIRED;
 }
 
+int
+zap_mortar(struct obj *obj, int shots, int shotlimit, coord *cc)
+{
+	int cost = 1;
+	int radius = 3;
+	
+	if(obj->ovar1 < cost){
+		shots = 0;
+	}
+	
+	if(shots <= 0){
+		You("pull the trigger, but nothing happens.");
+		return MOVE_STANDARD;
+	}
+
+		
+	obj->ovar1 -= cost;
+	radius += shots;
+	explode(cc->x, cc->y,
+		AD_ELEC, 0,
+		d(6,12) + 10 * shots,
+		EXPL_MAGICAL, radius);
+	nomul(-2, "firing a mortar");
+	return MOVE_FIRED;
+}
+
 /* KMH -- Automatically fill quiver */
 /* Suggested by Jeffrey Bay <jbay@convex.hp.com> */
 void
@@ -447,7 +473,7 @@ hurtle_step(void * arg, int x, int y)
     }
 
     if ((mon = m_at(x, y)) != 0) {
-		if(Role_if(PM_MONK) && !Upolyd && !mon->mpeaceful && canseemon(mon)){
+		if(((Role_if(PM_MONK) && !Upolyd) || activeFightingForm(FFORM_ATARU)) && !mon->mpeaceful && canseemon(mon)){
 			u.dx = x - u.ux;
 			u.dy = y - u.uy;
 			flags.forcefight = TRUE;
@@ -557,9 +583,16 @@ hurtle(int dx, int dy, int range, boolean verbose, boolean do_nomul)
 	You_feel("a tug from the iron ball.");
 	if(do_nomul) nomul(0, NULL);
 	return;
+    } else if (u.utrap && u.utraptype == TT_SALIVA) {
+		if(IS_AIR(levl[u.ux][u.uy].typ) && Weightless){
+			pline("The gooey mass of saliva hurtles through the air!");
+		}
+		else {
+			pline("The gooey mass of saliva slides along the %s!", surface(u.ux,u.uy));
+		}
     } else if (u.utrap) {
 	You("are anchored by the %s.",
-	    u.utraptype == TT_WEB ? "web" : u.utraptype == TT_LAVA ? "lava" :
+	    u.utraptype == TT_WEB ? "web" : u.utraptype == TT_LAVA ? "lava" : 
 		u.utraptype == TT_INFLOOR ? surface(u.ux,u.uy) : "trap");
 	if(do_nomul) nomul(0, NULL);
 	return;

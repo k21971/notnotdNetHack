@@ -45,7 +45,8 @@ const char def_oc_syms[MAXOCLASSES] = {
 	VENOM_SYM,
 	TILE_SYM,
 	BED_SYM,
-	SCOIN_SYM
+	SCOIN_SYM,
+	BELT_SYM,
 };
 
 const char invisexplain[] = "remembered, unseen, creature";
@@ -72,7 +73,8 @@ const char * const objexplain[] = {	/* these match def_oc_syms, above */
 	"splash of venom",
 	"broken tile or slab",
 	"bed or chair",
-	"strange coin"
+	"strange coin",
+	"belt"
 };
 
 /* Object class names.  Used in object_detect(). */
@@ -998,7 +1000,8 @@ static const uchar IBM_r_oc_syms[MAXOCLASSES] = {	/* a la EPYX Rogue */
 	VENOM_SYM,
 	TILE_SYM,
 	BED_SYM,
-	SCOIN_SYM
+	SCOIN_SYM,
+	BELT_SYM,
 };
 
 void

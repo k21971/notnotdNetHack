@@ -156,6 +156,8 @@ dosave0(void)
 	/* undo date-dependent luck adjustments made at startup time */
 	if(flags.moonphase == FULL_MOON)	/* ut-sally!fletcher */
 		change_luck(-1);		/* and unido!ab */
+	if(flags.moonphase == HUNTING_MOON)
+		change_luck(-2);
 	if(flags.friday13)
 		change_luck(1);
 	if(iflags.window_inited)
@@ -446,6 +448,7 @@ savelev(int fd, int lev, int mode)
 	bwrite(fd,(void *) &updest,sizeof(dest_area));
 	bwrite(fd,(void *) &dndest,sizeof(dest_area));
 	bwrite(fd,(void *) &level.flags,sizeof(level.flags));
+	bwrite(fd,(void *) &level.lastmove,sizeof(level.lastmove));
 	bwrite(fd, (void *) doors, sizeof(doors));
 	bwrite(fd,(void *) &altarindex, sizeof(int));
 	bwrite(fd, (void *) altars, sizeof(altars));

@@ -8,9 +8,7 @@
  *  time NetHack creates those level files.
  */
 #include "config.h"
-#if !defined(O_WRONLY)
 #include <fcntl.h>
-#endif
 
 
 int recover_main(int, char **);

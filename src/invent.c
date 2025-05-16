@@ -12,8 +12,8 @@
 static void reorder_invent(void);
 static boolean mergable(struct obj *,struct obj *);
 static void invdisp_nothing(const char *,const char *);
-static boolean worn_wield_only(struct obj *);
-static boolean only_here(struct obj *);
+static boolean worn_wield_only(struct obj *, int);
+static boolean only_here(struct obj *, int);
 static void compactify(char *);
 static boolean taking_off(const char *);
 static boolean putting_on(const char *);
@@ -24,7 +24,7 @@ static char display_pickinv(const char *,boolean, long *, boolean, boolean);
 #else
 static char display_pickinv(const char *,boolean, long *);
 #endif /* DUMP_LOG */
-static boolean this_type_only(struct obj *);
+static boolean this_type_only(struct obj *, int);
 static void dounpaid(void);
 static struct obj *find_unpaid(struct obj *,struct obj **);
 static void menu_identify(int);
@@ -307,6 +307,11 @@ addinv_core1(struct obj *obj)
 			u.specialSealsKnown |= SEAL_ALIGNMENT_THING;
 		}
 		set_artifact_intrinsic(obj, 1, W_ART);
+	}
+
+	/* Picking up dead bodies increases impurity */
+	if (obj->otyp == CORPSE && !vegan(&mons[obj->corpsenm]) && !obj->invlet){
+		IMPURITY_UP(u.uimp_bodies)
 	}
 
 	if((obj->otyp == LUCKSTONE && obj->record_achieve_special) ||
@@ -888,6 +893,24 @@ carrying_art(register int artnum)
 	return((struct obj *) 0);
 }
 
+static char
+is_invokable_object(struct obj *otmp){
+	struct artifact *oart;
+	return is_invokable_otyp(otmp->otyp) || (otmp->oartifact && (oart = get_artifact(otmp)) && oart->inv_prop);
+}
+
+char
+carrying_invokable_object(void)
+{
+	struct obj *otmp;
+
+	for(otmp = invent; otmp; otmp = otmp->nobj){
+		if(is_invokable_object(otmp))
+			return TRUE;
+	}
+	return FALSE;
+}
+
 const char *
 currency(long amount)
 {
@@ -1045,6 +1068,7 @@ getobj(register const char *let, register const char *word)
 	boolean useboulder = FALSE;
 	boolean usethrowing = FALSE;
 	boolean usemirror = FALSE;
+	boolean phlebot_kit = !!find_object_type(invent, PHLEBOTOMY_KIT);
 	xchar foox = 0;
 	long cnt;
 	boolean prezero = FALSE;
@@ -1118,12 +1142,12 @@ getobj(register const char *let, register const char *word)
 
 		/* ugly check: remove inappropriate things */
 		if ((taking_off(word) &&
-		    (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL))
+		    (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT))
 		     || (otmp==uarm && uarmc && arm_blocks_upper_body(uarm->otyp))
 		     || (otmp==uarmu && ((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc))
 		    ))
 		|| (putting_on(word) &&
-		     (otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL)))
+		     (otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_BELT | W_TOOL)))
 							/* already worn */
 #if 0	/* 3.4.1 -- include currently wielded weapon among the choices */
 		|| (!strcmp(word, "wield") &&
@@ -1139,7 +1163,7 @@ getobj(register const char *let, register const char *word)
 		/* Second ugly check; unlike the first it won't trigger an
 		 * "else" in "you don't have anything else to ___".
 		 */
-		else if ((putting_on(word) &&
+		else if ((!strcmp(word, "put on") &&
 		    ((otmp->oclass == FOOD_CLASS && otmp->otyp != MEAT_RING) ||
 		    (otmp->oclass == TOOL_CLASS &&
 		     otyp != BLINDFOLD && otyp != MASK && otyp != R_LYEHIAN_FACEPLATE && 
@@ -1152,15 +1176,15 @@ getobj(register const char *let, register const char *word)
 		|| (!strcmp(word, "resize") && !(otmp->oclass == ARMOR_CLASS || otmp->oclass == TOOL_CLASS))
 		|| (!strcmp(word, "trephinate") && !(otmp->otyp == CRYSTAL_SKULL))
 		|| (!strcmp(word, "eat") && !is_edible(otmp))
-		|| (!strcmp(word, "contribute for scrap iron") && otmp->obj_material != IRON)
-		|| (!strcmp(word, "contribute for scrap green steel") && otmp->obj_material != GREEN_STEEL)
-		|| (!strcmp(word, "contribute for scrap bronze") && otmp->obj_material != COPPER)
-		|| (!strcmp(word, "contribute for scrap silver") && otmp->obj_material != SILVER)
-		|| (!strcmp(word, "contribute for scrap gold") && otmp->obj_material != GOLD)
-		|| (!strcmp(word, "contribute for scrap lead") && otmp->obj_material != LEAD)
-		|| (!strcmp(word, "contribute for scrap mithril") && otmp->obj_material != MITHRIL)
+		|| (!strcmp(word, "contribute for scrap iron") && (otmp->obj_material != IRON || otmp->owornmask))
+		|| (!strcmp(word, "contribute for scrap green steel") && (otmp->obj_material != GREEN_STEEL || otmp->owornmask))
+		|| (!strcmp(word, "contribute for scrap bronze") && (otmp->obj_material != COPPER || otmp->owornmask))
+		|| (!strcmp(word, "contribute for scrap silver") && (otmp->obj_material != SILVER || otmp->owornmask))
+		|| (!strcmp(word, "contribute for scrap gold") && (otmp->obj_material != GOLD || otmp->owornmask))
+		|| (!strcmp(word, "contribute for scrap lead") && (otmp->obj_material != LEAD || otmp->owornmask))
+		|| (!strcmp(word, "contribute for scrap mithril") && (otmp->obj_material != MITHRIL || otmp->owornmask))
 		|| (!strcmp(word, "contribute for scrap fossil dark") && otmp->obj_material != SHADOWSTEEL && otmp->otyp != CHUNK_OF_FOSSIL_DARK)
-		|| (!strcmp(word, "contribute for scrap platinum") && otmp->obj_material != PLATINUM)
+		|| (!strcmp(word, "contribute for scrap platinum") && (otmp->obj_material != PLATINUM || otmp->owornmask))
 		|| (!strcmp(word, "zap") &&
 		    !(otmp->oclass == WAND_CLASS 
 				|| (otmp->oclass == TOOL_CLASS && otmp->otyp == ROD_OF_FORCE)
@@ -1185,6 +1209,13 @@ getobj(register const char *let, register const char *word)
 		     otyp != SEVERED_HAND &&                    
 		     otyp != EYEBALL &&	/* KMH -- fixed */
 		     otyp != AMULET_OF_YENDOR && otyp != FAKE_AMULET_OF_YENDOR))
+		|| (!strcmp(word, "research") &&
+		    ((otyp != CORPSE &&
+		      otyp != SEVERED_HAND &&                    
+		      otyp != EYEBALL &&	/* KMH -- fixed */
+		      otyp != AMULET_OF_YENDOR && otyp != FAKE_AMULET_OF_YENDOR
+			) || otmp->researched
+		   ))
 		|| (!strcmp(word, "write with") &&
 		    ((otmp->oclass == TOOL_CLASS &&
 		     otyp != MAGIC_MARKER && otyp != TOWEL 
@@ -1209,6 +1240,8 @@ getobj(register const char *let, register const char *word)
 		|| (!strncmp(word, "replace with", 12)
 		    && otmp->otyp != HELLFIRE_COMPONENT
 			&& otmp->otyp != CLOCKWORK_COMPONENT)
+		|| (!strncmp(word, "forge with", 10)
+		    && (otmp->otyp != INGOT || !is_metallic(otmp) ))
 		|| (!strncmp(word, "salve", 5) && !salve_target(otmp))
 		|| ((!strcmp(word, "use or apply") ||
 			!strcmp(word, "untrap with")) &&
@@ -1234,6 +1267,20 @@ getobj(register const char *let, register const char *word)
 			  otmp->otyp != RAKUYO && otmp->otyp != RAKUYO_SABER && 
 			  otmp->otyp != BLADE_OF_MERCY && otmp->otyp != BLADE_OF_GRACE && 
 			  otmp->otyp != DOUBLE_FORCE_BLADE && otmp->otyp != FORCE_BLADE &&
+			  otmp->otyp != HUNTER_S_AXE && otmp->otyp != HUNTER_S_LONG_AXE &&
+			  otmp->otyp != SAW_CLEAVER && otmp->otyp != RAZOR_CLEAVER &&
+			  otmp->otyp != SAW_SPEAR && otmp->otyp != LONG_SAW &&
+			  otmp->otyp != SOLDIER_S_RAPIER && otmp->otyp != SOLDIER_S_SABER &&
+			  otmp->otyp != SHANTA_PATA && otmp->otyp != TWINGUN_SHANTA &&
+			  otmp->otyp != BOW_BLADE && otmp->otyp != BLADED_BOW &&
+			  otmp->otyp != CANE && otmp->otyp != WHIP_SAW &&
+			  otmp->otyp != CHIKAGE &&
+			  otmp->otyp != TONITRUS &&
+			  otmp->otyp != HUNTER_S_LONGSWORD && otmp->otyp != CHURCH_BLADE && otmp->otyp != CHURCH_SHEATH &&
+			  otmp->otyp != HUNTER_S_SHORTSWORD && otmp->otyp != CHURCH_HAMMER && otmp->otyp != CHURCH_BRICK &&
+			  otmp->otyp != BEAST_CRUSHER && otmp->otyp != BEAST_CUTTER && otmp->otyp != DEVIL_FIST &&
+			  otmp->otyp != DEMON_CLAW && otmp->otyp != CHURCH_SHORTSWORD &&
+			  otmp->otyp != SMITHING_HAMMER &&
 			  !(otmp->oartifact == ART_SKY_REFLECTED && carrying_art(ART_SILVER_SKY)) &&
 			  !(otmp->oartifact == ART_SILVER_SKY && carrying_art(ART_SKY_REFLECTED)) &&
 			  otmp->otyp != MASS_SHADOW_PISTOL
@@ -1244,11 +1291,13 @@ getobj(register const char *let, register const char *word)
 				  || otyp == LIFELESS_DOLL) /* Note: Joke */
 			 ) ||
 		     (otmp->oclass == POTION_CLASS &&
-		     /* only applicable potion is oil, and it will only
-			be offered as a choice when already discovered */
-		     ((otyp != POT_OIL &&
-			 otyp != POT_WATER) || !otmp->dknown ||
-		      !objects[POT_OIL].oc_name_known)) ||
+		     ((otyp != POT_OIL && otyp != POT_BLOOD &&
+			   otyp != POT_WATER) || !otmp->dknown
+		      || (otyp == POT_OIL && !objects[POT_OIL].oc_name_known)
+		      || (otyp == POT_WATER && !objects[POT_WATER].oc_name_known)
+		      || (otyp == POT_BLOOD && !(phlebot_kit && objects[POT_BLOOD].oc_name_known))
+			 )
+			  ) ||
 		     (otmp->oclass == FOOD_CLASS &&
 		      otyp != CREAM_PIE && otyp != EUCALYPTUS_LEAF) ||
 		     /* MRKR: mining helmets */
@@ -1266,6 +1315,7 @@ getobj(register const char *let, register const char *word)
 		     (otmp->oclass == GEM_CLASS && !is_graystone(otmp) && !(otmp->otyp == ROCK)
 				&& otyp != CATAPSI_VORTEX && otyp != ANTIMAGIC_RIFT
 				&& otyp != VITAL_SOULSTONE && otyp != SPIRITUAL_SOULSTONE
+				&& !(otyp == CRYSTAL && otmp->obj_material == FLESH)
 				&& !(otyp == DILITHIUM_CRYSTAL && Role_if(PM_ANACHRONONAUT) && !otmp->oartifact)
 			 )))
 		|| (!strcmp(word, "invoke") &&
@@ -1543,18 +1593,20 @@ silly_thing(const char *word, struct obj *otmp)
 	s1 = s2 = s3 = 0;
 	/* check for attempted use of accessory commands ('P','R') on armor
 	   and for corresponding armor commands ('W','T') on accessories */
-	if (ocls == ARMOR_CLASS) {
-	    if (!strcmp(word, "put on"))
-		s1 = "W", s2 = "wear", s3 = "";
-	    else if (!strcmp(word, "remove"))
-		s1 = "T", s2 = "take", s3 = " off";
-	} else if ((ocls == RING_CLASS || otyp == MEAT_RING) ||
+	if ((ocls == RING_CLASS || otyp == MEAT_RING) ||
 		ocls == AMULET_CLASS ||
+		is_belt(otmp) ||
 		(is_worn_tool(otmp))) {
 	    if (!strcmp(word, "wear"))
 		s1 = "P", s2 = "put", s3 = " on";
 	    else if (!strcmp(word, "take off"))
 		s1 = "R", s2 = "remove", s3 = "";
+	}
+	else if (ocls == ARMOR_CLASS) {
+	    if (!strcmp(word, "put on"))
+		s1 = "W", s2 = "wear", s3 = "";
+	    else if (!strcmp(word, "remove"))
+		s1 = "T", s2 = "take", s3 = " off";
 	}
 	if (s1) {
 	    what = "that";
@@ -1573,7 +1625,7 @@ static int
 ckvalidcat(struct obj *otmp)
 {
 	/* use allow_category() from pickup.c */
-	return((int)allow_category(otmp));
+	return((int)allow_category(otmp, 0));
 }
 
 static int
@@ -1589,9 +1641,15 @@ wearing_armor(void)
 }
 
 boolean
-is_worn(struct obj *otmp)
+is_worn_no_flags(struct obj *otmp)
 {
-    return((boolean)(!!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL |
+    return is_worn(otmp, 0);
+}
+
+boolean
+is_worn(struct obj *otmp, int qflags)
+{
+    return((boolean)(!!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_BELT | W_TOOL |
 			W_SADDLE | W_WEP | W_SWAPWEP | W_QUIVER))));
 }
 
@@ -1638,7 +1696,7 @@ ggetobj(
 	add_valid_menu_class(0);	/* reset */
 	if (taking_off(word)) {
 	    takeoff = TRUE;
-	    filter = is_worn;
+	    filter = is_worn_no_flags;
 	} else if (!strcmp(word, "identify")) {
 	    ident = TRUE;
 	    filter = not_fully_identified;
@@ -1829,7 +1887,7 @@ nextclass:
 		if(ilet == 'z') ilet = 'A'; else ilet++;
 		otmp2 = otmp->nobj;
 		if (olets && *olets && otmp->oclass != *olets) continue;
-		if (takeoff && !is_worn(otmp)) continue;
+		if (takeoff && !is_worn(otmp, 0)) continue;
 		if (ident && !not_fully_identified(otmp)) continue;
 		if (ckfn && !(*ckfn)(otmp)) continue;
 		if (!allflag) {
@@ -1931,7 +1989,7 @@ menu_identify(int id_limit)
 	Sprintf(buf, "What would you like to identify %s?",
 		first ? "first" : "next");
 	n = query_objlist(buf, invent, SIGNAL_NOMENU|USE_INVLET|INVORDER_SORT|SIGNAL_ESCAPE,
-		&pick_list, PICK_ANY, not_fully_identified);
+		&pick_list, PICK_ANY, not_fully_identified_dummy_flags);
 
 	if (n > 0) {
 	    if (n > id_limit) n = id_limit;
@@ -2108,6 +2166,7 @@ itemactions(struct obj *obj)
 	int (*feedback_fn)(void) = 0;
 	anything any;
 	menu_item *selected = 0;
+	boolean phlebot_kit = !!find_object_type(invent, PHLEBOTOMY_KIT);
 
 	struct monst *mtmp;
 	char prompt[BUFSIZ];
@@ -2126,7 +2185,7 @@ itemactions(struct obj *obj)
 	else if (obj->otyp == BULLWHIP || obj->otyp == VIPERWHIP)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Lash out with this whip", MENU_UNSELECTED);
-	else if (obj->otyp == FORCE_WHIP)
+	else if (obj->otyp == FORCE_WHIP || obj->otyp == WHIP_SAW)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Lock or lash out with this whip", MENU_UNSELECTED);
 	else if (obj->otyp == GRAPPLING_HOOK)
@@ -2155,6 +2214,9 @@ itemactions(struct obj *obj)
 	else if (obj->otyp == TINNING_KIT)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Use this kit to tin a corpse", MENU_UNSELECTED);
+	else if (obj->otyp == DISSECTION_KIT)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Use this kit to dissect a corpse", MENU_UNSELECTED);
 	else if (obj->otyp == LEASH)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Tie a pet to this leash", MENU_UNSELECTED);
@@ -2193,6 +2255,9 @@ itemactions(struct obj *obj)
 	else if (obj->otyp == POT_OIL && objects[obj->otyp].oc_name_known)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Light or extinguish this oil", MENU_UNSELECTED);
+	else if (obj->otyp == POT_BLOOD && phlebot_kit && objects[obj->otyp].oc_name_known)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Inject yourself with this vial of blood.", MENU_UNSELECTED);
 #if 0 /* TODO */
 	else if (obj->oclass == POTION_CLASS) {
 		any.a_void = (void *) dodip;
@@ -2273,6 +2338,33 @@ itemactions(struct obj *obj)
 	else if (obj->otyp == FORCE_SWORD)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Unlock your force whip", MENU_UNSELECTED);
+	else if (obj->otyp == CANE)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Unlock your whip saw", MENU_UNSELECTED);
+	else if (obj->otyp == HUNTER_S_AXE || obj->otyp == HUNTER_S_LONG_AXE)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Extend or collapse your hunter's axe", MENU_UNSELECTED);
+	else if (obj->otyp == SAW_CLEAVER || obj->otyp == RAZOR_CLEAVER)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Open or close your cleaver", MENU_UNSELECTED);
+	else if (obj->otyp == LONG_SAW || obj->otyp == SAW_SPEAR)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Open or close your saw", MENU_UNSELECTED);
+	else if (obj->otyp == BOW_BLADE || obj->otyp == BLADED_BOW)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Open or close your bow", MENU_UNSELECTED);
+	else if (obj->otyp == SHANTA_PATA || obj->otyp == TWINGUN_SHANTA)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Open or close your pata", MENU_UNSELECTED);
+	else if (obj->otyp == SOLDIER_S_RAPIER || obj->otyp == SOLDIER_S_SABER)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Latch or unlatch your rapier", MENU_UNSELECTED);
+	else if (obj->otyp == CHURCH_HAMMER || obj->otyp == HUNTER_S_SHORTSWORD || obj->otyp == CHURCH_BRICK
+		|| obj->otyp == CHURCH_BLADE || obj->otyp == HUNTER_S_LONGSWORD || obj->otyp == CHURCH_SHEATH
+		|| obj->otyp == CHIKAGE
+	)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Sheath or unsheath your sword", MENU_UNSELECTED);
 	else if (obj->oartifact == ART_SILVER_SKY)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Merge skies", MENU_UNSELECTED);
@@ -2285,13 +2377,16 @@ itemactions(struct obj *obj)
 	else if (obj->otyp == SUNROD && !obj->lamplit)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Light this sunrod", MENU_UNSELECTED);
+	else if (obj->otyp == TONITRUS)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Strike this tonitrus", MENU_UNSELECTED);
 	else if (obj->otyp == SENSOR_PACK)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Use this sensor pack", MENU_UNSELECTED);
 	else if (obj->otyp == HYPOSPRAY)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Inject an ampule with this hypospray", MENU_UNSELECTED);
-	else if ((is_knife(obj) && !(obj->oartifact == ART_PEN_OF_THE_VOID && obj->ovar1_seals&SEAL_MARIONETTE))
+	else if ((is_knife(obj) && !(obj->oartifact == ART_PEN_OF_THE_VOID && obj->ovara_seals&SEAL_MARIONETTE))
 		&& (u.wardsknown & (WARD_TOUSTEFNA | WARD_DREPRUN | WARD_OTTASTAFUR | WARD_KAUPALOKI | WARD_VEIOISTAFUR | WARD_THJOFASTAFUR)))
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Carve a stave with this knife", MENU_UNSELECTED);
@@ -2310,6 +2405,9 @@ itemactions(struct obj *obj)
 	else if (obj->otyp == ANTIMAGIC_RIFT || obj->otyp == CATAPSI_VORTEX)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Crush this flawed gem", MENU_UNSELECTED);
+	else if (obj->otyp == CRYSTAL && obj->obj_material == FLESH)
+		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
+				"Contemplate this crysalis", MENU_UNSELECTED);
 	else if (obj->otyp == MISOTHEISTIC_PYRAMID || obj->otyp == MISOTHEISTIC_FRAGMENT)
 		add_menu(win, NO_GLYPH, &any, 'a', 0, ATR_NONE,
 				"Shatter this pyramid", MENU_UNSELECTED);
@@ -2432,21 +2530,17 @@ itemactions(struct obj *obj)
 	add_menu(win, NO_GLYPH, &any, 't', 0, ATR_NONE,
 			"Throw this item", MENU_UNSELECTED);
 	/* T: unequip worn item */
-	if ((obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL))) {
+	if ((obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT))) {
 	    if ((obj->owornmask & (W_ARMOR)))
 		any.a_void = (void *)dotakeoff;
-	    if ((obj->owornmask & (W_RING | W_AMUL | W_TOOL)))
+	    if ((obj->owornmask & (W_RING | W_AMUL | W_TOOL | W_BELT)))
 		any.a_void = (void *)doremring;
 	    add_menu(win, NO_GLYPH, &any, 'T', 0, ATR_NONE,
 		     "Unequip this equipment", MENU_UNSELECTED);
 	}
 	/* V: invoke, rub, or break */
-	any.a_void = (void *)doinvoke;
-	if ((obj->otyp == FAKE_AMULET_OF_YENDOR && !obj->known) ||
-			obj->oartifact || objects[obj->otyp].oc_unique ||
-			(obj->otyp == RIN_WISHES && objects[obj->otyp].oc_name_known && (obj->owornmask & W_RING)) ||
-			(obj->otyp == CANDLE_OF_INVOCATION && obj->lamplit) ||
-			obj->otyp == MIRROR) /* wtf NetHack devteam? */
+	any.a_void = (void *)doparticularinvoke;
+	if (is_invokable_object(obj))
 		add_menu(win, NO_GLYPH, &any, 'V', 0, ATR_NONE,
 				"Try to invoke a unique power of this object", MENU_UNSELECTED);
 	/* w: hold in hands, works on everything but with different
@@ -2464,7 +2558,7 @@ itemactions(struct obj *obj)
 		add_menu(win, NO_GLYPH, &any, 'w', 0, ATR_NONE,
 				"Hold this item in your hands", MENU_UNSELECTED);
 	/* W: Equip this item */
-	if (!(obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL))) {
+	if (!(obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT))) {
 	    any.a_void = (void *)dowear;
 	    if (obj->oclass == ARMOR_CLASS)
 		add_menu(win, NO_GLYPH, &any, 'W', 0, ATR_NONE,
@@ -2557,6 +2651,12 @@ itemactions(struct obj *obj)
 		destroy_nhwindow(datawin);
 		return 0;
 	}
+
+	/* The getobj hack won't work for invoking, so we have to call
+	    doparticular invoke with an argument instead.*/
+	if(feedback_fn == (void *)doparticularinvoke)
+		return (*(((int (*)(struct obj *)) feedback_fn)))(obj);	
+
 	/* In most cases, we can just set getobj's result directly.
 	   (This works even for commands that take no arguments, because
 	   they don't call getobj at all. */
@@ -2596,9 +2696,9 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 	boolean printed_type = FALSE;
 	boolean has_artidmg = oartifact && (artilist[oartifact].adtyp || artilist[oartifact].damage || artilist[oartifact].accuracy);
 	
-	if(check_oprop(obj,OPROP_GOATW))
+	if(check_oprop(obj,OPROP_GOATW) && !(obj->where == OBJ_INVENT && GOAT_BAD))
 		goatweaponturn = goat_weapon_damage_turn(obj);
-	if(check_oprop(obj,OPROP_SOTHW))
+	if(check_oprop(obj,OPROP_SOTHW) && !(obj->where == OBJ_INVENT && YOG_BAD))
 		sothweaponturn = soth_weapon_damage_turn(obj);
 
 
@@ -2635,9 +2735,9 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 	}
 
 	/* Object classes currently with no special messages here: amulets. */
-	if (olet == WEAPON_CLASS || (olet == TOOL_CLASS && oc.oc_skill) || otyp == HEAVY_IRON_BALL || olet == GEM_CLASS || has_artidmg) {
+	if (olet == WEAPON_CLASS || (olet == TOOL_CLASS && oc.oc_skill) || otyp == BALL || olet == GEM_CLASS || has_artidmg) {
 		int mask = attack_mask(obj, otyp, oartifact, &youmonst);
-		boolean otyp_is_blaster = (otyp == CARCOSAN_STING || otyp == HAND_BLASTER || otyp == ARM_BLASTER || otyp == MASS_SHADOW_PISTOL || otyp == CUTTING_LASER || otyp == RAYGUN);
+		boolean otyp_is_blaster = (otyp == CARCOSAN_STING || otyp == HAND_BLASTER || otyp == ARM_BLASTER || otyp == MASS_SHADOW_PISTOL || otyp == CUTTING_LASER || otyp == RAYGUN || otyp == SHOCK_MORTAR);
 		boolean otyp_is_launcher = (((oc.oc_skill >= P_BOW && oc.oc_skill <= P_CROSSBOW) || otyp == ATLATL) && !otyp_is_blaster);
 		/* armor and rings don't have meaningful base damage, but can have artifact bonus damage */
 		boolean artidmg_only = olet == ARMOR_CLASS || olet == RING_CLASS;
@@ -2685,7 +2785,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 				Sprintf(buf, "Thrown %smissile.", buf2);
 			}
 			/* special cases */
-			if (oartifact == ART_PEN_OF_THE_VOID && obj && (obj->ovar1_seals & SEAL_EVE))
+			if (oartifact == ART_PEN_OF_THE_VOID && obj && (obj->ovara_seals & SEAL_EVE))
 				Strcpy(eos(buf)-1, ", and launcher.");
 			if (oartifact == ART_LIECLEAVER || oartifact == ART_ROGUE_GEAR_SPIRITS || oartifact == ART_WAND_OF_ORCUS || otyp == CARCOSAN_STING)
 				Sprintf(eos(buf)-1, ", and %smelee weapon.", buf2);
@@ -2706,7 +2806,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 						Strcpy(buf2, " at range, and your pickaxe skill in melee.");
 						break;
 					case ART_PEN_OF_THE_VOID:
-						if(obj->ovar1_seals & SEAL_EVE) {
+						if(obj->ovara_seals & SEAL_EVE) {
 							Strcpy(buf2, " in melee, and your ammo's skill at range.");
 						}
 						else
@@ -2830,14 +2930,14 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 				if (mvitals[PM_ACERERAK].died > 0)
 				{
 					Sprintf(buf, "Deals double damage");
-					if (obj->ovar1_seals)
+					if (obj->ovara_seals)
 						Strcat(buf, ", and enhanced spirit bonus damage.");
 					else
 						Strcat(buf, ".");
 				}
 				else
 				{
-					if (obj->ovar1_seals)
+					if (obj->ovara_seals)
 						Sprintf(buf, "Deals bonus damage from the spirit bound into it.");
 					else
 						buf[0] = '\0';
@@ -2865,7 +2965,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 					case AD_STON: Strcat(buf, "petrifying damage"); break;
 					case AD_DARK: Strcat(buf, "dark damage"); break;
 					case AD_BLUD: Strcat(buf, "blood damage"); break;
-					case AD_DRIN: Strcat(buf, "brain damage."); break;
+					case AD_DRIN: Strcat(buf, "brain damage"); break;
 					case AD_HOLY: Strcat(buf, "holy damage"); break;
 					case AD_STDY: Strcat(buf, "study damage"); break;
 					case AD_HLUH: Strcat(buf, "corrupted holy damage"); break;
@@ -2932,6 +3032,20 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			}
 			int ldamd = objects[otyp].oc_wldam.oc_damd;
 			int sdamd = objects[otyp].oc_wsdam.oc_damd;
+			if(obj->otyp == TOOTH && Insight >= 20 && obj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(obj, &youmonst, ETRAIT_FOCUS_FIRE)){
+				if(obj->ovar1_tooth_type == MAGMA_TOOTH){
+					Sprintf(buf2, "Deals +5d10%s fire damage.", (obj->spe ? sitoa(obj->spe) : ""));
+					OBJPUTSTR(buf2);
+				}
+				else if(obj->ovar1_tooth_type == VOID_TOOTH){
+					Sprintf(buf2, "Drains three levels from the target and deals +3d3%s cold damage.", (obj->spe ? sitoa(obj->spe) : ""));
+					OBJPUTSTR(buf2);
+				}
+				else if(obj->ovar1_tooth_type == SERPENT_TOOTH){
+					Sprintf(buf2, "Injects dire poison and deals +1d8%s poison and +1d8%s acid damage.",(obj->spe ? sitoa(obj->spe) : ""),(obj->spe ? sitoa(obj->spe) : ""));
+					OBJPUTSTR(buf2);
+				}
+			}
 			if(obj->otyp == TORCH){
 				Sprintf(buf2, "When lit, deals +1d10%s fire damage.", (obj->spe ? sitoa(obj->spe) : ""));
 				OBJPUTSTR(buf2);
@@ -2946,6 +3060,10 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			}
 			if(obj->otyp == SUNROD){
 				Sprintf(buf2, "When lit, deals +1d10%s lightning and acid damage and may blind struck targets.", (obj->spe ? sitoa(obj->spe) : ""));
+				OBJPUTSTR(buf2);
+			}
+			if(obj->otyp == TONITRUS){
+				Sprintf(buf2, "When lit, deals +1d10%s lightning damage.", (obj->spe ? sitoa(obj->spe) : ""));
 				OBJPUTSTR(buf2);
 			}
 			if(obj->otyp == KAMEREL_VAJRA){
@@ -2983,10 +3101,10 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 					(3 + 2*(obj->objsize - MZ_MEDIUM)), (obj->spe ? sitoa(obj->spe) : ""));
 				OBJPUTSTR(buf2);
 			}
-			if(obj->otyp == DISKOS && u.uinsight >= 15){
-				int dice = (u.uinsight >= 45) ? 3 : ((u.uinsight >= 20) ? 2 : 1);
-				int lflat = (u.uinsight >= 50) ? ldamd : 0;
-				int sflat = (u.uinsight >= 50) ? sdamd : 0;
+			if(obj->otyp == DISKOS && Insight >= 15){
+				int dice = (Insight >= 45) ? 3 : ((Insight >= 20) ? 2 : 1);
+				int lflat = (Insight >= 50) ? ldamd : 0;
+				int sflat = (Insight >= 50) ? sdamd : 0;
 
 				if(u.ualign.record < -3 && Insanity > 50){
 					lflat += ldamd*(50-u.usanity)/50;
@@ -3004,11 +3122,11 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			}
 			if(mercy_blade_prop(obj) & !u.veil){
 				Sprintf(buf2, "Deals extra damage scaled by insight%s, currently %d%% extra damage.",
-					(u.uinsight >= 25) ? " and charisma" : "",
-					(min(u.uinsight, 50) + ((u.uinsight >= 25) ? min((u.uinsight-25)/2, ACURR(A_CHA)) : 0))*2);
+					(Insight >= 25) ? " and charisma" : "",
+					(min(Insight, 50) + ((Insight >= 25) ? min((Insight-25)/2, ACURR(A_CHA)) : 0))*2);
 				OBJPUTSTR(buf2);
 
-				if (u.uinsight >= 25){
+				if (Insight >= 25){
 					Sprintf(buf2, "Lowers struck targets' morale based on your charisma, currently -%d per hit, capped at -%d.",
 						ACURR(A_CHA)/5, (obj->spe + ACURR(A_CHA)));
 					OBJPUTSTR(buf2);
@@ -3020,33 +3138,33 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			}
 			if(obj->otyp == BESTIAL_CLAW && active_glyph(BEASTS_EMBRACE)){
 				Sprintf(buf2, "Makes struck targets vulnerable, adding stacks equal to 10%% of damage, capped at %d (scaling inversely with insight).",
-					(int)(30*pow(.97, u.uinsight)));
+					(int)(30*pow(.97, Insight)));
 				OBJPUTSTR(buf2);
 			}
 			if(obj->otyp == ISAMUSEI){
 				int factor = 20;
-				if(u.uinsight >= 70){
+				if(Insight >= 70){
 					factor = 4;
 				}
-				else if(u.uinsight >= 57){
+				else if(Insight >= 57){
 					factor = 5;
 				}
-				else if(u.uinsight >= 45){
+				else if(Insight >= 45){
 					factor = 6;
 				}
-				else if(u.uinsight >= 33){
+				else if(Insight >= 33){
 					factor = 8;
 				}
-				else if(u.uinsight >= 22){
+				else if(Insight >= 22){
 					factor = 10;
 				}
 				Sprintf(buf2, "Attempts to lower the target's current health by %d%% of its current value.", 100/factor);
 				OBJPUTSTR(buf2);
 			}
-			if(obj->otyp == PINCER_STAFF && u.uinsight >= 10){
+			if(obj->otyp == PINCER_STAFF && Insight >= 10){
 				Sprintf(buf2, "Deals double base damage %s%son consecutive attacks against the same target.",
 					(obj->oartifact == ART_FALLINGSTAR_MANDIBLES) ? "plus 1d12 magic damage " : "",
-					(u.uinsight >= 50) ? "and attempts to steal worn armor " : "");
+					(Insight >= 50) ? "and attempts to steal worn armor " : "");
 				OBJPUTSTR(buf2);
 			}
 			if(obj->oartifact == ART_ESSCOOAHLIPBOOURRR){
@@ -3058,8 +3176,8 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 				OBJPUTSTR(buf2);
 			}
 			if(obj->oartifact == ART_RUINOUS_DESCENT_OF_STARS){
-				if (u.uinsight >= 6){
-					Sprintf(buf2, "Deals +%dd6 fire damage, scaling with your insight.", min(6, u.uinsight/6));
+				if (Insight >= 6){
+					Sprintf(buf2, "Deals +%dd6 fire damage, scaling with your insight.", min(6, Insight/6));
 					OBJPUTSTR(buf2);
 				}
 				if (NightmareAware_Insanity >= 4){
@@ -3067,9 +3185,9 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 						ClearThoughts ? 1 : 2, min(12, NightmareAware_Insanity/4));
 					OBJPUTSTR(buf2);
 				}
-				if (u.uinsight >= 42){
+				if (Insight >= 42){
 					Sprintf(buf2, "Randomly drops falling stars on a hit, causing up to %d physical & fiery explosions centered anywhere on the level.",
-						min(6, (u.uinsight - 36)/6));
+						min(6, (Insight - 36)/6));
 					OBJPUTSTR(buf2);
 				}
 			}
@@ -3159,7 +3277,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 				poisons |= OPOISON_SLEEP;
 			if (oartifact == ART_DIRGE)
 				poisons |= OPOISON_ACID;
-			if (check_oprop(obj, OPROP_RLYHW) && u.uinsight && rnd(u.uinsight) >= 44)
+			if (check_oprop(obj, OPROP_RLYHW) && Insight && rnd(Insight) >= 44)
 				poisons |= OPOISON_ACID;
 			
 			if (poisons) {
@@ -3320,19 +3438,19 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			Sprintf(buf2, "Teleports away target's armor or deals double damage.");
 			OBJPUTSTR(buf2);
 		}
-		if (check_oprop(obj, OPROP_MORTW))
+		if (check_oprop(obj, OPROP_MORTW) && !FLAME_BAD)
 		{
 			Sprintf(buf2, "Drains 1d2 levels from living intelligent targets.");
 			OBJPUTSTR(buf2);
 		}
 
-		if (check_oprop(obj, OPROP_TDTHW))
+		if (check_oprop(obj, OPROP_TDTHW) && !FLAME_BAD)
 		{
 			Sprintf(buf2, "Deals double damage plus 2d7 to undead.");
 			OBJPUTSTR(buf2);
 		}
 
-		if (check_oprop(obj, OPROP_SFUWW))
+		if (check_oprop(obj, OPROP_SFUWW) && !FLAME_BAD)
 		{
 			Sprintf(buf2, "Deals double disintegration damage to spiritual beings.");
 			OBJPUTSTR(buf2);
@@ -3452,19 +3570,19 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			OBJPUTSTR(buf2);
 		}
 
-		if (check_oprop(obj, OPROP_SFLMW))
+		if (check_oprop(obj, OPROP_SFLMW) && !FLAME_BAD)
 		{
 			Sprintf(buf2, "Offers slain targets to the Silver Flame.");
 			OBJPUTSTR(buf2);
 		}
 
-		if (check_oprop(obj, OPROP_GOATW))
+		if (check_oprop(obj, OPROP_GOATW) && !GOAT_BAD)
 		{
 			Sprintf(buf2, "Feeds slain foes to the Black Mother.");
 			OBJPUTSTR(buf2);
 		}
 
-		if (check_oprop(obj, OPROP_SOTHW))
+		if (check_oprop(obj, OPROP_SOTHW) && !YOG_BAD)
 		{
 			Sprintf(buf2, "Slakes the thirst of Yog-Sothoth.");
 			OBJPUTSTR(buf2);
@@ -3484,13 +3602,50 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			Sprintf(buf2, "The Silver Flame will save the wearer's life.");
 			OBJPUTSTR(buf2);
 		}
+		if(check_oprop(obj, OPROP_ANTAW)){
+			Sprintf(buf2, "Conducts arcane forces.");
+			OBJPUTSTR(buf2);
+		}
+	}
+	if(obj && obj->expert_traits){
+		buf[0] = '\0';
+#define	EXPERTTRAITS(trait, string)	\
+	ADDCLASSPROP(CHECK_ETRAIT(obj, &youmonst, trait), string);
+		EXPERTTRAITS(ETRAIT_HEW, "can deliver powerful overhead blows");
+		EXPERTTRAITS(ETRAIT_FELL, "can disrupt enemy movement");
+		EXPERTTRAITS(ETRAIT_KNOCK_BACK, (obj->expert_traits&ETRAIT_KNOCK_BACK_CHARGE) ? "can charge and knock enemies back" : "can knock enemies back");
+		EXPERTTRAITS(ETRAIT_FOCUS_FIRE, "can target gaps in enemy armor");
+		EXPERTTRAITS(ETRAIT_STUNNING_STRIKE, "can deliver powerful stunning blows");
+		EXPERTTRAITS(ETRAIT_GRAZE, "may graze foes on a near miss");
+		EXPERTTRAITS(ETRAIT_STOP_THRUST, "can harness enemy momentum to deliver powerful blows");
+		EXPERTTRAITS(ETRAIT_PENETRATE_ARMOR, "penetrates enemy armor");
+		EXPERTTRAITS(ETRAIT_LONG_SLASH, "deals extra damage against lightly-armored enemies");
+		EXPERTTRAITS(ETRAIT_BLEED, "may deliver bleeding wounds");
+		EXPERTTRAITS(ETRAIT_CLEAVE, "cleaves through slain enemies");
+		EXPERTTRAITS(ETRAIT_LUNGE, "can be used for lunging attacks");
+		EXPERTTRAITS(ETRAIT_QUICK, "strikes quickly");
+		EXPERTTRAITS(ETRAIT_SECOND, "when wielded in the off-hand strikes a second foe after killing the first");
+		EXPERTTRAITS(ETRAIT_CREATE_OPENING, "creates openings for sneak attacks");
+		EXPERTTRAITS(ETRAIT_BRACED, "delivers powerful counterattacks");
+		EXPERTTRAITS(ETRAIT_BLADESONG, "delivers powerful blows when combined with songs or spells");
+		EXPERTTRAITS(ETRAIT_BLADEDANCE, "delivers powerful blows when moving and striking erratically");
+		if(buf[0] != '\0')
+			Sprintf(buf2, "Expert traits: %s.", buf);
+		else
+			Sprintf(buf2, "No expert traits unlocked.");
+		OBJPUTSTR(buf2);
+	}
+	else {
+		Sprintf(buf2, "No expert traits.");
+		OBJPUTSTR(buf2);
 	}
 	/* other artifact weapon effects */
 	if (oartifact) {
 		register const struct artifact *oart = &artilist[oartifact];
 		buf[0] = '\0';
 		ADDCLASSPROP((oart->aflags&ARTA_POIS), "always poisoned");
-		ADDCLASSPROP((oart->aflags&ARTA_SILVER), "silvered");
+		if(oartifact != ART_AMALGAMATED_SKIES)
+			ADDCLASSPROP((oart->aflags&ARTA_SILVER), "silvered");
 		ADDCLASSPROP((oart->aflags&ARTA_VORPAL), "vorpal");
 		ADDCLASSPROP((oart->aflags&ARTA_CANCEL), "canceling");
 		ADDCLASSPROP((oart->aflags&ARTA_MAGIC), "magic-flourishing");
@@ -3563,15 +3718,27 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			else
 				Sprintf(buf2, "No mantras known.");
 			OBJPUTSTR(buf2);
+			buf[0] = '\0';
+			if(oartifact == ART_AMALGAMATED_SKIES)
+				ADDCLASSPROP(TRUE, "silver");
+			ADDCLASSPROP(TRUE, "iron");
+#define	ZERTHMATS(prop, string)	\
+	ADDCLASSPROP(artinstance[ART_SKY_REFLECTED].ZerthMaterials&prop, string);
+			ZERTHMATS(ZMAT_GREEN, "green steel");
+			ZERTHMATS(ZMAT_GOLD, "gold");
+			ZERTHMATS(ZMAT_PLATINUM, "platinum");
+			ZERTHMATS(ZMAT_MITHRIL, "mithril");
+			Sprintf(buf2, "Amalgamated metals: %s.", buf);
+			OBJPUTSTR(buf2);
 		}
 	}
-	if (olet == ARMOR_CLASS) {
+	if (olet == ARMOR_CLASS || olet == BELT_CLASS) {
 		/* Armor type */
 		/* Indexes here correspond to ARM_SHIELD, etc; not the W_* masks.
 		* Expects ARM_SUIT = 0, all the way up to ARM_SHIRT = 6. */
 		if (!printed_type) {
 			const char* armorslots[] = {
-				"torso", "shield", "helm", "gloves", "boots", "cloak", "shirt"
+				"torso", "shield", "helm", "gloves", "boots", "cloak", "shirt", "belt"
 			};
 			if (obj) {
 				Sprintf(buf, "%s, worn in the %s slot.",
@@ -4178,6 +4345,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 		otyp == CRYSTAL_HELM ||
 		otyp == PONTIFF_S_CROWN ||
 		otyp == FACELESS_HELM ||
+		otyp == FACELESS_HOOD ||
 		otyp == IMPERIAL_ELVEN_HELM ||
 		otyp == WHITE_FACELESS_ROBE ||
 		otyp == BLACK_FACELESS_ROBE ||
@@ -4186,7 +4354,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 	buf[0] = '\0';
 	ADDCLASSPROP(oartifact, "an artifact");
 	ADDCLASSPROP((oc.oc_magic && !oartifact), "inherently magical");		// overkill to say an artifact is inherently magical, and makes it weird when one isn't
-	ADDCLASSPROP((oc.oc_nowish || oartifact >= ART_ROD_OF_SEVEN_PARTS), "not wishable");
+	ADDCLASSPROP((oc.oc_nowish || (artilist[oartifact].gflags&ARTG_NOWISH)), "not wishable");
 	if (*buf) {
 		Sprintf(buf2, "Is %s.", buf);
 		OBJPUTSTR(buf2);
@@ -4724,6 +4892,32 @@ has_object_type(struct obj *list, int otyp)
 }
 
 /*
+ * Finds the first item of matching otyp within the given list. Does not check contained objects.
+ */
+struct obj *
+find_object_type(struct obj *list, int otyp)
+{
+	while (list) {
+		if (list->otyp == otyp) return list;
+		list = list->nobj;
+	}
+	return (struct obj *) 0;
+}
+
+/*
+ * Finds the first item of matching otyp within the given list for which spe > 0. Does not check contained objects.
+ */
+struct obj *
+find_charged_object_type(struct obj *list, int otyp)
+{
+	while (list) {
+		if (list->otyp == otyp && list->spe > 0) return list;
+		list = list->nobj;
+	}
+	return (struct obj *) 0;
+}
+
+/*
  * Returns the number of items with b/u/c/unknown within the given list.  
  * This does NOT include contained objects.
  */
@@ -4853,8 +5047,10 @@ dounpaid(void)
 static int this_type;
 
 static boolean
-this_type_only(struct obj *obj)
+this_type_only(struct obj *obj, int qflags)
 {
+	if(qflags&NO_EQUIPMENT && obj->owornmask)
+		return FALSE;
     return (obj->oclass == this_type);
 }
 
@@ -5237,7 +5433,7 @@ mergable_traits(struct obj *otmp, struct obj *obj)	/* returns TRUE if obj  & otm
 	if (obj->unpaid != otmp->unpaid ||
 		obj->ostolen != otmp->ostolen ||
 		(obj->ostolen && obj->sknown != otmp->sknown) ||
-		(obj->ovar1 != otmp->ovar1 && obj->otyp != CORPSE && obj->otyp != FORCE_BLADE) ||
+		(obj->ovar1 != otmp->ovar1 && obj->otyp != CORPSE && obj->otyp != FORCE_BLADE && obj->otyp != RAKUYO_DAGGER && obj->otyp != BLADE_OF_PITY) ||
 		(obj->oward != otmp->oward) ||
 	    obj->spe != otmp->spe || obj->dknown != otmp->dknown ||
 	    obj->cursed != otmp->cursed || obj->blessed != otmp->blessed ||
@@ -5449,7 +5645,7 @@ doprinuse(void)
 	char lets[52+1];
 
 	for (otmp = invent; otmp; otmp = otmp->nobj)
-	    if (is_worn(otmp) || tool_in_use(otmp))
+	    if (is_worn(otmp, 0) || tool_in_use(otmp))
 		lets[ct++] = obj_to_let(otmp);
 	lets[ct] = '\0';
 	if (!ct) You("are not wearing or wielding anything.");
@@ -5493,7 +5689,8 @@ static const char *names[] = { 0,
 	"Illegal objects", "Weapons", "Armor", "Rings", "Amulets",
 	"Tools", "Comestibles", "Potions", "Scrolls", "Spellbooks",
 	"Wands", "Coins", "Gems", "Boulders/Statues", "Iron balls",
-	"Scrap", "Venoms", "Tiles", "Furnature", "Strange coins"
+	"Scrap", "Venoms", "Tiles", "Furnature", "Strange coins",
+	"Belts"
 };
 
 static const char *bogusclasses[] = {
@@ -5848,7 +6045,7 @@ invdisp_nothing(const char *hdr, const char *txt)
 
 /* query_objlist callback: return things that could possibly be worn/wielded */
 static boolean
-worn_wield_only(struct obj *obj)
+worn_wield_only(struct obj *obj, int qflags)
 {
     return (obj->oclass == WEAPON_CLASS
 		|| obj->oclass == ARMOR_CLASS
@@ -5897,6 +6094,7 @@ display_minventory(struct monst *mon, int dflags, char *title)
 		: (mon->misc_worn_check || MON_WEP(mon) || MON_SWEP(mon))) {
 	    /* Fool the 'weapon in hand' routine into
 	     * displaying 'weapon in claw', etc. properly.
+		 * Set back by set_uasmon() bellow
 	     */
 	    youmonst.data = mon->data;
 
@@ -5981,8 +6179,10 @@ display_cinventory(struct obj *obj)
 static coord only;
 
 static boolean
-only_here(struct obj *obj)
+only_here(struct obj *obj, int qflags)
 {
+	if(qflags&NO_EQUIPMENT && obj->owornmask)
+		return FALSE;
     return (obj->ox == only.x && obj->oy == only.y);
 }
 
@@ -6145,6 +6345,9 @@ u_clothing_discomfort(void)
 	if(uamul){
 		count++;
 	}
+	if(ubelt){
+		count++;
+	}
 	count += count_worn_rings(FALSE);
 	if(ublindf){
 		count++;
@@ -6167,6 +6370,7 @@ mon_material_next_to_skin(struct monst *mon, int material)
 	boolean marm_blocks_ub = FALSE;
 	boolean hasgloves = !!which_armor(mon, W_ARMG);
 	boolean hasshirt = !!which_armor(mon, W_ARMU);
+	boolean hasarm = !!which_armor(mon, W_ARMU);
 
 	curarm = which_armor(mon, W_ARMU);
 	if(curarm && curarm->obj_material == material)
@@ -6207,6 +6411,10 @@ mon_material_next_to_skin(struct monst *mon, int material)
 	if(curarm && curarm->obj_material == material && !hasshirt && !marm_blocks_ub)
 		count++;
 
+	curarm = which_armor(mon, W_BELT);
+	if(curarm && curarm->obj_material == material && !hasshirt && !hasarm)
+		count++;
+
 	if(mon->entangled_oid && !hasshirt && !marm_blocks_ub && !which_armor(mon, W_ARMC) && entangle_material(mon, material))
 		count++;
 
@@ -6228,6 +6436,7 @@ mon_bcu_next_to_skin(struct monst *mon, int bcu)
 	boolean marm_blocks_ub = FALSE;
 	boolean hasgloves = !!which_armor(mon, W_ARMG);
 	boolean hasshirt = !!which_armor(mon, W_ARMU);
+	boolean hasarm = !!which_armor(mon, W_ARM);
 
 	curarm = which_armor(mon, W_ARMU);
 	if(curarm && bcu(curarm) == bcu)
@@ -6266,6 +6475,10 @@ mon_bcu_next_to_skin(struct monst *mon, int bcu)
 
 	curarm = which_armor(mon, W_AMUL);
 	if(curarm && bcu(curarm) == bcu && !hasshirt && !marm_blocks_ub)
+		count++;
+
+	curarm = which_armor(mon, W_BELT);
+	if(curarm && bcu(curarm) == bcu && !hasshirt && !hasarm)
 		count++;
 
 	if(mon->entangled_oid && !hasshirt && !marm_blocks_ub && !which_armor(mon, W_ARMC) && entangle_beatitude(mon, bcu))
@@ -6309,6 +6522,8 @@ u_material_next_to_skin(int material)
 		        count++;
 	if(uamul && uamul->obj_material == material && !uarmu && !(uarm && arm_blocks_upper_body(uarm->otyp)))
 		count++;
+	if(ubelt && ubelt->obj_material == material && !uarmu && !uarm)
+		count++;
 	if(u.uentangled_oid && !uarmu && !uarm && !(uarm && arm_blocks_upper_body(uarm->otyp)) && entangle_material(&youmonst, material))
 		count++;
 	if(ublindf && ublindf->obj_material == material)
@@ -6349,6 +6564,8 @@ u_bcu_next_to_skin(int bcu)
 	        if(urings[i] && bcu(urings[i]) == bcu)
 			count++;
 	if(uamul && bcu(uamul) == bcu && !uarmu && !(uarm && arm_blocks_upper_body(uarm->otyp)))
+		count++;
+	if(ubelt && bcu(ubelt) == bcu && !uarmu && !uarm)
 		count++;
 	if(u.uentangled_oid && !uarmu && !(uarm && arm_blocks_upper_body(uarm->otyp)) && !uarmc && entangle_beatitude(&youmonst, bcu))
 		count++;

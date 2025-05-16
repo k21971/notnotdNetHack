@@ -335,10 +335,11 @@ choose_psionic_spell(int spellnum, int mid, boolean hostile)
 
 /* ...but first, check for monster-specific spells */
 static int
-choose_magic_special(struct monst *mtmp, unsigned int type)
+choose_magic_special(struct monst *mtmp, unsigned int type, int i)
 {
 	int clrc_spell_power;
 	int wzrd_spell_power;
+	boolean youagr = (mtmp == &youmonst);
 	if(mtmp->m_id == 0){
 		clrc_spell_power = rn2(u.ulevel) * 18 / 30;
 		wzrd_spell_power = rn2(u.ulevel) * 24 / 30;
@@ -353,6 +354,9 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
 	}
 	boolean quake = FALSE;
 	if(mtmp->mtyp == PM_ELVEN_WRAITH){
+		return mtmp->mvar_elfwraith_spell;
+	}
+	if(mtmp->mtyp == PM_SILVERFIRE_SHADOW_S_WRAITH){
 		return mtmp->mvar_elfwraith_spell;
 	}
 	if(has_template(mtmp, PSURLON)){
@@ -482,7 +486,10 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
        case PM_MASTER_KAEN:
           return (!rn2(3) ? MON_AURA_BOLT : rn2(2) ? WEAKEN_YOU : EARTHQUAKE);
 
-       case PM_MINION_OF_HUHETOTL:
+       case PM_MONK:
+          return MON_AURA_BOLT;
+
+       case PM_MINION_OF_TEZCATLIPOCA:
            return (rn2(2) ? CURSE_ITEMS : (rn2(2) ? DESTRY_WEPN : DROP_BOULDER));
 
        case PM_TITAN:
@@ -649,6 +656,7 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
 	case PM_ALIGNED_PRIEST:
 	case PM_HIGH_PRIEST:
 	case PM_ARCH_PRIEST:
+	case PM_HIGH_PRIEST_WOLF:
 		quake = !mtmp->mtame; //Casts earthquake instead of tremor
 	break;
 	case PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH:
@@ -753,6 +761,50 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
 			//case "0", "5", "10", "15"
 			default:
 				return CURE_SELF;
+		}
+	break;
+	case PM_VICAR_WOLF:
+		switch (rnd(7)) {
+			case 1:
+				return MASS_CURE_CLOSE;
+			break;
+			case 2:
+				return MON_PROTECTION;
+			break;
+			case 3:
+				return PARALYZE;
+			break;
+			case 4:
+				return NIGHTMARE;
+			break;
+			default:
+				return CURE_SELF;
+			break;
+		}
+	break;
+	case PM_MOON_S_CHOSEN:
+		switch (rnd(7)) {
+			case 1:
+				return MIST_WOLVES;
+			break;
+			case 2:
+				return MASS_CURE_CLOSE;
+			break;
+			case 3:
+				return MASS_CURE_FAR;
+			break;
+			case 4:
+				return MON_PROTECTION;
+			break;
+			case 5:
+				return PARALYZE;
+			break;
+			case 6:
+				return NIGHTMARE;
+			break;
+			case 7:
+				return NAIL_TO_THE_SKY;
+			break;
 		}
 	break;
 	case PM_DWARF_CLERIC:
@@ -1595,6 +1647,16 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
 			}
        case PM_SHUUSHAR_THE_ENLIGHTENED:
           return (!quest_status.offered_artifact ? CURE_SELF : MASS_CURE_CLOSE);
+	   case PM_SPELLWEAVER:
+	    wzrd_spell_power = hash(mtmp->mvar_spellweaver_seed + mtmp->m_id - i)%12;
+		return choose_magic_spell(wzrd_spell_power,mtmp->m_id,!(mtmp->mpeaceful));
+	   break;
+	   case PM_SPELLWEAVER_GODDESS_MOCKER:
+	    wzrd_spell_power = hash(mtmp->mvar_spellweaver_seed + mtmp->m_id - i)%30;
+		if(hash(mtmp->mvar_spellweaver_seed + mtmp->m_id - i + 1000)%3)
+			return choose_clerical_spell(wzrd_spell_power,mtmp->m_id,!(mtmp->mpeaceful), TRUE);
+		return choose_magic_spell(wzrd_spell_power,mtmp->m_id,!(mtmp->mpeaceful));
+	   break;
        case PM_WITCH_S_FAMILIAR:
 			return OPEN_WOUNDS;
 	   break;
@@ -1721,6 +1783,24 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
 	case PM_SHOGGOTH:
 		if(!rn2(20)) return SUMMON_MONS; 
 		else return 0;
+	case PM_TETTIGON_LEGATUS:
+	case PM_UNMASKED_TETTIGON:
+	case PM_TRANSCENDENT_TETTIGON:
+		if(!youagr && !mtmp->mpeaceful && distmin(mtmp->mux, mtmp->muy, x(mtmp), y(mtmp)) < 3 && rn2(2))
+			return MON_WARP_THROW;
+		switch(rnd(8)){
+			case 1: return PSI_BOLT;
+			case 2: return FORCE_SPHERES;
+			case 3: return MON_WARP;
+			case 4: return MON_WARP_THROW;
+			case 5: return HOLY_BOLT;
+			case 6: return PAIN_BOLT;
+			case 7: return VULNERABILITY;
+			case 8: return STUN_YOU;
+		}
+	case PM_SILVERMAN:
+	case PM_SILVERGRUB:
+		return PEST_THREADS;
 	case PM_VERIER: 
 		if(!rn2(3)) return WEAKEN_YOU;
 		else return DESTRY_ARMR;
@@ -1773,6 +1853,44 @@ choose_magic_special(struct monst *mtmp, unsigned int type)
 				return SUMMON_SPHERE;
 			break;
 		}
+   case PM_NEFERET_THE_GREEN:
+		if(quest_status.offered_artifact){
+			switch(rn2(9)){
+				case 8:
+					return TURN_TO_STONE;
+				case 7:
+					return DEATH_TOUCH;
+				case 6:
+					return DRAIN_ENERGY;
+				case 5:
+					return SUMMON_MONS;
+				case 4:
+					return DISAPPEAR;
+				case 3:
+					return STUN_YOU;
+				case 2:
+					return HASTE_SELF;
+				case 1:
+					return CURE_SELF;
+				case 0:
+					return PSI_BOLT;
+			}
+		}
+		else {
+			switch(rn2(5)){
+				case 4:
+					return DISAPPEAR;
+				case 3:
+					return STUN_YOU;
+				case 2:
+					return HASTE_SELF;
+				case 1:
+					return CURE_SELF;
+				case 0:
+					return PSI_BOLT;
+			}
+		}
+	   return ARROW_RAIN; //Fallback, should be unreached
 	case PM_NALFESHNEE:
 		switch(rn2(5)){
 			case 0:
@@ -2142,6 +2260,10 @@ const char * spellname[] =
 	"CRUSH_BOLT",
 	"MADF_BURST",
 	"HOLY_BOLT",
+	"MIST_WOLVES",
+	//105
+	"FORCE_SPHERES",
+	"PEST_THREADS",
 };
 
 
@@ -2157,7 +2279,7 @@ const char * spellname[] =
  * Does not consider whether or not magr should be able to cast at mdef (line of sight, range)
  */
 int
-xcasty(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx, int tary)
+xcasty(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx, int tary, int i)
 {
 	boolean youagr = (magr == &youmonst);
 	boolean youdef = (mdef == &youmonst);
@@ -2201,7 +2323,7 @@ xcasty(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx, in
 
 		do {
 			/* get spell */
-			spellnum = choose_magic_special(magr, attk->adtyp);
+			spellnum = choose_magic_special(magr, attk->adtyp, i);
 			/* check that the spell selection code did not abort the cast */
 			if (!spellnum)
 				return 0;
@@ -2362,7 +2484,7 @@ xcasty(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx, in
 	else {
 		if(magr->mrage && magr->mberserk)
 			spell_skill /= 2;
-		if(magr->mformication || magr->mscorpions)
+		if(magr->mformication || magr->mscorpions || magr->mcaterpillars)
 			spell_skill /= 2;
 		if(magr->msciaphilia && unshadowed_square(x(magr), y(magr)))
 			spell_skill /= 2;
@@ -2454,10 +2576,10 @@ xcasty(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx, in
 			magr->mux = magr->muy = 0;
 		}
 	}
-	if(result == MM_HIT && magr && !youagr && magr->mfaction == NECROMANCY_FACTION && magr->mtyp != PM_ELVEN_WRAITH && u.uinsight >= 15 && spellnum && mdef){
+	if(result == MM_HIT && magr && !youagr && magr->mfaction == NECROMANCY_FACTION && magr->mtyp != PM_ELVEN_WRAITH && Insight >= 15 && spellnum && mdef){
 		struct monst *wraith = makemon(&mons[PM_ELVEN_WRAITH], magr->mx, magr->my, MM_ESUM|MM_ADJACENTOK|NO_MINVENT);
 		if(wraith){
-			mark_mon_as_summoned(wraith, magr, u.uinsight/5, 0);
+			mark_mon_as_summoned(wraith, magr, Insight/5, 0);
 			wraith->m_insight_level = 15;
 			wraith->m_lev = magr->m_lev;
 			wraith->mpeaceful = magr->mpeaceful;
@@ -2469,6 +2591,24 @@ xcasty(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx, in
 			wraith->mhp = wraith->mhpmax;
 			wraith->mvar_elfwraith_target = youdef ? 0 : (long) mdef->m_id;
 			wraith->mvar_elfwraith_spell = spellnum;
+		}
+	}
+	if(result == MM_HIT && magr && !youagr && magr->mtyp == PM_SPELLWEAVER_GODDESS_MOCKER && spellnum && mdef){
+		struct monst *wraith = makemon(&mons[PM_SILVERFIRE_SHADOW_S_WRAITH], magr->mx, magr->my, MM_ESUM|MM_ADJACENTOK|NO_MINVENT);
+		if(wraith){
+			mark_mon_as_summoned(wraith, magr, Insight/5, 0);
+			wraith->m_insight_level = magr->m_insight_level;
+			wraith->m_lev = max(1, magr->m_lev-6);
+			wraith->mpeaceful = magr->mpeaceful;
+			// set_faction(wraith, SPELLWEAVER_FACTION);
+			if(wraith->m_lev > 0)
+				wraith->mhpmax = d(magr->m_lev, hd_size(wraith->data));
+			else
+				wraith->mhpmax = rnd((hd_size(wraith->data)+1)/2);
+			wraith->mhp = wraith->mhpmax;
+			wraith->mvar_elfwraith_target = youdef ? 0 : (long) mdef->m_id;
+			wraith->mvar_elfwraith_spell = spellnum;
+			mofflin_close(wraith);
 		}
 	}
 	return result;
@@ -2490,7 +2630,11 @@ elemspell(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx,
 	boolean foundem = (mdef && (tarx == x(mdef) && tary == y(mdef)));
 	boolean rangedspell;
 	int adtyp = attk->adtyp;
-	int dmn = mlev(magr) / 3 + 1;
+	int dmn;
+	if(attk->adtyp == AD_PSON) //Psion dice are usually d15s (like mind blasts), so there needs to be fewer of them.
+		dmn = max(mlev(magr) / 4, 1);
+	else
+		dmn = mlev(magr) / 3 + 1;
 	/* cap level contribution to ndice to MAX_BONUS_DICE */
 	if (dmn > MAX_BONUS_DICE)
 		dmn = MAX_BONUS_DICE;
@@ -2855,7 +2999,7 @@ elemspell(struct monst *magr, struct monst *mdef, struct attack *attk, int tarx,
 				int i;
 				/* reduce by DR */
 				for (i = dmn / 3; i > 0; i--) {
-					dmg -= (youdef ? roll_udr(magr, attk->aatyp) : roll_mdr(mdef, magr, attk->aatyp));
+					dmg -= (youdef ? roll_udr(magr, ROLL_SLOT) : roll_mdr(mdef, magr, ROLL_SLOT));
 				}
 				/* deals silver-hating damage */
 				if (hates_silver((youdef ? youracedata : mdef->data))) {
@@ -3045,7 +3189,7 @@ cast_spell(
 		if (dmg > 50)
 			dmg = 50;
 		/* calculate resistance */
-		if (Magic_res(mdef) || (!youdef && resist(mdef, 0, 0, FALSE))) {
+		if (Magic_res(mdef) || (!youdef && mm_resist(mdef, magr, 0, FALSE))) {
 			shieldeff(x(mdef), y(mdef));
 			dmg = (dmg + 1) / 2;
 		}
@@ -3097,7 +3241,7 @@ cast_spell(
 				dmg += dmg_base;
 		}
 		/* calculate resistance */
-		if ((!youdef && resist(mdef, 0, 0, FALSE))) {
+		if ((!youdef && mm_resist(mdef, magr, 0, FALSE))) {
 			shieldeff(x(mdef), y(mdef));
 			dmg = (dmg + 1) / 2;
 		}
@@ -3292,7 +3436,7 @@ cast_spell(
 		if (dmg > 60)
 			dmg = 60;
 		/* calculate resistance */
-		if (Magic_res(mdef) || (!youdef && resist(mdef, 0, 0, FALSE))) {
+		if (Magic_res(mdef) || (!youdef && mm_resist(mdef, magr, 0, FALSE))) {
 			shieldeff(x(mdef), y(mdef));
 			dmg = (dmg + 1) / 2;
 		}
@@ -3457,6 +3601,7 @@ cast_spell(
 			else if (!rn2(3)) weap = KNIFE;
 			else if (!rn2(3)) weap = JAVELIN;
 			else if (!rn2(3)) weap = AXE;
+			else if (magr && magr->mtyp == PM_NEFERET_THE_GREEN && rn2(3)) weap = KHOPESH;
 			else {
 				//weap = rnd_class(ARROW, WORM_TOOTH - 1);
 				//if (weap == TRIDENT) weap = JAVELIN;
@@ -3469,6 +3614,9 @@ cast_spell(
 			otmp->spe = 0;
 			if(magr && magr->mtyp == PM_SUZERAIN){
 				add_oprop(otmp, OPROP_LESSER_FLAYW);
+				if(magr->mtyp == PM_SUZERAIN){
+					TRANSCENDENCE_IMPURITY_UP(FALSE)
+				}
 			}
 
 			/* call projectile() to shoot fire all the weapons */
@@ -3530,6 +3678,9 @@ cast_spell(
 			else {
 				dmg = d(8, 6);
 				dmg = reduce_dmg(mdef,dmg,FALSE,TRUE);
+				if(youdef){
+					IMPURITY_UP(u.uimp_disaster)
+				}
 			}
 
 			/* destroy items if it hit */
@@ -3565,10 +3716,10 @@ cast_spell(
 			if(distmin(x(magr), y(magr), x(mdef), y(mdef)) <= mlev(magr)/10+1 && !resist(mdef, '\0', 0, NOTELL)){
 				if(!youdef){
 					mdef->mcanmove = 0;
-					mdef->mfrozen = min_ints(7, max(mdef->mfrozen, u.uinsight/11));
+					mdef->mfrozen = min_ints(7, max(mdef->mfrozen, Insight/11));
 				}
 				else {
-					mdef->movement -= u.uinsight/11;
+					mdef->movement -= Insight/11;
 				}
 			}
 			if(!youdef && cansee(x(mdef),y(mdef)))
@@ -3578,7 +3729,7 @@ cast_spell(
 			if (Shock_res(mdef)) {
 				shieldeff(mdef->mx, mdef->my);
 			} else {
-				dmg = d(min(10, u.uinsight/11*2),6);
+				dmg = d(min(10, Insight/11*2),6);
 			}
 		}
 		return xdamagey(magr, mdef, attk, dmg);
@@ -3605,6 +3756,9 @@ cast_spell(
 			else {
 				dmg = d(8, 6);
 				dmg = reduce_dmg(mdef,dmg,FALSE,TRUE);
+			}
+			if(youdef){
+				IMPURITY_UP(u.uimp_disaster)
 			}
 
 			if (!UseInvFire_res(mdef)) {
@@ -3688,6 +3842,9 @@ cast_spell(
 				/* this is physical damage, not magical damage */
 				dmg = d(8, 6);
 				dmg = reduce_dmg(mdef,dmg,TRUE,FALSE);
+				if(youdef){
+					IMPURITY_UP(u.uimp_disaster)
+				}
 
 				if (boots && boots->otyp == find_mboots()) {
 					if(youdef) pline("Good thing you're wearing mud boots!");
@@ -3737,6 +3894,9 @@ cast_spell(
 				/* check resistance and override damage */
 				dmg = d(8, 6);
 				dmg = reduce_dmg(mdef,dmg,FALSE,TRUE);
+				if(youdef){
+					IMPURITY_UP(u.uimp_disaster)
+				}
 				if (Acid_res(mdef)) {
 					shieldeff(x(mdef), y(mdef));
 					if (youdef)
@@ -3831,6 +3991,10 @@ cast_spell(
 					change_usanity(save_vs_sanloss() ? 0 : -1*d(1,4), TRUE);
 			}
 			else {
+				if(youdef){
+					IMPURITY_UP(u.uimp_blood)
+					IMPURITY_UP(u.uimp_disaster)
+				}
 				/* check resistance and override damage */
 				dmg = flaming(mdef->data) ? d(8, 6) : 0;
 				if(dmg)
@@ -3858,6 +4022,9 @@ cast_spell(
 				pline("%s pummel %s from all sides!",
 					(spell == ICE_STORM ? "Chunks of ice" : "Hailstones"),
 					youdef ? "you" : mon_nam(mdef));
+			}
+			if(youdef){
+				IMPURITY_UP(u.uimp_disaster)
 			}
 
 			/* calculate physical damage */
@@ -4077,6 +4244,9 @@ cast_spell(
 			else if (canseemon(mdef))
 				pline("%s's using the touch of death!", upstart(heshe));
 
+			if(youagr || youdef){
+				IMPURITY_UP(u.uimp_death_magic)
+			}
 			/* check resistance cases and do effects */
 			if (nonliving(mdef->data) || is_demon(mdef->data)) {
 				if (youdef || canseemon(mdef)) {
@@ -4129,7 +4299,7 @@ cast_spell(
 					/* monster */
 					boolean resisted = FALSE;
 
-					if (!(resisted = (Magic_res(mdef) || resists_death(mdef) || resist(mdef, 0, 0, FALSE))) &&
+					if (!(resisted = (Magic_res(mdef) || resists_death(mdef) || mm_resist(mdef, magr, 0, FALSE))) &&
 						rn2(mlev(magr)) > 12
 						){
 						if (is_delouseable(mdef->data)){
@@ -4280,7 +4450,9 @@ cast_spell(
 				pline("A cascade of filth pours onto %s!",
 					youdef ? "you" : mon_nam(mdef));
 			}
-
+			if(youdef){
+				IMPURITY_UP(u.uimp_dirtiness)
+			}
 			/* glib your hands (player-only) */
 			if (youdef && freehand() && rn2(3)) {
 				boolean wasGlib = !!Glib;
@@ -4497,6 +4669,16 @@ cast_spell(
 				dmg = d(n * 2, 20);
 				dmg = reduce_dmg(mdef,dmg,TRUE,FALSE);
 			}
+			else if (!Shock_res(mdef) && shock_vulnerable_species(mdef)){
+				if (youagr || youdef || canseemon(mdef))
+					pline("%s %s shocked by %s of silver light!",
+					youdef ? "You" : Monnam(mdef), youdef ? "are" : "is", rays);
+				dmg = d(n*2, 20);
+				if (!UseInvShock_res(mdef)) {
+					destroy_item(mdef, WAND_CLASS, AD_ELEC);
+					destroy_item(mdef, RING_CLASS, AD_ELEC);
+				}
+			}
 			else if (!Fire_res(mdef) && species_resists_cold(mdef)){
 				if (youagr || youdef || canseemon(mdef))
 					pline("%s %s burned by %s of silver light!",
@@ -4578,7 +4760,7 @@ cast_spell(
 				if (youagr || youdef || canseemon(mdef))
 					pline("%s %s pierced by %s of silver light!",
 					youdef ? "You" : Monnam(mdef), youdef ? "are" : "is", rays);
-				dmg = d(n, 20) - (youdef ? roll_udr(magr, attk->aatyp) : roll_mdr(mdef, magr, attk->aatyp));
+				dmg = d(n, 20) - (youdef ? roll_udr(magr, ROLL_SLOT) : roll_mdr(mdef, magr, ROLL_SLOT));
 				if(dmg < 1)
 					dmg = 1;
 				dmg = reduce_dmg(mdef,dmg,TRUE,FALSE);
@@ -4594,7 +4776,17 @@ cast_spell(
 			return MM_MISS;
 		}
 		else {
-			if (!Fire_res(mdef) && species_resists_cold(mdef)){
+			if (!Shock_res(mdef) && shock_vulnerable_species(mdef)){
+				if (youagr || youdef || canseemon(mdef))
+					pline("%s %s shocked by golden light!",
+					youdef ? "You" : Monnam(mdef), youdef ? "are" : "is");
+				dmg = d(4, 12);
+				if (!UseInvFire_res(mdef)) {
+					destroy_item(mdef, WAND_CLASS, AD_ELEC);
+					destroy_item(mdef, RING_CLASS, AD_ELEC);
+				}
+			}
+			else if (!Fire_res(mdef) && species_resists_cold(mdef)){
 				if (youagr || youdef || canseemon(mdef))
 					pline("%s %s burned by golden light!",
 					youdef ? "You" : Monnam(mdef), youdef ? "are" : "is");
@@ -4681,12 +4873,57 @@ cast_spell(
 				if (youagr || youdef || canseemon(mdef))
 					pline("%s %s slashed by golden light!",
 					youdef ? "You" : Monnam(mdef), youdef ? "are" : "is");
-				dmg = d(2, 12) - (youdef ? roll_udr(magr, attk->aatyp) : roll_mdr(mdef, magr, attk->aatyp));
+				dmg = d(2, 12) - (youdef ? roll_udr(magr, ROLL_SLOT) : roll_mdr(mdef, magr, ROLL_SLOT));
 				if(dmg < 1)
 					dmg = 1;
 				dmg = reduce_dmg(mdef,dmg,TRUE,FALSE);
 			}
 			dmg = reduce_dmg(mdef,dmg,FALSE,TRUE);
+		}
+		return xdamagey(magr, mdef, attk, dmg);
+
+	case PEST_THREADS:
+		/* needs direct target */
+		if (!foundem) {
+			impossible("sticky threads with no mdef?");
+			return MM_MISS;
+		}
+		else {
+			int n = 0;
+			int i;
+			char * rays;
+			
+			for(i = 0; i < dmn; i++)
+				if (zap_hit(mdef, 0, TRUE))
+					n++;
+			
+			if(dmn > 1 && dmn == n)
+				n *= 2;
+
+			if (!n){
+				if (youagr || youdef || canseemon(mdef))
+					pline("Sticky threads whizz past %s!",
+					youdef ? "you" : mon_nam(mdef));
+				return MM_MISS;
+			}
+			if (n == 1)
+				rays = "a sticky thread";
+			if (n >= 2)
+				rays = "sticky threads";
+
+			if (youagr || youdef || canseemon(mdef))
+				pline("%s %s %s by %s!",
+				youdef ? "You" : Monnam(mdef), youdef ? "are" : "is",
+				dmn < n ? "torn apart" : "torn",
+				rays);
+			int ndmg;
+			for(i = 0; i < n; i++){
+				ndmg = d(1, hd_size(mdef->data)) - (youdef ? roll_udr(magr, ROLL_SLOT) : roll_mdr(mdef, magr, ROLL_SLOT));
+				if(ndmg < 1)
+					ndmg = 1;
+				dmg += ndmg;
+			}
+			dmg = reduce_dmg(mdef,dmg,TRUE,TRUE);
 		}
 		return xdamagey(magr, mdef, attk, dmg);
 
@@ -4708,9 +4945,14 @@ cast_spell(
 			do{
 				dx = rn2(3) - 1;
 				dy = rn2(3) - 1;
+				//Reduce odds of being flung into an adjacent wall
+				if(!isok(x(mdef)+dx,y(mdef)+dy) || !ZAP_POS(levl[x(mdef)+dx][y(mdef)+dy].typ)){
+					dx = rn2(3) - 1;
+					dy = rn2(3) - 1;
+				}
 			} while(
 				!(dx || dy) &&
-				!(dx == x(mdef) - x(magr) && dy == y(mdef) - y(magr))
+				!(dx == x(magr) - x(mdef) && dy == y(magr) - y(mdef))
 			);
 			if(youdef){
 				hurtle(dx, dy, BOLT_LIM, FALSE, FALSE);
@@ -4755,7 +4997,7 @@ cast_spell(
 				Is_rogue_level(&u.uz) ||
 #endif
 				(In_endgame(&u.uz) && !Is_earthlevel(&u.uz)));
-			otmp = mksobj(iron ? HEAVY_IRON_BALL : BOULDER, MKOBJ_NOINIT);
+			otmp = mksobj(iron ? BALL : BOULDER, MKOBJ_NOINIT);
 			otmp->quan = 1;
 			otmp->owt = weight(otmp);
 			if (iron) otmp->owt += 160 * rn2(2);
@@ -4974,6 +5216,9 @@ cast_spell(
 				dy = y(magr) - u.uy;
 				pline("Mesmerized, you stumble towards %s!", mhim(magr));
 				hurtle(sgn(dx), sgn(dy), 1, FALSE, FALSE);
+				if(youdef){
+					IMPURITY_UP(u.uimp_seduction)
+				}
 			}
 		}
 			
@@ -5027,6 +5272,9 @@ cast_spell(
 
 			/* only summons creatures if targeting the player */
 			do_earthquake(tarx, tary, min((mlev(magr) - 1) / 3 + 1, 24), min((mlev(magr) - 1) / 6 + 1, 8), youdef, magr);
+			if(youdef){
+				IMPURITY_UP(u.uimp_disaster)
+			}
 
 			aggravate(); /* wake up without scaring */
 			stop_occupation();	/* even if you weren't targeted, you certainly noticed! */
@@ -5064,7 +5312,7 @@ cast_spell(
 			else {
 				if (canseemon(magr))
 					pline("%s looks better.", Monnam(magr));
-				if(magr->mtyp == PM_ELVEN_WRAITH
+				if((magr->mtyp == PM_ELVEN_WRAITH || magr->mtyp == PM_SILVERFIRE_SHADOW_S_WRAITH)
 					&& get_mx(magr, MX_ESUM)
 					&& magr->mextra_p->esum_p->summoner
 				){
@@ -5337,6 +5585,31 @@ cast_spell(
 			}
 		}
 		return MM_HIT;
+	case FORCE_SPHERES:{
+			int i = 0;
+			int n;
+			struct monst *mtmp;
+			int maketame = ((magr->mtame || youagr) ? MM_EDOG : 0);
+			int makesum = MM_ESUM;
+			for(n = (dmg+5)/6; n > 0; n--){
+				mtmp = makemon(&mons[PM_SPHERE_OF_FORCE], x(magr), y(magr), MM_ADJACENTOK|MM_ADJACENTSTRICT|maketame|makesum);
+				if (mtmp) {
+					/* time out */
+					if(makesum)
+						mark_mon_as_summoned(mtmp, magr, mlev(magr) + rnd(mlev(magr)), 0);
+					/* can be peaceful */
+					if(magr->mpeaceful)
+						mtmp->mpeaceful = TRUE;
+					/* can be tame */
+					if (maketame) {
+						initedog(mtmp);
+					}
+					/* bonus movement */
+					mtmp->movement = 3*NORMAL_SPEED;
+				}
+			}
+		}
+		return MM_HIT;
 
 	case INSECTS:
 		if (!(tarx || tary)) {
@@ -5454,8 +5727,15 @@ cast_spell(
 			mk_yellow_undead(&mm, TRUE, NO_MINVENT, YELLOW_FACTION);
 			stop_occupation();
 		}
+		TRANSCENDENCE_IMPURITY_UP(FALSE)
 		return MM_HIT;
 
+	case MIST_WOLVES:
+			if (canseemon(magr))
+				pline("Howling mist pours from the craters in %s %s!", s_suffix(mon_nam(magr)),  mbodypart(magr, HEAD));
+			dream_wolves(tarx, tary);
+			return MM_HIT;
+		break;
 	case MON_CANCEL:
 		if (!mdef) {
 			impossible("debuff spell with no target?");
@@ -5604,6 +5884,13 @@ cast_spell(
 				else {
 					alignment = sgn(magr->data->maligntyp);
 					gnum = align_to_god(alignment);
+					//Replace undead hunter "gods" with Egyptian gods
+					if(gnum == GOD_THE_COLLEGE)
+						gnum = GOD_PTAH;
+					else if(gnum == GOD_THE_CHOIR)
+						gnum = GOD_THOTH;
+					else if(gnum == GOD_DEFILEMENT)
+						gnum = GOD_ANHUR;
 				}
 				mtmp->isminion = TRUE;
 				EMIN(mtmp)->min_align = alignment;
@@ -5832,7 +6119,7 @@ cast_spell(
 		}
 		else {
 			/* these three spells are very similar, and share their resist checks */
-			if (Magic_res(mdef) || (youdef ? Free_action : resist(mdef, 0, 0, FALSE))) {
+			if (Magic_res(mdef) || (youdef ? Free_action : mm_resist(mdef, magr, 0, FALSE))) {
 				shieldeff(x(mdef), y(mdef));
 
 				switch (spell)
@@ -6275,7 +6562,7 @@ cast_spell(
 					dist2(tarx, tary, cmon->mx, cmon->my) <= 3 * 3 + 1
 					)
 				{
-					dmg = rnd(dmn);
+					dmg = d(dmn, dmd);
 					if (Half_spel(mdef))
 						dmg = (dmg + 1) / 2;
 					if (Magic_res(mdef))
@@ -6288,7 +6575,7 @@ cast_spell(
 			if (!(youagr || magr->mtame)
 				&& dist2(tarx, tary, u.ux, u.uy) <= 3 * 3 + 1)
 			{
-				dmg = rnd(dmn);
+				dmg = d(dmn, dmd);
 				if (Half_spel(mdef))
 					dmg = (dmg + 1) / 2;
 				if (Magic_res(mdef))
@@ -6344,20 +6631,17 @@ cast_spell(
 				float_up();
 				/* reverse kludge */
 				HLevitation = 0;
-				if (!Is_waterlevel(&u.uz)) {
-					if ((u.ux != xupstair || u.uy != yupstair)
-						&& (u.ux != sstairs.sx || u.uy != sstairs.sy || !sstairs.up)
-						&& (!xupladder || u.ux != xupladder || u.uy != yupladder)
-						) {
-						You("hit your %s on the %s.",
-							body_part(HEAD),
-							ceiling(u.ux, u.uy));
-						losehp(uarmh ? 1 : rnd(10),
-							"colliding with the ceiling",
-							KILLED_BY);
-					}
-					else (void)doup();
-				}
+			}
+			if (!Is_waterlevel(&u.uz) && !In_outdoors(&u.uz)) {
+				You("hit your %s on the %s.",
+					body_part(HEAD),
+					ceiling(u.ux, u.uy));
+				losehp(uarmh ? 1 : rnd(10),
+					"colliding with the ceiling",
+					KILLED_BY);
+			}
+			else {
+				You("jerk upwards.");
 			}
 			incr_itimeout(&HLevitation, (d(1, 4) + 1) * 100);
 			spoteffects(FALSE);	/* for sinks */
@@ -6404,6 +6688,7 @@ cast_spell(
 			return cast_spell(magr, mdef, attk, OPEN_WOUNDS, tarx, tary);
 		}
 		else {
+			TRANSCENDENCE_IMPURITY_UP(FALSE)
 			switch(rn2(3)){
 				case 0:
 				case 1:
@@ -6546,6 +6831,7 @@ is_undirected_spell(int spellnum)
 		)) ||
 		spellnum == RAISE_DEAD ||
 		spellnum == TIME_DUPLICATE ||
+		spellnum == FORCE_SPHERES ||
 		spellnum == CLONE_WIZ
 		)
 		return TRUE;
@@ -6601,6 +6887,7 @@ is_directed_attack_spell(int spellnum)
 	case MADF_BURST:
 	case STARFALL:
 	case MON_AURA_BOLT:
+	case PEST_THREADS:
 		return TRUE;
 	default:
 		break;
@@ -6856,9 +7143,9 @@ spell_would_be_useless(struct monst *magr, struct monst *mdef, int spellnum, int
 	/* don't cast red word if target is already disrobed/disrobing */
 	if (spellnum == MON_RED_WORD
 		&& (youdef ? 
-		    (u.ufirst_know || !(uarmh || uarmc || uarm || uarmu || uarmg || uarmf
+		    (u.ufirst_know || !(uarmh || uarmc || uarm || ubelt || uarmu || uarmg || uarmf
 					|| uamul || ublindf || count_worn_rings(FALSE)))
-		    : (!(mdef->misc_worn_check&(W_ARMOR|W_AMUL|W_TOOL)) || mdef->mdisrobe)
+		    : (!(mdef->misc_worn_check&(W_ARMOR|W_AMUL|W_BELT|W_TOOL)) || mdef->mdisrobe)
 		    )
 	)
 		return TRUE;
@@ -6873,7 +7160,7 @@ spell_would_be_useless(struct monst *magr, struct monst *mdef, int spellnum, int
 	/* don't cast healing when already healed */
 	if (spellnum == CURE_SELF){
 		if (*hp(magr) == *hpmax(magr)){
-			if(magr->mtyp == PM_ELVEN_WRAITH){
+			if((magr->mtyp == PM_ELVEN_WRAITH || magr->mtyp == PM_SILVERFIRE_SHADOW_S_WRAITH)){
 				if(get_mx(magr, MX_ESUM)
 					&& magr->mextra_p->esum_p->summoner
 					&& *hp(magr->mextra_p->esum_p->summoner) == *hpmax(magr->mextra_p->esum_p->summoner)
@@ -7076,7 +7363,7 @@ spell_would_be_useless(struct monst *magr, struct monst *mdef, int spellnum, int
 		))
 		return TRUE;
 	/* Don't de-stone the player */
-	if (youdef && (Stoned || Golded) && (
+	if (youdef && (Stoned || Golded || Salted) && (
 		spellnum == ACID_RAIN
 		))
 		return TRUE;
@@ -7150,5 +7437,19 @@ pick_tannin(struct monst *mon)
 	return PM_AKKABISH_TANNIN;
 }
 
+void
+dream_wolves(int tx, int ty)
+{
+	int x, y;
+	struct monst *mtmp;
+	for(int i = d(u.ulevel/10+1, 4); i > 0; i--){
+		do {
+			x = tx + rnd(9) - 5;
+			y = ty + rnd(9) - 5;
+		} while (!isok(x,y) || distmin(tx, ty, x, y) < 3);
+		mtmp = makemon(&mons[PM_MIST_CLOUD], x, y, MM_ADJACENTOK|NO_MINVENT);
+	}
+	aggravate();
+}
 
 /*mcastu.c*/

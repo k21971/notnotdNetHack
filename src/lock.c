@@ -376,19 +376,55 @@ reset_pick(void)
 }
 
 
+/* pick a tool for autounlock */
+struct obj *
+autokey(boolean opening) /* True: key, pick, artikey, or card; False: key, pick, or artikey */
+{
+    struct obj *o, *key, *pick, *artikey, *card;
+
+    /* mundane item or regular artifact or own role's quest artifact */
+    key = pick = artikey = card = (struct obj *) 0;
+    for (o = invent; o; o = o->nobj) {
+		if (!touch_artifact(o, &youmonst, TRUE)) continue;
+        switch (o->otyp) {
+            case SKELETON_KEY:
+                if (!key && !o->oartifact)  key = o;
+				if (!artikey && o->oartifact)  artikey = o;
+                break;
+            case LOCK_PICK:
+                if (!pick) pick = o;
+                break;
+            case CREDIT_CARD:
+                if (!card) card = o;
+                break;
+            default:
+                break;
+        }
+    }
+    if (!opening)
+        card = 0;
+    return key ? key : pick ? pick : artikey ? artikey : card ? card : 0;
+}
+
+/*
+ * pick a lock with a given object
+ *
+ * rx, ry - coordinates of doors/container, for autounlock: does not
+ *          prompt for direction if these are set
+ *
+ * container - for autounlock
+ */
+
 int
-pick_lock( /* pick a lock with a given object */
-	register struct obj **pick_p)
+pick_lock(struct obj *pick, xchar rx, xchar ry, struct obj *container)
 {
 	int picktyp, c, ch;
-	struct obj *pick = 0;
 	coord cc;
 	int key;
 	struct rm	*door;
 	struct obj	*otmp;
 	char qbuf[QBUFSZ];
-
-	if(pick_p) pick = *pick_p;
+	boolean autounlock = (rx != 0 && ry != 0) || (container != NULL);
 
 	picktyp = pick->otyp;
 
@@ -433,7 +469,14 @@ pick_lock( /* pick a lock with a given object */
 	}
 	ch = 0;		/* lint suppression */
 
-	if(!get_adjacent_loc((char *)0, "Invalid location!", u.ux, u.uy, &cc)) return MOVE_CANCELLED;
+	if (rx != 0 && ry != 0) { /* autounlock; caller has provided coordinates */
+		cc.x = rx;
+		cc.y = ry;
+	} else if (!get_adjacent_loc((char *) 0, "Invalid location!",
+								 u.ux, u.uy, &cc)) {
+		return(0);
+	}
+
 	if (cc.x == u.ux && cc.y == u.uy) {	/* pick lock on a container */
 	    const char *verb;
 	    boolean it;
@@ -454,8 +497,10 @@ pick_lock( /* pick a lock with a given object */
 
 	    count = 0;
 	    c = 'n';			/* in case there are no boxes here */
-	    for(otmp = level.objects[cc.x][cc.y]; otmp; otmp = otmp->nexthere)
-		if (Is_box(otmp)) {
+	    for (otmp = level.objects[cc.x][cc.y]; otmp; otmp = otmp->nexthere)
+                /* autounlock on boxes: only the one that just informed you it was
+                 * locked. Don't include any other boxes which might be here. */
+                if ((!autounlock && Is_box(otmp)) || (otmp == container)) {
 		    ++count;
 		    if (!can_reach_floor()) {
 			You_cant("reach %s from up here.", the(xname(otmp)));
@@ -466,15 +511,24 @@ pick_lock( /* pick a lock with a given object */
 		    else if (!otmp->olocked && otmp->otyp != MAGIC_CHEST) verb = "lock", it = 1;
 		    else if (picktyp != LOCK_PICK) verb = "unlock", it = 1;
 		    else verb = "pick";
-		    Sprintf(qbuf, "There is %s here, %s %s?",
-		    	    safe_qbuf("", sizeof("There is  here, unlock its lock?"),
-			    	doname(otmp), an(simple_typename(otmp->otyp)), "a box"),
-			    verb, it ? "it" : "its lock");
+			if (autounlock) {
+				Sprintf(qbuf, "Unlock it with %s?", yname(pick));
+				c = yn(qbuf);
+				if (c == 'n')
+					return 0;
+			} else {
+				/* "There is <a box> here; <verb> <it|its lock>?" */
+				Sprintf(qbuf, "There is %s here, %s %s?",
+								safe_qbuf("", sizeof("There is  here, unlock its lock?"),
+								doname(otmp), an(simple_typename(otmp->otyp)), "a box"),
+						verb, it ? "it" : "its lock");
 
-		    c = ynq(qbuf);
-		    if(c == 'q') return MOVE_CANCELLED;
-		    if(c == 'n') continue;
-
+				c = ynq(qbuf);
+				if (c == 'q')
+					return 0;
+				if (c == 'n')
+					continue;
+			}
 		    if (otmp->obroken) {
 				You_cant("fix its broken lock with %s.", doname(pick));
 				return MOVE_CANCELLED;
@@ -497,20 +551,24 @@ pick_lock( /* pick a lock with a given object */
 				You_cant("do that with %s.", doname(pick));
 				return MOVE_CANCELLED;
 		    }
+			else if (autounlock && !touch_artifact(pick, &youmonst, FALSE)) {
+				/* note: for !autounlock, apply already did touch check */
+				return 1;
+			}
 		    switch(picktyp) {
 			case CREDIT_CARD:
-			    ch = ACURR(A_DEX) + 20*Role_if(PM_ROGUE);
+			    ch = 2*ACURR(A_DEX) + 20*Role_if(PM_ROGUE);
 			    break;
 			case LOCK_PICK:
-			    ch = 4*ACURR(A_DEX) + 25*Role_if(PM_ROGUE);
+			    ch = 3*ACURR(A_DEX) + 30*Role_if(PM_ROGUE);
 			    break;
 			case SKELETON_KEY:
-			    ch = 75 + ACURR(A_DEX);
+			    ch = 70 + ACURR(A_DEX);
 			    break;
 			case UNIVERSAL_KEY:
-			    ch = 85 + ACURR(A_DEX);
+			    ch = 80 + ACURR(A_DEX);
 			    break;
-			default:	ch = 0;
+			default:    ch = 0;
 		    }
 		    if(otmp->cursed) ch /= 2;
 
@@ -553,9 +611,10 @@ pick_lock( /* pick a lock with a given object */
 		if (is_drawbridge_wall(cc.x,cc.y) >= 0)
 		    You("%s no lock on the drawbridge.",
 				Blind ? "feel" : "see");
-		else
+		else {
 		    You("%s no door there.",
 				Blind ? "feel" : "see");
+		}
 		return MOVE_CANCELLED;
 		}
 	    switch (door->doormask) {
@@ -577,11 +636,17 @@ pick_lock( /* pick a lock with a given object */
 		    /* ALI - Artifact doors from slash'em */
 		    key = artifact_door(cc.x, cc.y);
 
-		    Sprintf(qbuf,"%sock it?",
-			(door->doormask & D_LOCKED) ? "Unl" : "L" );
+                Sprintf(qbuf, "%s it%s%s?",
+                        (door->doormask & D_LOCKED) ? "Unlock" : "Lock",
+                        autounlock ? " with " : "",
+                        autounlock ? yname(pick) : "");
 
 		    c = yn(qbuf);
 		    if(c == 'n') return MOVE_CANCELLED;
+
+			/* note: for !autounlock, 'apply' already did touch check */
+			if (autounlock && !touch_artifact(pick, &youmonst, FALSE))
+				return 1;
 
 		    switch(picktyp) {
 			case CREDIT_CARD:
@@ -609,10 +674,6 @@ pick_lock( /* pick a lock with a given object */
 					here = &levl[cc.x][cc.y];
 					here->typ = ROOM;
 					useupall(pick);
-					//0 out obj in the calling code. uwep should already be 0 at this point due to useupall, so it's harmless to set it to 0 again.
-					// pick_p shouldn't ever be 0 in this case, but....
-					if(pick_p)
-						*pick_p = (struct obj *) 0;
 					make_engr_at(cc.x, cc.y,
 						 gates_of_hell[key%4], 0L, BURN); //mod 4 the array index so people can mess up the des file without causing problems
 					unblock_point(cc.x,cc.y);
@@ -667,7 +728,7 @@ doforce(void)		/* try to force a chest with your weapon */
 	} else if(uwep->otyp == LOCK_PICK ||
 	    uwep->otyp == CREDIT_CARD ||
 	    uwep->otyp == SKELETON_KEY) {
-	    	return pick_lock(&uwep);
+	    	return pick_lock(uwep,0,0,NULL);
 	/* not a lightsaber or lockpicking device*/
 	} else if(!uwep ||     /* proper type test */
 	   (uwep->oclass != WEAPON_CLASS && !is_weptool(uwep) &&
@@ -707,6 +768,9 @@ doforce(void)		/* try to force a chest with your weapon */
 
 	x = u.ux + u.dx;
 	y = u.uy + u.dy;
+	
+	if (!isok(x,y)) goto nodoor_force;
+	
 	if (x == u.ux && y == u.uy && u.dz > -1) {
 	for(otmp = level.objects[u.ux][u.uy]; otmp; otmp = otmp->nexthere)
 	    if(Is_box(otmp)) {
@@ -771,9 +835,11 @@ doforce(void)		/* try to force a chest with your weapon */
 	    if(!IS_DOOR(door->typ)) {
 		if (is_drawbridge_wall(x,y) >= 0)
 		    pline("The drawbridge is too solid to force open.");
-		else
+		else {
+nodoor_force:
 		    You("%s no door there.",
 				Blind ? "feel" : "see");
+		}
 		return MOVE_CANCELLED;
 	    }
 	    /* ALI - artifact doors */
@@ -848,6 +914,8 @@ doopen_indir(int x, int y)
 	    return MOVE_CANCELLED;
 	}
 	
+	if (!isok(x,y)) goto nodoor_indr;
+	
 	if(x > 0 && y > 0){
 		cc.x = x;
 		cc.y = y;
@@ -872,6 +940,7 @@ doopen_indir(int x, int y)
 		    There("is no obvious way to open the drawbridge.");
 		    return MOVE_INSTANT;
 		}
+nodoor_indr:
 		You("%s no door there.",
 				Blind ? "feel" : "see");
 		return MOVE_CANCELLED;
@@ -879,19 +948,27 @@ doopen_indir(int x, int y)
 
 	if (!(door->doormask & D_CLOSED)) {
 	    const char *mesg;
+            boolean locked = FALSE;
+            struct obj* unlocktool;
 
 	    switch (door->doormask) {
 	    case D_BROKEN: mesg = " is broken"; break;
 	    case D_NODOOR: mesg = "way has no door"; break;
 	    case D_ISOPEN: mesg = " is already open"; break;
-	    default:	   mesg = " is locked"; break;
+	    default:
+                mesg = " is locked";
+                locked = TRUE;
+                break;
 	    }
 	    pline("This door%s.", mesg);
+            if (locked && flags.autounlock && (unlocktool = autokey(TRUE)) != 0) {
+                return pick_lock(unlocktool, cc.x, cc.y, (struct obj *) 0);
+            }
 	    if (Blind) feel_location(cc.x,cc.y);
 	    return MOVE_INSTANT;
 	}
 
-	if(verysmall(youracedata)) {
+	if(verysmall(youracedata) && !is_leprechaun(youracedata)) {
 	    pline("You're too small to pull the door open.");
 	    return MOVE_CANCELLED;
 	}
@@ -963,6 +1040,9 @@ doclose(void)		/* try to close a door */
 
 	x = u.ux + u.dx;
 	y = u.uy + u.dy;
+
+	if (!isok(x,y)) goto nodoor;
+
 	if((x == u.ux) && (y == u.uy)) {
 		You("are in the way!");
 		return MOVE_STANDARD;
@@ -983,9 +1063,11 @@ doclose(void)		/* try to close a door */
 	if(!IS_DOOR(door->typ)) {
 		if (door->typ == DRAWBRIDGE_DOWN)
 		    There("is no obvious way to close the drawbridge.");
-		else
+		else {
+nodoor:
 		    You("%s no door there.",
 				Blind ? "feel" : "see");
+		}
 		return MOVE_CANCELLED;
 	}
 

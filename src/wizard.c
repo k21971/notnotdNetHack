@@ -716,7 +716,7 @@ nasty(struct monst *mcast)
 
     if(!rn2(10) && Inhell) {
 		/* creatures made this way are full monsters gated in, not summons tied to mcast */
-		msummon(mcast, &mons[PM_WIZARD_OF_YENDOR]);	/* summons like WoY */
+		msummon(mcast, (struct permonst *) 0);	/* summons like WoY */
 		count++;
     } else {
 	tmp = (u.ulevel > 3) ? u.ulevel/3 : 1; /* just in case -- rph */
@@ -921,7 +921,7 @@ u_recognize_stars(void)
 	if(Role_if(PM_WIZARD) || Role_if(PM_PRIEST) || Role_if(PM_RANGER))
 		return (Race_if(PM_DROW) || Race_if(PM_DWARF) || Race_if(PM_GNOME)) ? ACURR(A_INT) > 18 : ACURR(A_INT) > 13;
 	// Anas
-	if(Role_if(PM_ANACHRONONAUT))
+	if(Role_if(PM_ANACHRONONAUT) || Role_if(PM_UNDEAD_HUNTER))
 		return ACURR(A_INT) > 13;
 
 	// Catch all
@@ -1217,7 +1217,7 @@ coa_arrive(void)
 	
 	if(!mtmp && mvitals[PM_CENTER_OF_ALL].born == 0) mtmp = makemon(&mons[PM_CENTER_OF_ALL], 0, 0, MM_NOWAIT);
 	
-	if (mtmp && (In_endgame(&u.uz) || u.uinsight > 8)) {
+	if (mtmp && (In_endgame(&u.uz) || Insight > 8)) {
 		mtmp->msleeping = mtmp->mtame = mtmp->mpeaceful = 0;
 		set_malign(mtmp);
 	}
@@ -1684,7 +1684,7 @@ aglaopesong(struct monst *mtmp)
 				for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
 					if(tmpm != mtmp && !DEADMONSTER(tmpm)){
 						if(!mindless_mon(tmpm)){
-							if ( mtmp->mpeaceful != tmpm->mpeaceful && !resist(tmpm, 0, 0, FALSE) ) {
+							if ( mtmp->mpeaceful != tmpm->mpeaceful && !mm_resist(tmpm, mtmp, 0, FALSE) ) {
 								if (tmpm->encouraged > -1*BASE_DOG_ENCOURAGED_MAX)
 									tmpm->encouraged = max_ints(-1*BASE_DOG_ENCOURAGED_MAX, tmpm->encouraged - rnd(mtmp->m_lev/3+1));
 								if (tmpm->mflee) tmpm->mfleetim = 0;
@@ -1709,7 +1709,7 @@ aglaopesong(struct monst *mtmp)
 				for(tmpm = fmon; tmpm; tmpm = tmpm->nmon){
 					if(tmpm != mtmp && !DEADMONSTER(tmpm)){
 						if(!mindless_mon(tmpm) && tmpm->data->mmove){
-							if ( mtmp->mpeaceful != tmpm->mpeaceful && !resist(tmpm, 0, 0, FALSE) ) {
+							if ( mtmp->mpeaceful != tmpm->mpeaceful && !mm_resist(tmpm, mtmp, 0, FALSE) ) {
 								tmpm->movement -= 12;
 								tmpm->permspeed = MSLOW;
 								tmpm->mspeed = MSLOW;

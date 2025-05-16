@@ -39,7 +39,8 @@ struct icp {
 const struct icp mkobjprobs[] = {
 {10, WEAPON_CLASS},
 {10, ARMOR_CLASS},
-{20, FOOD_CLASS},
+{18, FOOD_CLASS},
+{ 2, BELT_CLASS},
 { 8, TOOL_CLASS},
 { 8, GEM_CLASS},
 {16, POTION_CLASS},
@@ -77,9 +78,10 @@ const struct icp rogueprobs[] = {
 const struct icp hellprobs[] = {
 {20, WEAPON_CLASS},
 {20, ARMOR_CLASS},
-{16, FOOD_CLASS},
+{ 8, FOOD_CLASS},
+{ 6, BELT_CLASS},
 {12, TOOL_CLASS},
-{10, GEM_CLASS},
+{12, GEM_CLASS},
 { 1, POTION_CLASS},
 { 1, SCROLL_CLASS},
 { 8, WAND_CLASS},
@@ -254,6 +256,62 @@ static const struct icp bow_materials[] = {
 	{  0, 0 }
 };
 
+static const struct icp cane_materials[] = {
+	{550, 0 }, /* use base material */
+	{250, WOOD },
+	{ 90, COPPER },
+	{ 50, SILVER },
+	{ 25, BONE },
+	{ 20, MITHRIL },
+	{ 10, GOLD },
+	{  5, DRAGON_HIDE },
+	{  0, 0 }
+};
+
+static const struct icp chikage_materials[] = {
+	{550, 0 }, /* use base material */
+	{250, GOLD },
+	{200, GREEN_STEEL },
+	{  0, 0 }
+};
+
+static const struct icp brick_materials[] = {
+	{550, 0 }, /* use base material */
+	{150, WOOD },
+	{100, IRON },//800
+	{ 50, LEAD },
+	{ 30, SILVER },
+	{ 25, PLATINUM },//905
+	{ 25, MITHRIL },//930
+	{ 25, WAX },//955
+	{ 18, GLASS },//973
+	{ 17, GEMSTONE },//990
+	{ 10, OBSIDIAN_MT },//1000
+	{  0, 0 }
+};
+
+static const struct icp special_materials[] = {
+	{250, 0 }, /* use base material */
+	{250, SILVER },
+	{150, GOLD },
+	{100, IRON },
+	{ 75, MITHRIL },
+	{ 75, PLATINUM },
+	{ 50, GREEN_STEEL },
+	{ 50, DRAGON_HIDE },
+	{  0, 0 }
+};
+
+static const struct icp fiend_materials[] = {
+	{350, 0 }, /* use base material */
+	{250, GOLD },
+	{150, GREEN_STEEL },
+	{ 75, LEAD },
+	{ 75, PLATINUM },
+	{ 50, MITHRIL },
+	{ 50, DRAGON_HIDE },
+	{  0, 0 }
+};
 
 struct obj *
 mkobj_at(char let, int x, int y, int mkflags)
@@ -393,7 +451,7 @@ rndmonnum(void)	/* select a random, common monster type */
 	register int	i;
 
 	/* Plan A: get a level-appropriate common monster */
-	ptr = rndmonst();
+	ptr = rndmonst(0, 0);
 	if (ptr) return(monsndx(ptr));
 
 	/* Plan B: get any common monster */
@@ -456,7 +514,7 @@ splitobj(struct obj *obj, long num)
  * in the nobj chain (and nexthere chain when on the floor).
  */
 struct obj *
-duplicate_obj(struct obj *obj)
+duplicate_obj(struct obj *obj, boolean same_chain)
 {
 	struct obj *otmp;
 
@@ -473,7 +531,7 @@ duplicate_obj(struct obj *obj)
 		struct obj *cntdup;
 		struct obj **curcobj = &(otmp->cobj);
 		for(struct obj *cntobj = obj->cobj; cntobj; cntobj = cntobj->nobj){
-			cntdup = duplicate_obj(cntobj);
+			cntdup = duplicate_obj(cntobj, TRUE);
 			if(cntdup){
 				obj_extract_self(cntdup);
 				//Note: don't use the normal add to container function, or it will reverse the order of cobj
@@ -489,11 +547,18 @@ duplicate_obj(struct obj *obj)
 	if (!otmp->o_id) otmp->o_id = flags.ident++;	/* ident overflowed */
 	otmp->lamplit = 0;	/* not lit, yet */
 	otmp->owornmask = 0L;	/* new object isn't worn */
-	obj->nobj = otmp;
-	/* Only set nexthere when on the floor, nexthere is also used */
-	/* as a back pointer to the container object when contained. */
-	if (obj->where == OBJ_FLOOR)
-	    obj->nexthere = otmp;
+	if(same_chain){
+		obj->nobj = otmp;
+		/* Only set nexthere when on the floor, nexthere is also used */
+		/* as a back pointer to the container object when contained. */
+		if (obj->where == OBJ_FLOOR)
+			obj->nexthere = otmp;
+	}
+	else {
+		otmp->where = OBJ_FREE;
+		otmp->nobj = 0;
+		otmp->nexthere = 0;
+	}
 
 	register int ox_id;
 	for (ox_id=0; ox_id<NUM_OX; ox_id++)
@@ -641,6 +706,27 @@ mksobj(int otyp, int mkflags)
 	otmp->mp = (struct mask_properties *) 0;
 	
 	init_obj_material(otmp);
+	if(otmp->otyp == CANE){
+		int mat_primary = otmp->obj_material;
+		otmp->otyp = WHIP_SAW;
+		init_obj_material(otmp);
+
+		otmp->otyp = CANE;
+		otmp->ovar1_alt_mat = otmp->obj_material;
+		set_material_gm(otmp, mat_primary);
+	}
+	else if(otmp->otyp == WHIP_SAW){
+		int mat_primary = otmp->obj_material;
+		otmp->otyp = CANE;
+		init_obj_material(otmp);
+
+		otmp->otyp = WHIP_SAW;
+		otmp->ovar1_alt_mat = otmp->obj_material;
+		set_material_gm(otmp, mat_primary);
+	}
+	else if(otmp->otyp == TOOTH){
+		otmp->ovar1_tooth_type = rnd(MAX_TOOTH);
+	}
 	
 	set_object_color(otmp);
 	
@@ -675,16 +761,58 @@ mksobj(int otyp, int mkflags)
 		add_oprop(otmp, OPROP_RAKUW);
 	if (is_mercy_blade(otmp))
 		add_oprop(otmp, OPROP_MRCYW);
+	//Always-init otyps
 	if (otmp->otyp == WHITE_VIBROSWORD
 		|| otmp->otyp == WHITE_VIBROSPEAR
 		|| otmp->otyp == WHITE_VIBROZANBATO
 		)
 		add_oprop(otmp, OPROP_HOLYW);
-	if (otmp->otyp == GOLD_BLADED_VIBROSWORD
+	else if (otmp->otyp == GOLD_BLADED_VIBROSWORD
 		|| otmp->otyp == GOLD_BLADED_VIBROSPEAR
 		|| otmp->otyp == GOLD_BLADED_VIBROZANBATO
 		)
 		add_oprop(otmp, OPROP_UNHYW);
+	else if (otmp->otyp == MOON_AXE){
+		switch (phase_of_the_moon()){
+		case 0:
+			otmp->ovar1_moonPhase = ECLIPSE_MOON;
+			break;
+		case 1:
+		case 7:
+			otmp->ovar1_moonPhase = CRESCENT_MOON;
+			break;
+		case 2:
+		case 6:
+			otmp->ovar1_moonPhase = HALF_MOON;
+			break;
+		case 3:
+		case 5:
+			otmp->ovar1_moonPhase = GIBBOUS_MOON;
+			break;
+		case 4:
+			otmp->ovar1_moonPhase = FULL_MOON;
+			break;
+		case 8:
+			otmp->ovar1_moonPhase = HUNTING_MOON;
+			break;
+		}
+	}
+	else if(otmp->otyp == CHURCH_HAMMER){
+		struct obj *sword = mksobj(HUNTER_S_SHORTSWORD, mkflags);
+		add_to_container(otmp, sword);
+	}
+	else if(otmp->otyp == CHURCH_BLADE){
+		struct obj *sword = mksobj(HUNTER_S_LONGSWORD, mkflags);
+		add_to_container(otmp, sword);
+	}
+	else if (otmp->otyp == MASS_SHADOW_PISTOL){
+		struct obj *stone = mksobj(ROCK, NO_MKOBJ_FLAGS);
+		stone->quan = 1;
+		stone->owt = weight(stone);
+		add_to_container(otmp, stone);
+		container_weight(otmp);
+	}
+
 	if (init) {
 		switch (let) {
 		case WEAPON_CLASS:
@@ -707,12 +835,11 @@ mksobj(int otyp, int mkflags)
 				otmp->altmode = AD_SLEE;
 			}
 			else if (otmp->otyp == MASS_SHADOW_PISTOL){
-				struct obj *stone = mksobj(ROCK, NO_MKOBJ_FLAGS);
 				otmp->ovar1_charges = 800L + rnd(200);
-				stone->quan = 1;
-				stone->owt = weight(stone);
-				add_to_container(otmp, stone);
-				container_weight(otmp);
+			}
+			else if (otmp->otyp == DEVIL_FIST || otmp->otyp == DEMON_CLAW){
+				struct obj *coin = mksobj(WAGE_OF_SLOTH + rn2(WAGE_OF_PRIDE - (WAGE_OF_SLOTH-1)), NO_MKOBJ_FLAGS);
+				add_to_container(otmp, coin);
 			}
 			else if(is_tipped_spear(otmp)){
 				struct obj *stone = mksobj(FLINT, NO_MKOBJ_FLAGS);
@@ -726,28 +853,6 @@ mksobj(int otyp, int mkflags)
 				otmp->ovar1_charges = 80L + rnd(20);
 				if (otmp->otyp == ARM_BLASTER) otmp->altmode = WP_MODE_SINGLE;
 				if (otmp->otyp == RAYGUN) otmp->altmode = AD_FIRE;	// I think this is never reached?
-			}
-			else if (otmp->otyp == MOON_AXE){
-				switch (phase_of_the_moon()){
-				case 0:
-					otmp->ovar1_moonPhase = ECLIPSE_MOON;
-					break;
-				case 1:
-				case 7:
-					otmp->ovar1_moonPhase = CRESCENT_MOON;
-					break;
-				case 2:
-				case 6:
-					otmp->ovar1_moonPhase = HALF_MOON;
-					break;
-				case 3:
-				case 5:
-					otmp->ovar1_moonPhase = GIBBOUS_MOON;
-					break;
-				case 4:
-					otmp->ovar1_moonPhase = FULL_MOON;
-					break;
-				}
 			}
 			if (otmp->otyp == STICK_OF_DYNAMITE) {
 				otmp->age = (otmp->cursed ? rn2(15) + 2 :
@@ -892,7 +997,7 @@ mksobj(int otyp, int mkflags)
 				otmp->lamplit = 0;
 				otmp->age = (long)rn1(50000, 100000);
 				blessorcurse(otmp, 2);
-				{
+				if(is_gemable_lightsaber(otmp)){
 					struct obj *gem = mksobj(rn2(6) ? BLUE_FLUORITE : GREEN_FLUORITE, NO_MKOBJ_FLAGS);
 					gem->quan = 1;
 					gem->owt = weight(gem);
@@ -927,6 +1032,7 @@ mksobj(int otyp, int mkflags)
 				otmp->obolted = 0;
 				break;
 			case EXPENSIVE_CAMERA:
+			case DISSECTION_KIT:
 			case TINNING_KIT:
 			case MAGIC_MARKER:	otmp->spe = rn1(70, 30);
 				break;
@@ -934,6 +1040,9 @@ mksobj(int otyp, int mkflags)
 			case TREPHINATION_KIT:
 			case CAN_OF_GREASE:	otmp->spe = rnd(25);
 				blessorcurse(otmp, 10);
+				break;
+			case PHLEBOTOMY_KIT:
+				otmp->spe = rnd(5);
 				break;
 			case CRYSTAL_BALL:	otmp->spe = rnd(5);
 				blessorcurse(otmp, 2);
@@ -1098,7 +1207,8 @@ mksobj(int otyp, int mkflags)
 						PM_STAR_ELF, PM_STAR_ELF, PM_STAR_EMPEROR, PM_STAR_EMPRESS,
 						PM_ARCHEOLOGIST, PM_BARBARIAN, PM_HALF_DRAGON, PM_CAVEMAN, PM_CAVEWOMAN, 
 						PM_KNIGHT, PM_KNIGHT, PM_MADMAN, PM_MADWOMAN, PM_PRIEST, PM_PRIESTESS,
-						PM_RANGER, PM_ROGUE, PM_ROGUE, PM_SAMURAI, PM_VALKYRIE, PM_WIZARD 
+						PM_RANGER, PM_ROGUE, PM_ROGUE, PM_SAMURAI, PM_UNDEAD_HUNTER, PM_VALKYRIE,
+						PM_WIZARD 
 					};
 					skull = ROLL_FROM(skulls);
 				}
@@ -1551,6 +1661,23 @@ mksobj(int otyp, int mkflags)
 				otmp->spe = d(3,3);
 			}
 			break;
+		case BELT_CLASS:
+			if (rn2(10) && (otmp->otyp == BELT_OF_WEAKNESS
+				|| otmp->otyp == BELT_OF_CARRYING 
+				|| otmp->otyp == BELT_OF_WEIGHT 
+				|| !rn2(11))
+			) {
+				curse(otmp);
+				if(otmp->otyp == KIDNEY_BELT)
+					otmp->spe = -rne(3);
+			}
+			else if (!rn2(10)) {
+				otmp->blessed = rn2(2);
+				if(otmp->otyp == KIDNEY_BELT)
+					otmp->spe = rne(3);
+			}
+			else	blessorcurse(otmp, 10);
+			break;
 		case COIN_CLASS:
 		case TILE_CLASS:
 		case SCOIN_CLASS:
@@ -1570,7 +1697,7 @@ mksobj(int otyp, int mkflags)
 
 		/* your quest tends to be stocked with things that fit you */
 		if (quest_equipment(otmp) && !otmp->oartifact) {
-			otmp->objsize = (&mons[urace.malenum])->msize;
+			otmp->objsize = permonst_of(urace.malenum, get_template(&youmonst))->msize;
 			if (otmp->oclass == ARMOR_CLASS){
 				set_obj_shape(otmp, mons[urace.malenum].mflagsb);
 			}
@@ -1603,7 +1730,7 @@ mksobj(int otyp, int mkflags)
 	if (otyp == WORD_OF_KNOWLEDGE)
 	    flags.made_know = TRUE;
 	
-	otmp->owt = weight(otmp);
+	fix_object(otmp);
 	return(otmp);
 }
 
@@ -1698,7 +1825,12 @@ start_corpse_timeout(struct obj *body)
 #define ROT_AGE (250L)		/* age when corpses rot away */
 
 	/* lizards, beholders, and lichen don't rot or revive */
-	if (body->corpsenm == PM_LIZARD || body->corpsenm == PM_LICHEN || body->corpsenm == PM_CROW_WINGED_HALF_DRAGON || body->corpsenm == PM_BEHOLDER || body->spe) return;
+	if (body->corpsenm == PM_LIZARD
+		|| body->corpsenm == PM_LICHEN
+		|| body->corpsenm == PM_CROW_WINGED_HALF_DRAGON
+		|| body->corpsenm == PM_BEHOLDER
+		|| body->spe
+	) return;
 	
 	if(get_ox(body, OX_EMON)) attchmon = EMON(body);
 
@@ -2055,6 +2187,7 @@ material_list(struct obj *obj)
 	case HAWAIIAN_SHIRT:
 	case HAWAIIAN_SHORTS:
 	case STRIPED_SHIRT:
+	case STRIPED_HAT:
 	case ICHCAHUIPILLI:
 	case RUFFLED_SHIRT:
 	case VICTORIAN_UNDERWEAR:
@@ -2114,6 +2247,24 @@ material_list(struct obj *obj)
 		return eli_materials;
 	case SOUL_LENS:
 		return lens_materials;
+	case CANE:
+	case CHURCH_BLADE:
+	case CHURCH_SHEATH:
+		return cane_materials;
+	case CHIKAGE:
+		return chikage_materials;
+	case CHURCH_HAMMER:
+	case CHURCH_BRICK:
+		return brick_materials;
+	case WHIP_SAW:
+	case HUNTER_S_SHORTSWORD:
+	case HUNTER_S_LONGSWORD:
+	case SHANTA_PATA:
+	case TWINGUN_SHANTA:
+		return special_materials;
+	case DEVIL_FIST:
+	case DEMON_CLAW:
+		return fiend_materials;
 	default:
 		break;
 	}
@@ -2289,7 +2440,7 @@ rand_interesting_obj_material(struct obj *obj)
 			int i = rnd(1000);
 			while (i > 0) {
 				if(random_mat_list->iprob == 0){
-					impossible("init_obj_material random_mat_list out-of-range.");
+					impossible("rand_interesting_obj_material random_mat_list out-of-range.");
 					break;
 				}
 				if (i <= random_mat_list->iprob)
@@ -2345,6 +2496,10 @@ set_material(struct obj *obj, int mat)
 	int oldmat = obj->obj_material;
 
 	if(mat == obj->obj_material) return; //Already done!
+	if(oldmat == MERCURIAL){
+		start_timer(d(8,8), TIMER_OBJECT,
+					REVERT_MERC, (void *)obj);
+	}
 
 
 	if (obj->where == OBJ_INVENT) {
@@ -2372,8 +2527,15 @@ set_material(struct obj *obj, int mat)
 		/* bullets */
 		case BULLET:
 		case SILVER_BULLET:
+		case BLOOD_BULLET:
+		case BLOOD_SPEAR:
 			if (mat == SILVER)			obj->otyp = SILVER_BULLET;
+			else if (mat == HEMARGYOS)	obj->otyp = BLOOD_BULLET;
 			else						obj->otyp = BULLET;
+		break;
+		case CRYSKNIFE:
+			if(mat > CHITIN && mat != MINERAL)
+				obj->otyp = KNIFE;
 		break;
 		/* elven helmets */
 		case ELVEN_HELM:
@@ -2518,7 +2680,7 @@ set_material(struct obj *obj, int mat)
 		case GOLD_BLADED_VIBROZANBATO:
 			if(mat != GOLD) obj->otyp = WHITE_VIBROZANBATO;
 		break;
-		// case HEAVY_IRON_BALL:
+		// case BALL:
 			// obj->otyp = ;
 		// break;
 		// case CHAIN:
@@ -2608,6 +2770,11 @@ set_material(struct obj *obj, int mat)
 }
 
 
+int gold_weight(long quan){
+	return (int)(((quan + 50L) / 100L) * (Race_if(PM_LEPRECHAUN) ? -1 : 1));
+}
+
+
 /*
  *  Calculate the weight of the given object.  This will recursively follow
  *  and calculate the weight of any containers.
@@ -2626,14 +2793,27 @@ weight(register struct obj *obj)
 
 	if (obj->oartifact)
 		wt = artifact_weight(obj);
+	if(obj->otyp == INGOT){
+		return obj->quan * wt;
+	}
+	else if(obj->otyp == CANE || obj->otyp == WHIP_SAW){
+		int otyp_alt = obj->otyp == CANE ? WHIP_SAW : CANE;
+		int base_mat_alt = (obj->oartifact && artilist[obj->oartifact].material != MT_DEFAULT && artilist[obj->oartifact].weight != WT_DEFAULT) ? artilist[obj->oartifact].material : objects[otyp_alt].oc_material;
 
-	if(obj->obj_material != base_mat) {
+		wt = ((wt * materials[obj->obj_material].density / materials[base_mat].density) + (wt * materials[obj->ovar1_alt_mat].density / materials[base_mat_alt].density))/2;
+	}
+	else if(obj->otyp == CHIKAGE && obj->obj_material == HEMARGYOS){
+		if(obj->ovar1_alt_mat != base_mat)
+			wt = wt * materials[obj->ovar1_alt_mat].density / materials[base_mat].density;
+	}
+	else if(obj->obj_material != base_mat) {
 		/* do not apply this to artifacts; those are handled in artifact_weight() */
 		wt = wt * materials[obj->obj_material].density / materials[base_mat].density;
 	}
 	
 	if(obj->otyp == MOON_AXE && obj->oartifact != ART_SCEPTRE_OF_LOLTH){
-		if(obj->ovar1_moonPhase) wt =  wt/4*obj->ovar1_moonPhase;
+		if(obj->ovar1_moonPhase == HUNTING_MOON) wt =  wt/3;
+		else if(obj->ovar1_moonPhase) wt =  wt/4*obj->ovar1_moonPhase;
 		else wt = wt/4;
 	}
 
@@ -2665,7 +2845,11 @@ weight(register struct obj *obj)
 				wt += mons[PM_VAMPIRE_LADY].cwt;
 		}
 	}
-	if ((Is_container(obj) && obj->otyp != MAGIC_CHEST) || obj->otyp == STATUE) {
+	if ((Is_container(obj) && obj->otyp != MAGIC_CHEST && obj->oartifact != ART_TREASURY_OF_PROTEUS)
+		|| obj->otyp == STATUE
+		|| obj->otyp == CHURCH_BLADE
+		|| obj->otyp == CHURCH_HAMMER
+	) {
 		struct obj *contents;
 		register int cwt = 0;
 
@@ -2714,8 +2898,8 @@ weight(register struct obj *obj)
 	} else if (obj->oclass == FOOD_CLASS && obj->oeaten) {
 		return eaten_stat((int)obj->quan * wt, obj);
 	} else if (obj->oclass == COIN_CLASS)
-		return (int)((obj->quan + 50L) / 100L);
-	else if (obj->otyp == HEAVY_IRON_BALL && obj->owt != 0)
+		return gold_weight(obj->quan);
+	else if (obj->otyp == BALL && obj->owt != 0)
 		return((int)(obj->owt));	/* kludge for "very" heavy iron ball */
 	return((wt || obj->oartifact) ? wt*(int)obj->quan : ((int)obj->quan + 1)>>1);
 }
@@ -3327,11 +3511,12 @@ obj_extract_self(struct obj *obj)
 	    extract_magic_chest_nobj(obj);
 	    break;
 	case OBJ_INTRAP:
+		obj_extract_self_from_trap(obj);
 		/* The only place that we should be trying to extract an object inside a
 		* trap is from within the trap code, where we have a pointer to the
 		* trap that contains the object. We should never be trying to extract
 		* an object inside a trap without that context. */
-		panic("trying to extract object from trap with no trap info");
+		// panic("trying to extract object from trap with no trap info");
 		break;
 	default:
 	    panic("obj_extract_self");
@@ -3703,7 +3888,7 @@ hornoplenty(
                 //hitfloor(obj, TRUE); /* does altar check, message, drop */
             } else {
                 if (IS_ALTAR(levl[u.ux][u.uy].typ))
-                    doaltarobj(obj); /* does its own drop message */
+                    doaltarobj(obj, god_at_altar(u.ux,u.uy)); /* does its own drop message */
                 else
                     pline("%s %s to the %s.", Doname2(obj),
                           otense(obj, "drop"), surface(u.ux, u.uy));

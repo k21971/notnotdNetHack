@@ -35,9 +35,10 @@ struct Role roles[] = {
 	{"Collector",   0},
 	{"Curator",     0} },
 	GOD_QUETZALCOATL, GOD_CAMAXTLI, GOD_HUHETOTL, /* Central American */
+	GOD_HUHETOTL,
 	"Arc", "the College of Archeology", "the Tomb of the Toltec Kings",
 	PM_ARCHEOLOGIST, NON_PM, NON_PM,
-	PM_LORD_CARNARVON, PM_STUDENT, PM_MINION_OF_HUHETOTL,
+	PM_LORD_CARNARVON, PM_STUDENT, PM_MINION_OF_TEZCATLIPOCA,
 	NON_PM, PM_HUMAN_MUMMY, S_SNAKE, S_MUMMY,
 	ART_ITLACHIAYAQUE,
 	MA_HUMAN|MA_DWARF|MA_GNOME|MA_CLOCK|MA_VAMPIRE|MA_DRAGON, ROLE_MALE|ROLE_FEMALE |
@@ -46,8 +47,16 @@ struct Role roles[] = {
 	{   7, 10, 10,  7,  7,  7 },
 	{  20, 20, 20, 10, 20, 10 },
 	/* Init   Lower  Higher */
-	{ 11, 0,  0, 8,  1, 0 },	/* Hit points */
+	{ 11, 0,  0, 8,  0, 2 },	/* Hit points */
 	{  1, 0,  1, 0,  0, 1 },14,	/* Energy */
+	/*init alignment
+	    base penalty, 
+	        healing penalty, 
+	          shield penalty,
+			     metal armor penalty,
+				     stat,
+						    favored spell,
+						                         favored penalty*/
 	10, 5, 0, 2, 10, A_INT, SPE_MAGIC_MAPPING,   -9
 },
 {	{"Anachrononaut", 0}, {
@@ -61,18 +70,19 @@ struct Role roles[] = {
 	{"Fatebreaker",   0},
 	{"Hope of the Future",     0} },
 	0, 0, 0, /* chosen randomly from among the other roles */
+	0,
 	"Ana", "the Last Redoubt", "Ground Zero",
 	PM_ANACHRONONAUT, NON_PM, NON_PM,
 	PM_SARA__THE_LAST_ORACLE, PM_TROOPER, NON_PM,
 	NON_PM, NON_PM, NON_PM, NON_PM,
 	ART_ANNULUS,
-	MA_HUMAN|MA_DWARF|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_CLOCK|MA_GNOME|MA_REPTILIAN|MA_ETHEREAL, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_DWARF|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_CLOCK|MA_GNOME|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_NEUTRAL|ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{  12, 10,  7, 10,  10,  7 },
 	{  15, 17, 15, 12, 15, 15 },
 	/* Init   Lower  Higher */
-	{ 11, 0,  0, 8,  1, 0 },	/* Hit points */
+	{ 11, 0,  2, 8,  2, 0 },	/* Hit points */
 	{  2, 0,  0, 2,  0, 2 },14,	/* Energy */
 	10, 5, 0, 2, 10, A_INT, SPE_SLOW_MONSTER,   -9
 },
@@ -87,18 +97,19 @@ struct Role roles[] = {
 	{"Chieftain",   "Chieftainess"},
 	{"Conqueror",   "Conqueress"} },
 	GOD_MITRA, GOD_CROM, GOD_SET, /* Hyborian */
+	GOD_SET,
 	"Bar", "the Camp of the Duali Tribe", "the Duali Oasis",
 	PM_BARBARIAN, NON_PM, NON_PM,
 	PM_PELIAS, PM_CHIEFTAIN, PM_THOTH_AMON,
 	PM_OGRE, PM_TROLL, S_OGRE, S_TROLL,
 	ART_HEART_OF_AHRIMAN,
-	MA_HUMAN|MA_ORC|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ORC|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_DEMIHUMAN, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_NEUTRAL|ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{  16,  7,  7, 15, 16,  6 },
 	{  30,  6,  7, 20, 30,  7 },
 	/* Init   Lower  Higher */
-	{ 14, 0,  0,10,  0, 2 },	/* Hit points */
+	{ 14, 0,  0,12,  0, 4 },	/* Hit points */
 	{  1, 0,  0, 1,  0, 1 },10,	/* Energy */
 	10, 14, 0, 0,  8, A_INT, SPE_HASTE_SELF,      -1000
 },
@@ -113,18 +124,19 @@ struct Role roles[] = {
 	{"Unbinder",     0},
 	{"Gnostikos",    0} },
 	0, 0, 0,	/* chosen randomly from among the other roles */
+	0,
 	"Bin", "the lost library", "the Tower of Woe",
 	PM_EXILE, NON_PM, NON_PM,
 	PM_STRANGE_CORPSE, PM_PEASANT, PM_ACERERAK,
 	PM_SKELETON, PM_LICH, S_HUMAN, S_HUMANOID,
 	ART_PEN_OF_THE_VOID,
-	MA_HUMAN|MA_DWARF|MA_GNOME|MA_ELF|MA_ORC|MA_CLOCK|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_FEY|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_DWARF|MA_GNOME|MA_ELF|MA_ORC|MA_CLOCK|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_FEY|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_LAWFUL|ROLE_CHAOTIC|ROLE_NEUTRAL,
 	/* Str Int Wis Dex Con Cha */
 	{  6,  6,  6,  6,  6,  6 },
 	{ 11,  9,  9, 11, 11,  9 },
 	/* Init   Lower  Higher */
-	{ 11, 0,  0, 10,  0, 2 },	/* Hit points */
+	{ 11, 0,  0, 10,  0, 3 },	/* Hit points */
 	{  5, 0,  0,  1,  1, 0 },15,	/* Energy */
 	-5, 10, 5, 10,  25, 0/*Special*/, SPE_SLEEP, -14
 },
@@ -139,6 +151,7 @@ struct Role roles[] = {
 	{"Rover",       0},
 	{"Pioneer",     0} },
 	GOD_ANU, GOD_ISHTAR, GOD_ANSHAR, /* Babylonian */
+	GOD_NERGAL,
 	"Cav", "the Caves of the Ancestors", "the Dragon's Lair",
 	PM_CAVEMAN, PM_CAVEWOMAN, PM_LITTLE_DOG,
 	PM_SHAMAN_KARNOV, PM_NEANDERTHAL, PM_CHROMATIC_DRAGON,
@@ -150,7 +163,7 @@ struct Role roles[] = {
 	{  10,  7,  7,  7,  8,  6 },
 	{  30,  6,  7, 20, 30,  7 },
 	/* Init   Lower  Higher */
-	{ 14, 0,  0, 8,  0, 2 },	/* Hit points */
+	{ 14, 0,  0,10,  0, 4 },	/* Hit points */
 	{  1, 0,  0, 1,  0, 1 },10,	/* Energy */
 	0, 12, 0, 1,  8, A_INT, SPE_DIG, -1000
 },
@@ -165,19 +178,20 @@ struct Role roles[] = {
 	{"Felon",    0},
 	{"Fugitive",  0} },
 	GOD_ILMATER, GOD_GRUMBAR, GOD_TYMORA,	/* Faerunian */
+	GOD_UMBERLEE,
 	"Con", "Castle Waterdeep Dungeon", "the Warden's Level",
 	PM_CONVICT, NON_PM, PM_SEWER_RAT,
 	PM_ROBERT_THE_LIFER, PM_INMATE, PM_WARDEN_ARIANNA,
 	PM_SOLDIER_ANT, PM_MALKUTH_SEPHIRAH, S_RODENT, S_SPIDER,
 	ART_IRON_SPOON_OF_LIBERATION,
 	// ART_IRON_BALL_OF_LIBERATION,
-	MA_HUMAN|MA_DWARF|MA_GNOME|MA_ORC|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_FEY|MA_REPTILIAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_DWARF|MA_GNOME|MA_ORC|MA_ELF|MA_VAMPIRE|MA_DRAGON|MA_ANIMAL|MA_FEY|MA_REPTILIAN|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{  10,  7,  7,  7, 13,  6 },
 	{  20, 20, 10, 20, 20, 10 },
 	/* Init   Lower  Higher */
-	{  8, 0,  0, 8,  0, 0 },	/* Hit points */
+	{  8, 0,  0,10,  0, 0 },	/* Hit points */
 	{  1, 0,  0, 1,  0, 1 },10,	/* Energy */
 	-10, 5, 0, 2, 10, A_INT, SPE_TELEPORT_AWAY,   -19
 },
@@ -192,6 +206,7 @@ struct Role roles[] = {
 	{"Physician",      0},
 	{"Chirurgeon",     0} },
 	GOD_ATHENA, GOD_HERMES, GOD_POSEIDON, /* Greek */
+	GOD_ERIS,
 	"Hea", "the Temple of Epidaurus", "the Temple of Coeus",
 	PM_HEALER, NON_PM, NON_PM,
 	PM_HIPPOCRATES, PM_ATTENDANT, PM_CYCLOPS,
@@ -202,7 +217,7 @@ struct Role roles[] = {
 	{   7, 13, 11,  7, 11, 16 },
 	{   5, 30, 20, 15, 25, 5 },
 	/* Init   Lower  Higher */
-	{ 11, 0,  0, 8,  1, 0 },	/* Hit points */
+	{ 11, 0,  1, 8,  1, 2 },	/* Hit points */
 	{  1, 4,  1, 2,  0, 3 },20,	/* Energy */
 	10, 3,-3, 2, 10, A_INT, SPE_FULL_HEALING,   -14
 },
@@ -217,6 +232,7 @@ struct Role roles[] = {
 	{"Telekinetic",     0},
 	{"Keeper of the Gate",    0} },
 	GOD_ILSENSINE, GOD_RESISTANCE, GOD_THOON,	/* ahahah */
+	GOD_THOON,
 	"Acu", "The Elder Pool", "The Far Reach",
 	PM_ANACHRONOUNBINDER, NON_PM, PM_BRAIN_GOLEM,
 	PM_ULITHARID, PM_MINDLESS_THRALL, PM_MENZOBERRANZAN,
@@ -243,6 +259,7 @@ struct Role roles[] = {
 	{"Seignieur",   "Dame"},
 	{"Paladin",     0} },
 	GOD_LUGH, GOD_BRIGIT, GOD_MANANNAN_MAC_LIR, /* Celtic */
+	GOD_BALAR,
 	"Kni", "Camelot Castle", "the Isle of Glass",
 	PM_KNIGHT, NON_PM, PM_PONY,
 	PM_KING_ARTHUR, PM_PAGE, PM_NIMUNE,
@@ -253,7 +270,7 @@ struct Role roles[] = {
 	{  13,  7, 14,  8, 10, 17 },
 	{  30, 15, 15, 10, 20, 10 },
 	/* Init   Lower  Higher */
-	{ 14, 0,  0, 8,  0, 2 },	/* Hit points */
+	{ 14, 0,  0,10,  1, 2 },	/* Hit points */
 	{  1, 4,  1, 2,  0, 3 },10,	/* Energy */
 	10, 8,-2, 0,  9, A_WIS, SPE_TURN_UNDEAD, -1000
 },
@@ -268,6 +285,7 @@ struct Role roles[] = {
 	{"Student of Fire",   0},
 	{"Master",            0} },
 	GOD_PRINCE_NEZHA, GOD_LAOZI, GOD_THE_HUNSHI_SIHOU, /* Chinese */
+	GOD_HUNDUN,
 	"Mon", "the Monastery of Chan-Sune",
 	  "the Monastery of the Earth-Lord",
 	PM_MONK, NON_PM, NON_PM,
@@ -280,8 +298,8 @@ struct Role roles[] = {
 	{  10,  7,  8,  8,  7,  7 },
 	{  25, 10, 20, 20, 15, 10 },
 	/* Init   Lower  Higher */
-	{  8, 0,  0, 8,  1, 0 },	/* Hit points */
-	{  8, 0,  0, 2,  0, 2 },10,	/* Energy */
+	{  8, 0,  0, 8,  0, 8 },	/* Hit points */
+	{  8, 0,  0, 2,  0, 4 },10,	/* Energy */
 	10, 8,-2, 2, 20, A_WIS, SPE_RESTORE_ABILITY, -24
 },
 {	{"Madman", "Madwoman"}, {
@@ -295,6 +313,7 @@ struct Role roles[] = {
 	{"Augur",    0},
 	{"Seer",  0} },
 	GOD_ZO_KALAR, GOD_LOBON, GOD_TAMASH,	/* Dreamlands */
+	GOD_GURATHNAKA,
 	"Mad", "Archer Asylum", "the ground floor",
 	PM_MADMAN, PM_MADWOMAN, NON_PM,
 	PM_CASSILDA_THE_IRON_MAIDEN, PM_PATIENT, PM_DOCTOR_ARCHER,
@@ -324,6 +343,7 @@ struct Role roles[] = {
 	{"Domn",	     0},
 	{"Domnitor",     0} },
 	GOD_GOD_THE_FATHER, GOD_MOTHER_EARTH, GOD_THE_SATAN, /* Romanian, sorta */
+	GOD_THE_SATAN,
 	"Nob", "your ancestral home",
 	  "the rebel village",
 	PM_NOBLEMAN, PM_NOBLEWOMAN, PM_PONY,
@@ -336,7 +356,7 @@ struct Role roles[] = {
 	{   10,10,  7, 10,  7,  7 },
 	{  20, 18, 10, 20, 15, 17 },
 	/* Init   Lower  Higher */
-	{ 10, 0,  0, 8,  1, 0 },	/* Hit points */
+	{ 10, 0,  0,10,  0, 2 },	/* Hit points */
 	{  2, 2,  0, 2,  0, 2 },10,	/* Energy */
 	10, 4,-4, 4, 8, A_INT, SPE_PROTECTION, -1000
 },
@@ -351,6 +371,7 @@ struct Role roles[] = {
 	{"Patriarch",   "Matriarch"},
 	{"High Priest", "High Priestess"} },
 	0, 0, 0,	/* chosen randomly from among the other roles */
+	0,
 	"Pri", "the Great Temple", "the Temple of the Legion",
 	PM_PRIEST, PM_PRIESTESS, NON_PM,
 	PM_ARCH_PRIEST, PM_ACOLYTE, PM_LEGION,
@@ -362,7 +383,7 @@ struct Role roles[] = {
 	{   7,  7, 10,  7,  7,  7 },
 	{  15, 10, 30, 15, 20, 10 },
 	/* Init   Lower  Higher */
-	{ 12, 0,  0, 8,  1, 0 },	/* Hit points */
+	{ 12, 0,  1, 6,  0, 3 },	/* Hit points */
 	{  4, 3,  2, 4,  0, 4 },10,	/* Energy */
 	0, 3,-2, 1, 10, A_WIS, SPE_REMOVE_CURSE,    -7
 },
@@ -377,18 +398,19 @@ struct Role roles[] = {
 	{"Pirate Lord",   	0},
 	{"Dread Pirate",  	0} },
 	GOD_THE_LORD, GOD_THE_DEEP_BLUE_SEA, GOD_THE_DEVIL,	/* Christian, sorta */
+	GOD_THE_DEVIL,
 	"Pir", "Tortuga", "Shipwreck Island",
 	PM_PIRATE, NON_PM, NON_PM,
 	PM_MAYOR_CUMMERBUND, PM_PIRATE_BROTHER, PM_BLACKBEARD_S_GHOST,
 	PM_SKELETAL_PIRATE, PM_SOLDIER, S_RODENT, S_ELEMENTAL, /* Ghost pirates, soldiers, rats in the food stores, and the occasional storm*/
 	ART_TREASURY_OF_PROTEUS,
-	MA_HUMAN|MA_ELF|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ELF|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_CHAOTIC|ROLE_NEUTRAL,
 	/* Str Int Wis Dex Con Cha */
 	{  10,  7, 7,  10, 10,  7 },
 	{  22, 15, 10, 22, 20, 10 },
 	/* Init   Lower  Higher */
-	{ 20, 0,  0, 6,  0, 2 },	/* Hit points (10 +d8 for 11 levels comes up a bit over 20 +d6 for 11 levels) */
+	{ 30, 0,  0, 6,  0, 3 },	/* Hit points (10 +d10 for 11 levels comes up a bit over 30 +d6 for 11 levels) */
 	{  1, 0,  0, 1,  0, 0 },12,	/* Energy */
 	10, 8, 0, 2,  9, A_INT, SPE_CAUSE_FEAR,    -1000
 },
@@ -405,18 +427,19 @@ struct Role roles[] = {
 	{"Magsman",     "Magswoman"},
 	{"Thief",       0} },
 	GOD_ISSEK, GOD_MOG, GOD_KOS, /* Nehwon */
+	GOD_EARTH_GOD,
 	"Rog", "the Thieves' Guild Hall", "the Assassins' Guild Hall",
 	PM_ROGUE, NON_PM, NON_PM,
 	PM_MASTER_OF_THIEVES, PM_THUG, PM_MASTER_ASSASSIN,
 	PM_LEPRECHAUN, PM_GUARDIAN_NAGA, S_NYMPH, S_NAGA,
 	ART_MASTER_KEY_OF_THIEVERY,
-	MA_HUMAN|MA_ORC|MA_VAMPIRE|MA_ELF|MA_DRAGON|MA_ANIMAL|MA_REPTILIAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ORC|MA_VAMPIRE|MA_ELF|MA_DRAGON|MA_ANIMAL|MA_REPTILIAN|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{   7,  7,  7, 10,  7,  6 },
 	{  20, 10, 10, 30, 20, 10 },
 	/* Init   Lower  Higher */
-	{ 10, 0,  0, 6,  1, 0 },	/* Hit points */
+	{ 10, 0,  0, 8,  0, 2 },	/* Hit points */
 	{  1, 0,  0, 1,  0, 1 },11,	/* Energy */
 	10, 8, 0, 1,  9, A_INT, SPE_DETECT_TREASURE, -1000
 },
@@ -431,6 +454,7 @@ struct Role roles[] = {
 	{"Sharpshooter",  0},
 	{"Marksman",      "Markswoman"} },
 	GOD_APOLLO, GOD_LATONA, GOD_DIANA, /* Roman */
+	GOD_PYTHON_DELPYNE,
 	"Ran", "Orion's camp", "the cave of the wumpus",
 	PM_RANGER, NON_PM, PM_LITTLE_DOG /* Orion & canis major */,
 	PM_ORION, PM_HUNTER, PM_SCORPIUS,
@@ -442,7 +466,7 @@ struct Role roles[] = {
 	{  13, 13, 13,  9, 13,  7 },
 	{  30, 10, 10, 20, 20, 10 },
 	/* Init   Lower  Higher */
-	{ 13, 0,  0, 6,  1, 0 },	/* Hit points */
+	{ 13, 0,  0, 8,  0, 2 },	/* Hit points */
 	{  1, 0,  1, 0,  1, 0 },12,	/* Energy */
 	10, 9, 2, 1, 10, A_INT, SPE_INVISIBILITY,   -1000
 },
@@ -457,6 +481,7 @@ struct Role roles[] = {
 	{"Kuge",        0},  /* Noble of the Court */
 	{"Shogun",      0} },/* supreme commander, warlord */
 	GOD_AMATERASU_OMIKAMI, GOD_RAIJIN, GOD_SUSANOWO, /* Japanese */
+	GOD_MAO,
 	"Sam", "the Castle of the Taro Clan", "the Shogun's Castle",
 	PM_SAMURAI, NON_PM, PM_LITTLE_DOG,
 	PM_LORD_SATO, PM_ROSHI, PM_ASHIKAGA_TAKAUJI,
@@ -467,7 +492,7 @@ struct Role roles[] = {
 	{  10,  8,  7, 10, 17,  6 },
 	{  30, 10,  8, 30, 14,  8 },
 	/* Init   Lower  Higher */
-	{ 13, 0,  0, 8,  1, 0 },	/* Hit points */
+	{ 13, 0,  1, 8,  0, 2 },	/* Hit points */
 	{  1, 0,  0, 1,  0, 1 },11,	/* Energy */
 	10, 10, 0, 0,  8, A_INT, SPE_CLAIRVOYANCE,    -10
 },
@@ -482,6 +507,7 @@ struct Role roles[] = {
 	{"Explorer",    0},
 	{"Adventurer",  0} },
 	GOD_BLIND_IO, GOD_THE_LADY, GOD_OFFLER, /* Discworld */
+	GOD_BEL_SHAMHAROTH,
 	"Tou", "Ankh-Morpork", "the Thieves' Guild Hall",
 	PM_TOURIST, NON_PM, NON_PM,
 	PM_TWOFLOWER, PM_GUIDE, PM_MASTER_OF_THIEVES,
@@ -492,7 +518,7 @@ struct Role roles[] = {
 	{   7, 10,  6,  7,  7, 10 },
 	{  15, 10, 10, 15, 30, 20 },
 	/* Init   Lower  Higher */
-	{  8, 0,  0, 8,  0, 0 },	/* Hit points */
+	{  8, 0,  0, 8,  0, 2 },	/* Hit points */
 	{  1, 0,  0, 1,  0, 1 },14,	/* Energy */
 	0, 5, 1, 2, 10, A_INT, SPE_CHARM_MONSTER,   -15
 },
@@ -507,12 +533,13 @@ struct Role roles[] = {
 	{"Bard",        0},
 	{"Master Bard", 0} },
 	GOD_APOLLON, GOD_PAN, GOD_DIONYSUS, /* Thracian? */
+	GOD_HADES,
 	"Brd", "the Conservatorium", "the Island of Anthemoessa",
 	PM_BARD, NON_PM, NON_PM,
 	PM_PINDAR, PM_RHYMER, PM_AGLAOPE,
 	PM_SNAKE, PM_WHITE_UNICORN, S_SNAKE, S_UNICORN,
 	ART_LYRE_OF_ORPHEUS,
-	MA_HUMAN|MA_ELF|MA_GNOME|MA_ORC|MA_CLOCK|MA_DRAGON|MA_FEY|MA_VAMPIRE|MA_PLANT, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ELF|MA_GNOME|MA_ORC|MA_CLOCK|MA_DRAGON|MA_FEY|MA_VAMPIRE|MA_PLANT|MA_DEMIHUMAN, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_NEUTRAL|ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{   7,  7,  7, 10,  6, 10 },
@@ -521,6 +548,33 @@ struct Role roles[] = {
 	{ 11, 0,  0, 4,  1, 0 },	/* Hit points */
 	{  4, 3,  1, 2,  0, 3 },10,	/* Energy */
 	10, 3,-3, 2, 9, A_INT, SPE_CREATE_MONSTER, -24
+},
+{	{"Undead Hunter", 0}, {
+	{"Assistant",   0},
+	{"Berner",      0},
+	{"Beater",      0},
+	{"Inhumer",     0},
+	{"Hunter",      0},
+	{"Eliminator",  0},
+	{"Exterminator",0},
+	{"Vindicator",  0},
+	{"Old Hunter",  0} },
+	GOD_THE_COLLEGE, GOD_THE_CHOIR, GOD_DEFILEMENT, /* Bloodborne-ish */
+	GOD_DEFILEMENT,
+	"Hnt", "the Cathedral", "the Haunted Forest",
+	PM_UNDEAD_HUNTER, NON_PM, NON_PM,
+	PM_VICAR_AMALIA, PM_VERGER, PM_INDEX_WOLF,
+	PM_HUMAN_WEREWOLF, PM_MIST_WOLF, S_DOG, S_VORTEX,
+	ART_STAKE_OF_WITHERING,
+	MA_HUMAN|MA_VAMPIRE|MA_ORC|MA_FEY, ROLE_MALE|ROLE_FEMALE |
+	  ROLE_LAWFUL|ROLE_NEUTRAL|ROLE_CHAOTIC,
+	/* Str Int Wis Dex Con Cha */
+	{   7, 10, 10,  7,  7,  7 },
+	{  18, 10, 10, 24, 18, 10 },
+	/* Init   Lower  Higher */
+	{ 14, 0,  0,10,  0, 2 },	/* Hit points */
+	{  1, 3,  1, 2,  0, 6 },14,	/* Energy */
+	0, 10, -10, 10, 10, A_INT, SPE_FIREBALL,   -19
 },
 {	{"Valkyrie", 0}, {
 	{"Stripling",   0},
@@ -533,6 +587,7 @@ struct Role roles[] = {
 	{"Champion",    0},
 	{"Lord",        "Lady"} },
 	GOD_TYR, GOD_ODIN, GOD_LOKI, /* Norse */
+	GOD_HEL,
 	"Val", "the Shrine of Destiny", "the cave of Surtur",
 	PM_VALKYRIE, NON_PM, NON_PM /*PM_WINTER_WOLF_CUB*/,
 	PM_NORN, PM_WARRIOR, PM_LORD_SURTUR,
@@ -543,7 +598,7 @@ struct Role roles[] = {
 	{  12,  10, 12, 10, 10, 12 },
 	{  18,  14, 16, 18, 20, 14 },
 	/* Init   Lower  Higher */
-	{ 14, 0,  0, 8,  0, 2 },	/* Hit points */
+	{ 14, 0,  1,10,  1, 2 },	/* Hit points */
 	{  1, 0,  2, 2,  0, 2 },10,	/* Energy */
 	0, 10,-2, 0,  9, A_WIS, SPE_CONE_OF_COLD,    -1000 /*Valks CAN ALWAYS cast Cone of Cold*/
 },
@@ -558,12 +613,13 @@ struct Role roles[] = {
 	{"Wizard",      0},
 	{"Archmage",        0} },
 	GOD_PTAH, GOD_THOTH, GOD_ANHUR, /* Egyptian */
+	GOD_APEP,
 	"Wiz", "the Lonely Tower", "the Tower of Darkness",
 	PM_WIZARD, NON_PM, PM_KITTEN,
 	PM_NEFERET_THE_GREEN, PM_APPRENTICE, PM_DARK_ONE,
 	PM_VAMPIRE_BAT, PM_XORN, S_BAT, S_WRAITH,
 	ART_EYE_OF_THE_AETHIOPICA,
-	MA_HUMAN|MA_ELF|MA_GNOME|MA_ORC|MA_VAMPIRE|MA_DRAGON|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
+	MA_HUMAN|MA_ELF|MA_GNOME|MA_ORC|MA_VAMPIRE|MA_DRAGON|MA_REPTILIAN|MA_ETHEREAL|MA_PLANT|MA_DEMIHUMAN|MA_AQUATIC, ROLE_MALE|ROLE_FEMALE |
 	  ROLE_NEUTRAL|ROLE_CHAOTIC,
 	/* Str Int Wis Dex Con Cha */
 	{   7, 10,  7,  7,  7,  7 },
@@ -589,6 +645,7 @@ const struct Role WtWrole = {
 	{"",   0},
 	{"",     0} },
 	0, 0, 0, /* Determined by Mask */
+	0,
 	"", "", "", /* Determined by Mask */
 	PM_WORM_THAT_WALKS, NON_PM, NON_PM,
 	NON_PM, NON_PM, NON_PM, /* Determined by Mask */
@@ -695,7 +752,7 @@ struct RoleName FemHDNobRanks[9] = {
 struct Role urole =
 {	{"Undefined", 0}, { {0, 0}, {0, 0}, {0, 0},
 	{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0} },
-	GOD_NONE, GOD_NONE, GOD_NONE, "Xxx", "home", "locate",
+	GOD_NONE, GOD_NONE, GOD_NONE, GOD_NONE, "Xxx", "home", "locate",
 	NON_PM, NON_PM, NON_PM, NON_PM, NON_PM, NON_PM,
 	NON_PM, NON_PM, 0, 0, 0, 0, 0,
 	/* Str Int Wis Dex Con Cha */
@@ -721,7 +778,7 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{ STR18(100), 18, 18, 18, 18, 18 },
 	/* Init   Lower  Higher */
-	{  2, 0,  0, 2,  1, 0 },	/* Hit points */
+	{  2, 0,  0, 4,  1, 0 },	/* Hit points */
 	{  1, 0,  2, 0,  2, 0 },		/* Energy */
 	NORMALNIGHTVIS,
 	SPE_ABJURATION, -20
@@ -749,7 +806,7 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{ STR19(20),  16, 16, 20, 14, 16 },
 	/* Init   Lower  Higher */
-	{  5, 0,  1, 3,  1, 2 },	/* Hit points */
+	{  5, 0,  1, 6,  1, 2 },	/* Hit points */
 	{  0, 0,  0, 0,  0, 0 },	/* Energy */
 	NORMALNIGHTVIS,
 	SPE_MAGIC_MAPPING, -15
@@ -763,7 +820,7 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{ STR18(100), 16, 16, 20, 20, 16 },
 	/* Init   Lower  Higher */
-	{  4, 0,  0, 3,  2, 0 },	/* Hit points */
+	{  4, 0,  1, 3,  2, 0 },	/* Hit points */
 	{  0, 0,  0, 0,  0, 0 },	/* Energy */
 	NORMALNIGHTVIS,
 	SPE_DIG, -15
@@ -777,8 +834,8 @@ const struct Race races[] = {
 	{    3,     3,  3,  3,  3,  3 },
 	{   18,    20, 18, 20, 16, 20 },
 	/* Init   Lower  Higher */
-	{  8, 0,  0, 4,  1, 0 },	/* Hit points */
-	{  8, 0,  0, 4,  0, 4 },	/* Energy */
+	{  8, 0,  0, 8,  1, 0 },	/* Hit points */
+	{  8, 0,  0, 8,  0, 4 },	/* Energy */
 	NO_NIGHTVISION,
 	SPE_SLEEP, -5
 },
@@ -791,7 +848,7 @@ const struct Race races[] = {
 	{    3,     3,  3,  3,  3,  3 },
 	{   18,    20, 20, 20, 16, 18 },
 	/* Init   Lower  Higher */
-	{   7, 0,  3, 0,  1, 0 },	/* Hit points */
+	{   7, 0,  3, 0,  0, 3 },	/* Hit points */
 	{   7, 0,  3, 0,  3, 0 },	/* Energy */
 	NIGHTVISION3,
 	SPE_REMOVE_CURSE, -10
@@ -819,7 +876,7 @@ const struct Race races[] = {
 	{    3,     3,  3,  3,  3,  3 },
 	{STR18(50),19, 18, 18, 18, 18 },
 	/* Init   Lower  Higher */
-	{  1, 0,  0, 1,  0, 0 },	/* Hit points */
+	{  1, 0,  0, 0,  0, 6 },	/* Hit points */
 	{ 12, 0,  4, 0,  2, 2 },	/* Energy */
 	NIGHTVISION2,
 	SPE_INVISIBILITY, -10
@@ -833,7 +890,7 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{ STR19(25),  20, 20, 10, 20, 20 },
 	/* Init   Lower  Higher */
-	{  4, 0,  0, 4,  2, 0 },	/* Hit points */
+	{  4, 0,  1, 4,  2, 0 },	/* Hit points */
 	{  4, 0,  0, 4,  2, 0 },	/* Energy */
 	NORMALNIGHTVIS,
 	SPE_DETECT_TREASURE, -10
@@ -848,10 +905,24 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{ STR18(100), 18, 18, 18, 18, 18 },
 	/* Init   Lower  Higher */
-	{  2, 0,  0, 2,  0, 1 },	/* Hit points */
+	{  2, 0,  1, 2,  0, 1 },	/* Hit points */
 	{  0, 0,  100, 0, 100, 0 },		/* Energy */
 	NORMALNIGHTVIS
 	//Note: Bonus to all spells.
+},
+{	"leprechaun", "leprechaunic", "leprechaundum", "Lep",
+	{0, 0},
+	PM_LEPRECHAUN, NON_PM, PM_HUMAN_MUMMY, PM_LEPRECHAUN,
+	ROLE_MALE|ROLE_FEMALE | ROLE_CHAOTIC,
+	MA_DEMIHUMAN, 0, MA_GNOME|MA_DWARF,
+	/*    Str     Int Wis Dex Con Cha */
+	{      3,      3,  3,  3,  3,  3 },
+	{ 18,  18, 18, 25, 18, 20 },
+	/* Init   Lower  Higher */
+	{   7, 0,  3, 0,  1, 0 },	/* Hit points */
+	{  2, 0,  2, 0,  2, 0 },	/* Energy */
+	NIGHTVISION2, 
+	SPE_DETECT_TREASURE, -10
 },
 {	"orc", "orcish", "orcdom", "Orc",
 	{0, 0},
@@ -862,7 +933,7 @@ const struct Race races[] = {
 	{   3,      3,  3,  3,  3,  3 },
 	{   18 ,   16, 16, 18, 18, 16 },
 	/* Init   Lower  Higher */
-	{  1, 0,  0, 1,  0, 3 },	/* Hit points */
+	{  1, 0,  0, 1,  0, 8 },	/* Hit points */
 	{  1, 0,  1, 0,  1, 0 },	/* Energy */
 	NIGHTVISION2,
 	SPE_CANCELLATION, -15
@@ -904,7 +975,7 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{ STR19(19), 18, 18, 20, 20, 20 },
 	/* Init   Lower  Higher */
-	{  3, 0,  0, 3,  2, 0 },	/* Hit points */
+	{  3, 0,  0, 4,  2, 0 },	/* Hit points */
 	{  3, 0,  4, 0,  4, 0 },	/* Energy */
 	NORMALNIGHTVIS,
 	SPE_DRAIN_LIFE, -5
@@ -918,7 +989,7 @@ const struct Race races[] = {
 	{      3,      3,  3,  3,  3,  3 },
 	{     16,     18, 18, 20, 16, 20 },
 	/* Init   Lower  Higher */
-	{  2, 0,  1, 1,  0, 1 },	/* Hit points */
+	{  2, 0,  1, 2,  0, 1 },	/* Hit points */
 	{  2, 0,  3, 0,  3, 0 },	/* Energy */
 	NORMALNIGHTVIS,
 	SPE_CHARM_MONSTER, -15
@@ -1048,6 +1119,7 @@ const struct Species species[] = {
 	{"spruce", ENT_SPRUCE, ENT_SPECIES},
 	{"willow", ENT_WILLOW, ENT_SPECIES},
 	{"yew", ENT_YEW, ENT_SPECIES},
+	{"yggdrasil", ENT_YGGDRASIL, ENT_SPECIES},
 	{"white", AD_COLD, DRAGON_SPECIES},
 	{"red", AD_FIRE, DRAGON_SPECIES},
 	{"orange", AD_SLEE, DRAGON_SPECIES},
@@ -1332,7 +1404,12 @@ validspecies(int rolenum, int racenum, int gendnum, int speciesnum)
 	if (speciesnum < 0 || speciesnum >= ROLE_SPECIES)
 		return FALSE; 
 	if(races[racenum].malenum == PM_ENT){
-		return species[speciesnum].type == ENT_SPECIES;
+		if(species[speciesnum].type == ENT_SPECIES){
+			if(roles[rolenum].malenum == PM_ANACHRONONAUT)
+				return species[speciesnum].value == ENT_YGGDRASIL;
+			return species[speciesnum].value != ENT_YGGDRASIL;
+		}
+		return FALSE;
 	} else if(races[racenum].malenum == PM_HALF_DRAGON){
 		if(species[speciesnum].type != DRAGON_SPECIES)
 			return FALSE;	
@@ -1377,7 +1454,6 @@ validdescendant(int rolenum)
 			|| roles[rolenum].malenum == PM_ANACHRONOUNBINDER
 		));
 }
-
 
 int
 randspecies(int rolenum, int racenum, int gendnum)
@@ -2122,7 +2198,8 @@ role_init(int newgame)
 	/* Fix up the god names */
 	if (flags.pantheon == -1) {		/* new game */
 	    flags.pantheon = flags.initrole;	/* use own gods */
-	    while (!roles[flags.pantheon].lgod 	/* unless they're missing */
+	    while ((!roles[flags.pantheon].lgod || 	/* unless they're missing */
+					(!Role_if(PM_UNDEAD_HUNTER) && philosophy_index(roles[flags.pantheon].lgod)))
 			&& !(Race_if(PM_DROW) && !Role_if(PM_ANACHRONONAUT))
 			&& !(Race_if(PM_ELF) && !Role_if(PM_ANACHRONONAUT))
 			&& !Role_if(PM_EXILE)
@@ -2130,14 +2207,20 @@ role_init(int newgame)
 	    flags.panLgod = flags.pantheon;
 	    flags.panNgod = flags.pantheon;
 	    flags.panCgod = flags.pantheon;
+	    flags.panVgod = flags.pantheon;
 		if(Role_if(PM_EXILE)){
 			do{
-				do flags.panLgod = randrole(AM_LAWFUL); while (!roles[flags.panLgod].lgod);
-				do flags.panNgod = randrole(AM_NEUTRAL); while (!roles[flags.panNgod].ngod);
-				do flags.panCgod = randrole(AM_CHAOTIC); while (!roles[flags.panCgod].cgod);
-			} while(flags.panLgod == flags.panNgod ||
-					flags.panLgod == flags.panCgod ||
-					flags.panNgod == flags.panCgod );
+				do flags.panLgod = randrole(AM_LAWFUL); while (!roles[flags.panLgod].lgod || philosophy_index(roles[flags.panLgod].lgod));
+				do flags.panNgod = randrole(AM_NEUTRAL); while (!roles[flags.panNgod].ngod || philosophy_index(roles[flags.panNgod].ngod));
+				do flags.panCgod = randrole(AM_CHAOTIC); while (!roles[flags.panCgod].cgod || philosophy_index(roles[flags.panCgod].cgod));
+				do flags.panVgod = randrole(0); while (!roles[flags.panVgod].vgod || philosophy_index(roles[flags.panVgod].vgod));
+			} while(flags.panLgod == flags.panNgod
+					|| flags.panLgod == flags.panCgod
+					|| flags.panNgod == flags.panCgod
+					|| flags.panLgod == flags.panVgod 
+					|| flags.panNgod == flags.panVgod 
+					|| flags.panCgod == flags.panVgod 
+					);
 		}
 	}
 	if((Pantheon_if(PM_NOBLEMAN) || Role_if(PM_NOBLEMAN)) && Race_if(PM_VAMPIRE))
@@ -2147,6 +2230,7 @@ role_init(int newgame)
 		urole.lgod = roles[flags.panLgod].lgod;
 		urole.ngod = roles[flags.panNgod].ngod;
 		urole.cgod = roles[flags.panCgod].cgod;
+		urole.vgod = roles[flags.panVgod].vgod;
 		if(roles[flags.panLgod].guardnum){
 			mons[roles[flags.panLgod].guardnum].mflagst &= ~(MT_CLOSE|MT_PEACEFUL);
 			mons[roles[flags.panLgod].guardnum].mflagst |= MT_HOSTILE;
@@ -2181,6 +2265,7 @@ role_init(int newgame)
 				urole.lgod = GOD_VER_TAS;
 				urole.ngod = GOD_KIARANSALI;
 				urole.cgod = GOD_LOLTH;
+				urole.vgod = GOD_KIARANSALI;
 				
 				urole.homebase = "your house";
 				urole.intermed = "DRA-MUR-SHOU";
@@ -2199,6 +2284,7 @@ role_init(int newgame)
 				urole.lgod = GOD_EILISTRAEE;
 				urole.ngod = GOD_KIARANSALI;
 				urole.cgod = GOD_LOLTH;
+				urole.vgod = GOD_KIARANSALI;
 				if(Role_if(PM_PRIEST)){
 					urole.spelspec = DrowPriestessFavoredSpell;
 					urole.spelsbon = DrowPriestessFavoredBonus;
@@ -2239,6 +2325,7 @@ role_init(int newgame)
 				urole.lgod = GOD_VER_TAS;
 				urole.ngod = GOD_KEPTOLO;
 				urole.cgod = GOD_GHAUNADAUR;
+				urole.vgod = GOD_KIARANSALI;
 				
 				urole.homebase = "your house";
 				urole.intermed = "Eryndlyn";
@@ -2257,6 +2344,7 @@ role_init(int newgame)
 				urole.lgod = GOD_EDDERGUD;
 				urole.ngod = GOD_VHAERAUN;
 				urole.cgod = GOD_LOLTH;
+				urole.vgod = GOD_KIARANSALI;
 				
 				if(flags.stag == 0){
 					urole.homebase = "Menzoberranzan";
@@ -2292,6 +2380,7 @@ role_init(int newgame)
 		urole.lgod = GOD_ILMATER;
 		urole.ngod = GOD_PEN_A;
 		urole.cgod = GOD_GHAUNADAUR;
+		urole.vgod = GOD_KIARANSALI;
 
 		urole.homebase = "Ceiling District";/*Menzoberranzan*/
 		urole.intermed = "Floor District";
@@ -2331,15 +2420,18 @@ role_init(int newgame)
 			urole.lgod = GOD_OROME;
 			urole.ngod = GOD_YAVANNA;
 			urole.cgod = GOD_TULKAS;
+			urole.vgod = GOD_MELKOR_MORGOTH;
 		} else {
 			if(flags.initgend){ /*true = female*/
 				urole.lgod = GOD_VARDA_ELENTARI;
 				urole.ngod = GOD_MANDOS;
 				urole.cgod = GOD_NESSA;
+				urole.vgod = GOD_MELKOR_MORGOTH;
 			} else {
 				urole.lgod = GOD_MANWE_SULIMO;
 				urole.ngod = GOD_YAVANNA;
 				urole.cgod = GOD_LORIEN;
+				urole.vgod = GOD_MELKOR_MORGOTH;
 			}
 		}
 		
@@ -2371,10 +2463,12 @@ role_init(int newgame)
 			urole.lgod = GOD_VARDA_ELENTARI;
 			urole.ngod = GOD_MANDOS;
 			urole.cgod = GOD_NESSA;
+			urole.vgod = GOD_MELKOR_MORGOTH;
 		} else {
 			urole.lgod = GOD_MANWE_SULIMO;
 			urole.ngod = GOD_YAVANNA;
 			urole.cgod = GOD_LORIEN;
+			urole.vgod = GOD_MELKOR_MORGOTH;
 		}
 		urole.enemy1num = PM_ELF;
 		urole.enemy2num = PM_ORC_SHAMAN;
@@ -2425,6 +2519,7 @@ role_init(int newgame)
 		urole.lgod = GOD_MAHAL;
 		urole.ngod = GOD_HOLASHNER;
 		urole.cgod = GOD_ARMOK;
+		urole.cgod = GOD_ABBATHOR;
 		
 		urole.enemy1num = PM_HILL_ORC;
 		urole.enemy2num = PM_ORC_SHAMAN;
@@ -2466,6 +2561,7 @@ role_init(int newgame)
 		urole.lgod = GOD_KURTULMAK;
 		urole.ngod = GOD_GARL_GLITTERGOLD;
 		urole.cgod = GOD_URDLEN;
+		urole.vgod = GOD_URDLEN;
 		
 		urole.enemy1num = PM_KOBOLD;
 		urole.enemy2num = PM_LARGE_KOBOLD;
@@ -2508,6 +2604,7 @@ role_init(int newgame)
 			urole.lgod = GOD_GWYN__LORD_OF_SUNLIGHT;
 			urole.ngod = GOD_GWYNEVERE__PRINCESS_OF_SUN;
 			urole.cgod = GOD_DARK_SUN_GWYNDOLIN;
+			urole.vgod = GOD_MANUS__FATHER_OF_THE_ABYSS;
 			
 			urole.rank[0] = FemHDNobRanks[0];
 			urole.rank[1] = FemHDNobRanks[1];
@@ -2603,8 +2700,7 @@ role_init(int newgame)
 		//Drow noble nemesis is regular monster for anachrononauts
 		mons[PM_ELDER_BRAIN].msound = MS_SILENT;
 		mons[PM_ELDER_BRAIN].geno &= ~G_UNIQ;
-		if (flags.questprogress && Role_if(PM_ANACHRONONAUT))
-			urole.lgod = GOD_ILSENSINE;
+		urole.lgod = GOD_ILSENSINE;
 	}
 
 	if(!Role_if(PM_CAVEMAN)){
@@ -2630,8 +2726,9 @@ role_init(int newgame)
 	// }
 	
 	/* Fix up the unknown firearms descriptions */
-	if(Role_if(PM_PIRATE) || Role_if(PM_ANACHRONONAUT)){
+	if(Role_if(PM_PIRATE) || Role_if(PM_ANACHRONONAUT) || Role_if(PM_UNDEAD_HUNTER)){
 		COPY_OBJ_DESCR(objects[FLINTLOCK], objects[HANDGUN]);
+		COPY_OBJ_DESCR(objects[EVELYN], objects[HANDGUN]);
 		COPY_OBJ_DESCR(objects[PISTOL], objects[HANDGUN]);
 		
 		COPY_OBJ_DESCR(objects[RIFLE], objects[LONG_GUN]);
@@ -2720,7 +2817,7 @@ add_imp_record(long prop)
 void
 give_quest_trophy(void)
 {
-	if(urole.neminum == PM_MINION_OF_HUHETOTL)
+	if(urole.neminum == PM_MINION_OF_TEZCATLIPOCA)
 		achieve.trophies |= ARC_QUEST;
 	else if(urole.neminum == PM_CHROMATIC_DRAGON)
 		achieve.trophies |= CAV_QUEST;
@@ -2764,6 +2861,8 @@ give_quest_trophy(void)
 		achieve.trophies |= MAD_QUEST;
 	else if(urole.neminum == PM_MASTER_KAEN)
 		achieve.trophies |= MONK_QUEST;
+	else if(urole.neminum == PM_INDEX_WOLF)
+		achieve.trophies |= UH_QUEST;
 	else if(urole.neminum == PM_CYCLOPS)
 		achieve.trophies |= HEA_QUEST;
 	else if(urole.neminum == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH)
@@ -2780,6 +2879,8 @@ give_ascension_trophy(void)
 		achieve.trophies |= ANA_ASC;
 	else if(Role_if(PM_EXILE))
 		achieve.trophies |= BIN_ASC;
+	else if(Role_if(PM_UNDEAD_HUNTER) && quest_status.moon_close && philosophy_index(u.ualign.god))
+		achieve.trophies |= UH_ASC;
 		
 	if(Race_if(PM_CLOCKWORK_AUTOMATON))
 		achieve.trophies |= CLOCK_ASC;
@@ -2789,8 +2890,9 @@ give_ascension_trophy(void)
 		achieve.trophies |= HALF_ASC;
 	else if(Race_if(PM_YUKI_ONNA))
 		achieve.trophies |= YUKI_ASC;
-	if(Race_if(PM_SALAMANDER) || Race_if(PM_ETHEREALOID) || Race_if(PM_ENT) || Race_if(PM_OCTOPODE))
+        if(Race_if(PM_SALAMANDER) || Race_if(PM_ETHEREALOID) || Race_if(PM_ENT) || Race_if(PM_LEPRECHAUN) || Race_if(PM_OCTOPODE))
 		achieve.new_races = 1;
+
 	int i;
 	int keys = 0;
 	for(i = 0; i<9; i++){

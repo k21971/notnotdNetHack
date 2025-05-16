@@ -5,6 +5,7 @@
 #define NEED_VARARGS /* Uses ... */	/* comment line for pre-compiled headers */
 #include <math.h>
 #include "hack.h"
+#include "hashmap.h"
 
 static boolean no_repeat = FALSE;
 
@@ -625,6 +626,7 @@ ustatusline(void)
 	}
 	if (Stoned)		Strcat(info, ", solidifying");
 	if (Golded)		Strcat(info, ", aurelifying");
+	if (Golded)		Strcat(info, ", salifying");
 	if (Slimed)		Strcat(info, ", becoming slimy");
 	if (BloodDrown)		Strcat(info, ", drowning");
 	if (FrozenAir)		Strcat(info, ", can't breath");

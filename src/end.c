@@ -64,9 +64,9 @@ static boolean should_query_disclose_option(int,char *);
 static const char *deaths[] = {		/* the array of death */
 	"died", "betrayed", "choked", "poisoned", "starvation", "drowning", /*5*/
 	"burning", "dissolving under the heat and pressure",
-	"crushed", "turned to stone", "turned to gold", "turned to glass", "turned into slime",
+	"crushed", "turned to stone", "turned to gold", "turned to salt", "turned to glass", "turned into slime",
 	"exploded after being overwound", "turned into a weeping angel", "disintegrated",
-	"genocided",
+	"genocided", "world ended",
 	"panic", "trickery",
 	"quit", "escaped", "ascended"
 };
@@ -74,9 +74,9 @@ static const char *deaths[] = {		/* the array of death */
 static const char *ends[] = {		/* "when you..." */
 	"died", "were betrayed", "choked", "were poisoned", "starved", "drowned",
 	"burned", "dissolved in the lava",
-	"were crushed", "turned to stone", "turned to gold", "turned to glass", "turned into slime",
+	"were crushed", "turned to stone", "turned to gold", "turned to salt", "turned to glass", "turned into slime",
 	"were overwound and exploded", "turned into a weeping angel", "were disintegrated",
-	"were genocided",
+	"were genocided", "world ended",
 	"panicked", "were tricked",
 	"quit", "escaped", "ascended"
 };
@@ -282,8 +282,6 @@ done2(void)
 {
 	if (iflags.debug_fuzzer)
 		return MOVE_CANCELLED;
-	char buf[BUFSZ];
-
 	if (yesno("Really quit?", iflags.paranoid_quit) != 'y') {
 #ifndef NO_SIGNAL
 		(void) signal(SIGINT, (SIG_RET_TYPE) done1);
@@ -459,6 +457,11 @@ done_in_by(register struct monst *mtmp)
 	if (u.ugrave_arise >= LOW_PM &&
 				(mvitals[u.ugrave_arise].mvflags & G_GENOD && !In_quest(&u.uz)))
 		u.ugrave_arise = NON_PM;
+	if (!u.uconduct.killer){
+		//Pcifist PCs aren't combatants so if something kills them up "killed peaceful" type impurities
+		IMPURITY_UP(u.uimp_murder)
+		IMPURITY_UP(u.uimp_bloodlust)
+	}
 	if (touch_petrifies(mtmp->data))
 		done(STONING);
 	else if (mtmp->mtraitor)
@@ -639,6 +642,7 @@ savelife(int how)
 		HStrangled &= ~TIMEOUT;
 		delayed_killer = 0;
 	}
+	make_invulnerable(HSanctuary + 1, TRUE);
 	nomovemsg = "You survived that attempt on your life.";
 	flags.move |= MOVE_INSTANT;
 	if(multi > 0) multi = 0; else multi = -1;
@@ -1001,7 +1005,7 @@ done(int how)
 	            killer_format = 0;
 	            return;
 	        }
-	    } else
+	} else
 
 
 	/* kilbuf: used to copy killer in case it comes from something like
@@ -1009,12 +1013,12 @@ done(int how)
 	 *	xname() when listing possessions
 	 * pbuf: holds Sprintf'd output for raw_print and putstr
 	 */
-	if (how == ASCENDED || (!killer && how == GENOCIDED))
+	if (!killer && (how == ASCENDED || how == GENOCIDED))
 		killer_format = NO_KILLER_PREFIX;
 	/* Avoid killed by "a" burning or "a" starvation */
 	if (!killer && (how == STARVING || how == BURNING))
 		killer_format = KILLED_BY;
-	Strcpy(kilbuf, (!killer || how >= PANICKED ? deaths[how] : killer));
+	Strcpy(kilbuf, (!killer || (how >= PANICKED && how != ASCENDED) ? deaths[how] : killer));
 	killer = kilbuf;
 
 #define LSVD_NONE 0
@@ -1133,6 +1137,18 @@ done(int how)
 			      humanoid(youracedata) ? "ring-" : "",
 			      body_part(FINGER));
 			obj->spe--;
+		} else if(check_rot(ROT_CENT) && !(mvitals[PM_CENTIPEDE].mvflags & G_GENOD) && !HUnchanging){
+			lsvd = LSVD_MISC;
+			if (how == DISINTEGRATED) pline("A monstrous centipede crawls out of your dust!");
+			else pline("A monstrous centipede crawls out of your rotting body!");
+			struct obj *otmp, *nobj;
+			for(otmp = invent; otmp; otmp = nobj){
+				nobj = otmp->nobj;
+				obj_extract_and_unequip_self(otmp);
+				dropy(otmp);
+			}
+			polymon(PM_CENTIPEDE);
+			remove_rot(ROT_CENT);
 		} else if(check_mutation(ABHORRENT_SPORE) && !(mvitals[PM_DARK_YOUNG].mvflags & G_GENOD)){
 			lsvd = LSVD_SPOR;
 			if (how == DISINTEGRATED) pline("Your dust is consumed by the abhorrent spore!");
@@ -1164,8 +1180,6 @@ done(int how)
 				calc_total_maxhp();
 			}
 		}
-		if(youmonst.movement < 12)
-			youmonst.movement = 12;
 		savelife(how);
 		if (how == GENOCIDED)
 			pline("Unfortunately you are still genocided...");
@@ -1315,8 +1329,10 @@ die:
 		u.ugrave_arise = (NON_PM - 1);	/* statue instead of corpse */
 	    else if (how == GOLDING)
 		u.ugrave_arise = (NON_PM - 3);	/* statue instead of corpse */
-	    else if (how == GLASSED)
+		else if (how == SALTING)
 		u.ugrave_arise = (NON_PM - 4);	/* statue instead of corpse */
+	    else if (how == GLASSED)
+		u.ugrave_arise = (NON_PM - 5);	/* statue instead of corpse */
 	    else if (u.ugrave_arise == NON_PM &&
 		     !(mvitals[u.umonnum].mvflags & G_NOCORPSE && !uandroid)) {
 		int mtyp = u.umonnum;
@@ -1368,11 +1384,11 @@ die:
 		if (lastmsg >= 0) {
 		  dump ("", "Latest messages");
 		  for (i = lastmsg + 1; i < DUMPMSGS; i++) {
-		    if (strcmp(msgs[i], ""))
+		    if (strcmp(msgs[i], "") )
 		      dump ("  ", msgs[i]);
 		  } 
 		  for (i = 0; i <= lastmsg; i++) {
-		    if (strcmp(msgs[i], ""))
+		    if (strcmp(msgs[i], "") )
 		      dump ("  ", msgs[i]);
 		  } 
 		  dump ("","");
@@ -1410,7 +1426,7 @@ die:
 
 	if (bones_ok) {
 #ifdef WIZARD
-	    if(!wizard || (yesno("Save WIZARD MODE bones?", TRUE) == 'y'))
+	    if(!wizard || yesno("Save WIZARD MODE bones?", TRUE) == 'y')
 #endif /* WIZARD */
 		savebones(corpse);
 	    /* corpse may be invalid pointer now so
@@ -1481,7 +1497,7 @@ die:
 		   how != ASCENDED ?
 		      (const char *) ((flags.female && urole.name.f) ?
 		         urole.name.f : urole.name.m) :
-		      (const char *) (flags.female ? "Demigoddess" : "Demigod"));
+		      (const char *) title_override ? title_override : (flags.female ? "Demigoddess" : "Demigod"));
 	if (!done_stopprint) {
 	    putstr(endwin, 0, pbuf);
 	    putstr(endwin, 0, "");

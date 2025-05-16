@@ -121,7 +121,13 @@
  * #define MAX_NR_OF_PLAYERS 6
  */
 
-
+/*
+ * Limits the game to at most 100 inputs per second, and command
+ * repeats to 200.  This should be enabled on hardfought to avoid the
+ * high CPU usage kill script, but not when playing locally or CPU
+ * usage is properly limited with cgroups.
+ */
+/* #define LIMIT_IPS */
 
 /*
  * Section 3:	Definitions that may vary with system type.
@@ -206,7 +212,7 @@ typedef uint32_t glyph_t;
 
 #define DUMP_LOG        /* Dump game end information to a file */
 #ifndef DUMP_FN
-#define DUMP_FN "dumplog/%t"      /* Fixed dumpfile name, if you want
+#define DUMP_FN "./dumplog/%t"      /* Fixed dumpfile name, if you want
                                    * to prevent definition by users */
 #endif
 #ifndef DUMPMSGS
@@ -226,7 +232,7 @@ typedef uint32_t glyph_t;
 /* Filename for where HUPping a game is saved.
    Can be left undefined, in which case HUPping doesn't write the data. */
 #ifndef HUPLIST_FN
-#define HUPLIST_FN "/dgldir/userdata/%n/notdnethack/hangup"
+#define HUPLIST_FN "./hangup"
 #endif
 
 /* Filename for dgamelaunch extra info field.

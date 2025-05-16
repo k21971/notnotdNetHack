@@ -80,6 +80,9 @@ dosit(void)
 		} else if(u.utraptype == TT_WEB) {
 		    You("sit in the spider web and get entangled further!");
 		    u.utrap += rn1(10, 5);
+		} else if(u.utraptype == TT_SALIVA) {
+		    You("sit in the gluey mass and get stuck worse!");
+		    u.utrap += rn1(12, 5);
 		} else if(u.utraptype == TT_LAVA) {
 		    /* Must have fire resistance or they'd be dead already */
 		    You("sit in the lava!");
@@ -689,6 +692,9 @@ rndcurse(void)			/* curse a few inventory items at random! */
 		otmp->bknown = TRUE;
 	    }
 		did_curse = TRUE;
+	}
+	if(did_curse){
+		IMPURITY_UP(u.uimp_curse)
 	}
 	return did_curse;
 }
