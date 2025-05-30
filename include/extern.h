@@ -2454,6 +2454,7 @@ extern boolean ok_align(int, int, int, int);
 extern int pick_align(int, int, int, int);
 extern int pick_species(int, int, int, int);
 extern void role_init(int);
+extern int get_vgod(int);
 extern void rigid_role_checks(void);
 extern void plnamesuffix(void);
 extern const char *Hello(struct monst *);

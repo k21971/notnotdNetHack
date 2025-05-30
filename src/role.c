@@ -2758,6 +2758,12 @@ role_init(int newgame)
 	return;
 }
 
+int
+get_vgod(int pantheon)
+{
+	return roles[pantheon].vgod;
+}
+
 const char *
 Hello(struct monst *mtmp)
 {
