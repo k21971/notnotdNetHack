@@ -129,6 +129,7 @@ extern boolean check_oprop(struct obj *, int);
 extern boolean oprops_match(struct obj *, struct obj *);
 extern void copy_oprop_list(struct obj *, unsigned long int *);
 extern const char *artifact_name(const char *,short *, int *);
+extern char is_invokable_object(struct obj *);
 extern boolean art_already_exists(int);
 extern boolean art_already_exists_byname(int,const char *);
 extern int get_already_exists_byname(int,const char *);

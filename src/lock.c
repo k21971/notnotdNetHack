@@ -919,12 +919,12 @@ doopen_indir(int x, int y)
 	    return MOVE_CANCELLED;
 	}
 	
-	if (!isok(x,y)) goto nodoor_indr;
-	
 	if(x > 0 && y > 0){
 		cc.x = x;
 		cc.y = y;
 	} else if(!get_adjacent_loc((char *)0, (char *)0, u.ux, u.uy, &cc)) return MOVE_CANCELLED;
+
+	if (!isok(cc.x,cc.y)) goto nodoor_indr;
 
 	if((cc.x == u.ux) && (cc.y == u.uy)) return MOVE_CANCELLED;
 

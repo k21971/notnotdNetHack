@@ -9079,6 +9079,13 @@ invoke_on_cooldown(struct obj *obj, const struct artifact *oart){
 	);
 }
 
+char
+is_invokable_object(struct obj *otmp){
+	struct artifact *oart;
+	return is_invokable_otyp(otmp->otyp) || (otmp->oartifact && (oart = get_artifact(otmp)) && (oart->inv_prop || otmp->oartifact == ART_FINGERPRINT_SHIELD));
+}
+
+
 static struct obj *
 do_invoke_menu(void){
 	struct obj *otmp;
@@ -9099,7 +9106,7 @@ do_invoke_menu(void){
 	add_menu(tmpwin, NO_GLYPH, &any, 0, 0, ATR_BOLD, buf, MENU_UNSELECTED);
 	for(otmp = invent; otmp; otmp = otmp->nobj){
 		oart = (struct artifact *) 0;
-		if(is_invokable_otyp(otmp->otyp) || (otmp->oartifact && (oart = get_artifact(otmp)) && oart->inv_prop)){
+		if(is_invokable_object(otmp)){
 			if(oart && invoke_on_cooldown(otmp, oart)){
 				cooldown = otmp->age - monstermoves;
 				if(is_lightsaber(otmp) && otmp->cobj && otmp->oartifact == otmp->cobj->oartifact)

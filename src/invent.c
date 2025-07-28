@@ -893,12 +893,6 @@ carrying_art(register int artnum)
 	return((struct obj *) 0);
 }
 
-static char
-is_invokable_object(struct obj *otmp){
-	struct artifact *oart;
-	return is_invokable_otyp(otmp->otyp) || (otmp->oartifact && (oart = get_artifact(otmp)) && oart->inv_prop);
-}
-
 char
 carrying_invokable_object(void)
 {
