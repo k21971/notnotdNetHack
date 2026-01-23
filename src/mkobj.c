@@ -185,7 +185,8 @@ static const struct icp droven_materials[] = {
 	{900, 0 }, /* use base material */
 	{ 45, MITHRIL },
 	{ 45, SILVER },
-	{ 10, SHADOWSTEEL }, /* shadowsteel was intended to be quite bad for weapons, at least given the techniques the drow know */
+	{  9, GOLD }, /* shadowsteel was intended to be quite bad for weapons, at least given the techniques the drow know */
+	{  1, GREEN_STEEL },
 	{  0, 0 }
 };
 
@@ -851,6 +852,9 @@ mksobj(int otyp, int mkflags)
 				add_to_container(otmp, stone);
 				container_weight(otmp);
 			}
+			else if (otmp->otyp == SAPBURNER){
+				otmp->ovar1_charges = 80L + rnd(20);
+			}
 			else if (is_blaster(otmp)){ //Rayguns and mass-shadow pistols are also blasters, so this has to go under that case
 				otmp->ovar1_charges = 80L + rnd(20);
 				if (otmp->otyp == ARM_BLASTER) otmp->altmode = WP_MODE_SINGLE;
@@ -1350,6 +1354,9 @@ mksobj(int otyp, int mkflags)
 				}
 				blessorcurse(otmp, 10);
 			}
+			if (otmp->otyp == POT_SAP){
+				otmp->corpsenm = PM_DUNGEON_FERN;
+			}
 			if (otmp->otyp == POT_OIL)
 				otmp->age = MAX_OIL_IN_FLASK;	/* amount of oil */
 			/* fall through */
@@ -1817,6 +1824,7 @@ start_corpse_timeout(struct obj *body)
 	long age;
 	int chance;
 	struct monst *attchmon = 0;
+	struct permonst *ptr = 0;
 
 #define TAINT_AGE (50L)		/* age when corpses go bad */
 #define TROLL_REVIVE_CHANCE 37	/* 1/37 chance for 50 turns ~ 75% chance */
@@ -1835,6 +1843,10 @@ start_corpse_timeout(struct obj *body)
 	) return;
 	
 	if(get_ox(body, OX_EMON)) attchmon = EMON(body);
+	ptr = attchmon ? &mons[attchmon->mtyp] : &mons[body->corpsenm];
+	if(attchmon && attchmon->mtemplate)
+		ptr = permonst_of(ptr->mtyp, attchmon->mtemplate);
+
 
 	action = ROT_CORPSE;		/* default action: rot away */
 	rot_adjust = in_mklev ? 25 : 10;	/* give some variation */
@@ -1846,11 +1858,11 @@ start_corpse_timeout(struct obj *body)
 	when += (long)(rnz(rot_adjust) - rot_adjust);
 	
 //	pline("corpse type: %d, %c",mons[body->corpsenm].mlet,def_monsyms[mons[body->corpsenm].mlet]);
-	if(is_migo(&mons[body->corpsenm]) || body->corpsenm == PM_DEEP_DWELLER){
+	if(is_migo(ptr) || body->corpsenm == PM_DEEP_DWELLER){
 		when = when/10 + 1;
 	}
 
-	if (is_rider(&mons[body->corpsenm])
+	if (is_rider(ptr)
 		|| (uwep && uwep->oartifact == ART_SINGING_SWORD && uwep->osinging == OSING_LIFE && attchmon && attchmon->mtame)
 		) {
 		/*
@@ -1900,8 +1912,7 @@ start_corpse_timeout(struct obj *body)
 			when = age;
 			break;
 		    }
-	} else if (is_fungus(&mons[body->corpsenm]) && 
-			  !is_migo(&mons[body->corpsenm])) {
+	} else if (is_fungus(ptr) && !is_migo(ptr) && !body->norevive) {
 		/* Fungi come back with a vengeance - if you don't eat it or
 		 * destroy it,  any live cells will quickly use the dead ones
 		 * as food and come back.
@@ -1915,6 +1926,19 @@ start_corpse_timeout(struct obj *body)
 		    }
 	}
 	
+	chance = (ptr->mtyp == PM_RUSTY_GRAY_MOLD || ptr->mtyp == PM_GRAY_FUNGAL_TOWER) ? 0 :
+			 (ptr->mtyp == PM_VEGEPYGMY_SHAMAN || ptr->mtyp == PM_VEGEPYGMY) ? FULL_MOLDY_CHANCE : 
+			 (attchmon && (attchmon->mgmld_skin || attchmon->mgmld_skin)) ? FULL_MOLDY_CHANCE : 
+			 (In_quest(&u.uz) && Role_if(PM_KENSEI) && u.role_variant == ART_ANSERMEE) ? HALF_MOLDY_CHANCE : 
+			 0;
+	if(action == ROT_CORPSE && chance){
+		for (age = TAINT_AGE + 1; age <= ROT_AGE; age++)
+			if (!rn2(chance)) {    /* "revives" as a zombie */
+				action = GRAY_MOLDY_CORPSE;
+				when = age;
+				break;
+			}
+	}
 	if (action == ROT_CORPSE && !acidic(&mons[body->corpsenm])){
 		/* Corpses get moldy
 		 */
@@ -2200,6 +2224,10 @@ material_list(struct obj *obj)
 	case HARMONIUM_SCALE_MAIL:
 	case HARMONIUM_GAUNTLETS:
 	case HARMONIUM_BOOTS:
+	case SILVERKNIGHT_HELM:
+	case SILVERKNIGHT_ARMOR:
+	case SILVERKNIGHT_GAUNTLETS:
+	case SILVERKNIGHT_BOOTS:
 	case ELVEN_MITHRIL_COAT:
 	case DWARVISH_MITHRIL_COAT:
 	case BROKEN_ANDROID:
@@ -2373,6 +2401,9 @@ handle_material_specials(struct obj *obj, int oldmat, int newmat)
 	/* set random gemstone type for valid gemstone objects */
 	if (newmat == GEMSTONE && obj->oclass != GEM_CLASS && (obj->sub_material < MAGICITE_CRYSTAL || obj->sub_material > LAST_GEM || oldmat != GEMSTONE)) {
 		if(obj->oartifact == ART_JIN_GANG_ZUO){
+			set_submat(obj, DIAMOND);
+		}
+		else if(obj->oartifact == ART_GOKOREI){
 			set_submat(obj, DIAMOND);
 		}
 		else do{
@@ -3055,8 +3086,9 @@ mkcorpstat(
 			if (otmp->otyp == CORPSE) {
 				stop_all_timers(otmp->timed);
 				/* if the monster was cancelled, don't self-revive */
-				if (mtmp && mtmp->mcan && !is_rider(ptr))
+				if (mtmp && (mtmp->mcan || mtmp->mlaidtorest) && !is_rider(ptr)){
 					otmp->norevive = 1;
+				}
 				start_corpse_timeout(otmp);
 			}
 	    }
@@ -3461,7 +3493,7 @@ obj_extract_and_unequip_self(struct obj *obj)
 	}
 	else obj_extract_self(obj);
 	if (obj->otyp == LEASH && obj->leashmon) o_unleash(obj);
-	if (obj->oclass == FOOD_CLASS) food_disappears(obj);
+	if (obj->oclass == FOOD_CLASS) food_extracted(obj);
 	if (obj->oclass == SPBOOK_CLASS) book_disappears(obj);
 }
 

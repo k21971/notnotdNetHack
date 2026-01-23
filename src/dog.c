@@ -469,6 +469,7 @@ mon_arrive(struct monst *mtmp, boolean with_you)
 	mtmp->mtrack[0].x = mtmp->mtrack[0].y = 0;
 	mtmp->mtrack[1].x = mtmp->mtrack[1].y = 0;
 
+	mtmp->mprobed = 0;
 	if (mtmp == u.usteed)
 	    return;	/* don't place steed on the map */
 	if (with_you) {
@@ -661,6 +662,7 @@ mon_catchup_elapsed_time(
 	if (mtmp->mtrapped && rn2(imv + 1) > 40/2) mtmp->mtrapped = 0;
 	if (mtmp->mconf    && rn2(imv + 1) > 50/2) mtmp->mconf = 0;
 	if (mtmp->mstun    && rn2(imv + 1) > 10/2) mtmp->mstun = 0;
+	if (mtmp->mpunctured && rn2(imv + 1) > 2) mtmp->mpunctured = 0;
 
 	/* might finish eating or be able to use special ability again */
 	if (imv > mtmp->meating) mtmp->meating = 0;
@@ -1095,10 +1097,13 @@ rock:
 		obj_is_material(obj, GREEN_STEEL))
 			return(TABU);
 	    if (hates_unblessed_mon(mon) &&
-		(is_unholy(obj) || obj->blessed))
+		(is_unholy(obj) || is_holy(obj)))
 			return(TABU);
 		if (is_vampire(mon->data) &&
 		obj->otyp == POT_BLOOD && !((touch_petrifies(&mons[obj->corpsenm]) && !resists_ston(mon)) || is_rider(&mons[obj->corpsenm])))
+			return DOGFOOD;
+		if (herbi && !carni &&
+		obj->otyp == POT_SAP && !((touch_petrifies(&mons[obj->corpsenm]) && !resists_ston(mon)) || is_rider(&mons[obj->corpsenm])))
 			return DOGFOOD;
 	    if (herbi && !carni && (obj->otyp == SHEAF_OF_HAY || obj->otyp == SEDGE_HAT))
 			return CADAVER;
@@ -1138,7 +1143,7 @@ is_edible_mon(struct monst *mon, register struct obj *obj)
 		return 0;
 	if (hates_unholy_mon(mon) && obj->obj_material == GREEN_STEEL)
 		return 0;
-	if (hates_unblessed_mon(mon) && (is_unholy(obj) || obj->blessed))
+	if (hates_unblessed_mon(mon) && (is_unholy(obj) || is_holy(obj)))
 		return 0;
 
 	if(metal){
@@ -1146,7 +1151,7 @@ is_edible_mon(struct monst *mon, register struct obj *obj)
 			return 0;
 	    if (hates_iron(mon->data) && is_iron_obj(obj))
 			return 0;
-		if(mon->mtyp == PM_RUST_MONSTER)
+		if(mon->mtyp == PM_RUST_MONSTER || is_gray_mold(mon->data))
 			return is_rustprone(obj);
 		else return is_metallic(obj);
 	}
@@ -1222,6 +1227,9 @@ rock:
 	default:
 		if (is_vampire(mon->data) &&
 		obj->otyp == POT_BLOOD && !((touch_petrifies(&mons[obj->corpsenm]) && !resists_ston(mon)) || is_rider(&mons[obj->corpsenm])))
+			return 1;
+		if (herbi && !carni &&
+		obj->otyp == POT_SAP && !((touch_petrifies(&mons[obj->corpsenm]) && !resists_ston(mon)) || is_rider(&mons[obj->corpsenm])))
 			return 1;
 	    if (herbi && !carni && (obj->otyp == SHEAF_OF_HAY || obj->otyp == SEDGE_HAT))
 			return 1;

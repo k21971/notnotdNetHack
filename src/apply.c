@@ -28,6 +28,7 @@ static int do_present_item(struct obj *);
 static int use_towel(struct obj *);
 static boolean its_dead(int,int,int *,struct obj*);
 static int use_stethoscope(struct obj *);
+static int ansermee_scan(struct obj *);
 static void use_whistle(struct obj *);
 static void use_leash(struct obj *);
 static int use_mirror(struct obj **);
@@ -609,6 +610,78 @@ use_stethoscope(register struct obj *obj)
 	return res;
 }
 
+static int
+ansermee_scan(struct obj *obj)
+{
+	struct monst *mtmp;
+	struct rm *lev;
+	int rx, ry, res;
+	boolean interference = (u.uswallow && is_whirly(u.ustuck->data) &&
+				!rn2(Role_if(PM_HEALER) ? 10 : 3));
+
+	if (nohands(youracedata)) {	/* should also check for no ears and/or deaf */
+		You("have no hands!");	/* not `body_part(HAND)' */
+		return MOVE_CANCELLED;
+	} else if (!freehand()) {
+		You("have no free %s.", body_part(HAND));
+		return MOVE_CANCELLED;
+	}
+	if (!getdir((char *)0)) return MOVE_CANCELLED;
+
+	res = MOVE_PARTIAL;
+
+#ifdef STEED
+	if (u.usteed && u.dz > 0) {
+		if (interference) {
+			pline("%s interferes.", Monnam(u.ustuck));
+			probe_monster(u.ustuck);
+		} else
+			probe_monster(u.usteed);
+		return res;
+	} else
+#endif
+	if (u.uswallow && (u.dx || u.dy || u.dz)) {
+		probe_monster(u.ustuck);
+		return res;
+	} else if (u.uswallow && interference) {
+		pline("%s interferes.", Monnam(u.ustuck));
+		probe_monster(u.ustuck);
+		return res;
+	} else if (u.dz) {
+		pline("No life signs detected.");
+		return res;
+	}
+	if (Stunned || (Confusion && !rn2(5))) confdir();
+	if (!u.dx && !u.dy) {
+		ustatusline();
+		doenlightenment();
+		return res;
+	}
+	rx = u.ux + u.dx; ry = u.uy + u.dy;
+	if (!isok(rx,ry)) {
+		pline("All readings are off the scale.");
+		return MOVE_INSTANT;
+	}
+	if ((mtmp = m_at(rx,ry)) != 0) {
+		probe_monster(mtmp);
+		if (mtmp->mundetected) {
+			mtmp->mundetected = 0;
+			if (cansee(rx,ry)) newsym(mtmp->mx,mtmp->my);
+		}
+		if (!canspotmon(mtmp))
+			map_invisible(rx,ry);
+		return res;
+	}
+	if (glyph_is_invisible(levl[rx][ry].glyph)) {
+		unmap_object(rx, ry);
+		newsym(rx, ry);
+		pline_The("invisible monster must have moved.");
+	}
+
+	pline("No life signs detected.");
+	return res;
+}
+
 static const char whistle_str[] = "produce a %s whistling sound.";
 
 static void
@@ -913,7 +986,7 @@ use_mirror(struct obj **obj_p)
 		if(obj->oartifact == ART_HAND_MIRROR_OF_CTHYLLA && obj->age < moves && !Blind){
 			pline("An incomprehensible sight meets your eyes!");
 			losehp(d(15,15), "looking into Cthylla's hand-mirror", KILLED_BY);
-			obj->age = monstermoves + (long)(rnz(100)*(Role_if(PM_PRIEST) ? .8 : 1));
+			obj->age = monstermoves + (long)(rnz(100)*(u.upriest ? .8 : 1));
 		} else if(!Blind) {
 			if (youracedata->mlet == S_VAMPIRE || Invisible) {
 				You("don't have a reflection.");
@@ -1100,7 +1173,7 @@ use_mirror(struct obj **obj_p)
 	} else if(obj->oartifact == ART_HAND_MIRROR_OF_CTHYLLA && obj->age < moves &&
 				(!mtmp->minvis || mon_resistance(mtmp,SEE_INVIS))
 	){
-		obj->age = monstermoves + (long)(rnz(100)*(Role_if(PM_PRIEST) ? .8 : 1));
+		obj->age = monstermoves + (long)(rnz(100)*(u.upriest ? .8 : 1));
 		if (vis)
 		    pline("%s is blasted by its reflection.", Monnam(mtmp));
 		monflee(mtmp, d(2,4), FALSE, FALSE);
@@ -1114,7 +1187,7 @@ use_mirror(struct obj **obj_p)
 					ward_at(mtmp->mx,mtmp->my) != HAMSA) {
 		if (mon_reflects(mtmp, "The gaze is reflected away by %s %s!"))
 			return MOVE_STANDARD;
-		minstapetrify(mtmp, TRUE);
+		minstapetrify(mtmp, TRUE, FALSE);
 	} else if(!mtmp->mcan && !mtmp->minvis &&
 					mtmp->mtyp == PM_FLOATING_EYE && 
 					ward_at(mtmp->mx,mtmp->my) != HAMSA) {
@@ -1195,6 +1268,14 @@ use_bell(struct obj **optr, int spiritseal)
 	    pline("But it makes no sound.");
 	    learno = TRUE;	/* help player figure out why */
 
+	} else if (obj->oartifact == ART_GOKOREI) {
+		if(!obj->cursed)
+			use_unicorn_horn(obj);
+		if(obj->age < monstermoves){
+			pleased(GOD_KANNON, TRUE, 0, FALSE);
+			obj->age = monstermoves + (long)(rnz(100)*(u.upriest ? .8 : 1));
+		}
+		else obj->age += u.upriest ? (long) d(1,20) : (long) d(3,10);
 	} else if (ordinary) {
 	    if (obj->cursed && !rn2(4) &&
 		    /* note: once any of them are gone, we stop all of them */
@@ -1607,7 +1688,9 @@ aesculapius_poke(struct obj *obj)
 	struct monst *mon;
 	boolean shackles = obj->oartifact == ART_ESSCOOAHLIPBOOURRR;
 	if(obj != uwep){
-		if (!wield_tool(obj, "staff")) return MOVE_CANCELLED;
+		if (uwep && uwep->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return MOVE_CANCELLED;
+		else if (!wield_tool(obj, "staff")) return MOVE_CANCELLED;
 	}
 	if(!getdir((char *)0)) {
 		return MOVE_CANCELLED;
@@ -2355,16 +2438,21 @@ use_chikage(struct obj *obj)
 		return MOVE_CANCELLED;
 	}
 	
-	if(obj_is_material(obj, HEMARGYOS)){
+	if(obj_is_material(obj, HEMARGYOS) || check_oprop(obj, OPROP_HAEM)){
 		if (Insight < 13)
 			You("wipe the blood from your sword.");
 		else
 			You("wipe your blood from the sword.");
-		set_material_gm(obj, obj->ovar1_alt_mat);
-		set_object_color(obj);
-		obj->oeroded = access_oeroded(obj->ovar2_alt_erosion);
-		obj->oeroded2 = access_oeroded2(obj->ovar2_alt_erosion);
-		obj->oeroded3 = access_oeroded3(obj->ovar2_alt_erosion);
+		if(check_oprop(obj, OPROP_HAEM)){
+			remove_oprop(obj, OPROP_HAEM);
+		}
+		else {
+			set_material_gm(obj, obj->ovar1_alt_mat);
+			set_object_color(obj);
+			obj->oeroded = access_oeroded(obj->ovar2_alt_erosion);
+			obj->oeroded2 = access_oeroded2(obj->ovar2_alt_erosion);
+			obj->oeroded3 = access_oeroded3(obj->ovar2_alt_erosion);
+		}
 		(void) stop_timer(REVERT_OBJECT, obj->timed);
 	} else {
 		if(Insight < 27)
@@ -2374,15 +2462,20 @@ use_chikage(struct obj *obj)
 		else
 			You("sheath your sword in your shadow's %s and draw it forth bloody.", body_part(HEART));
 
-		if(obj->obj_material != obj->ovar1_alt_mat)
-			obj->ovar1_alt_mat = obj->obj_material;
+		if(obj->obj_material == MERCURIAL){
+			add_oprop(obj, OPROP_HAEM);
+		}
+		else {
+			if(obj->obj_material != obj->ovar1_alt_mat)
+				obj->ovar1_alt_mat = obj->obj_material;
+			set_material_gm(obj, HEMARGYOS);
+			obj->obj_color = CLR_RED;
+			store_oeroded(obj->ovar2_alt_erosion,obj->oeroded);
+			store_oeroded2(obj->ovar2_alt_erosion,obj->oeroded2);
+			store_oeroded3(obj->ovar2_alt_erosion,obj->oeroded3);
+			obj->oeroded = obj->oeroded2 = obj->oeroded3 = 0;
+		}
 		IMPURITY_UP(u.uimp_blood)
-		set_material_gm(obj, HEMARGYOS);
-		obj->obj_color = CLR_RED;
-		store_oeroded(obj->ovar2_alt_erosion,obj->oeroded);
-		store_oeroded2(obj->ovar2_alt_erosion,obj->oeroded2);
-		store_oeroded3(obj->ovar2_alt_erosion,obj->oeroded3);
-		obj->oeroded = obj->oeroded2 = obj->oeroded3 = 0;
 		start_timer(1, TIMER_OBJECT,
 					REVERT_OBJECT, (void *)obj);
 	}
@@ -2871,7 +2964,7 @@ transfusion(struct obj *obj)
 	}
 	Sprintf(qbuf, "Transfuse yourself with %s?", the(xname(obj)));
 	if(yn(qbuf) != 'y'){
-		pline("Never mind");
+		pline1(Never_mind);
 		return MOVE_CANCELLED;
 	}
 	IMPURITY_UP(u.uimp_blood)
@@ -2931,6 +3024,49 @@ transfusion(struct obj *obj)
 }
 
 static int
+sap_transfusion(struct obj *obj)
+{
+	struct obj *phleb_kit = find_object_type(invent, PHLEBOTOMY_KIT);
+	char qbuf[BUFSZ];
+	
+	if(!phleb_kit){
+		pline("Sorry, I don't know how to use that.");
+		return MOVE_CANCELLED;
+	}
+	Sprintf(qbuf, "Transfuse yourself with %s?", the(xname(obj)));
+	if(yn(qbuf) != 'y'){
+		pline("Never mind");
+		return MOVE_CANCELLED;
+	}
+	if(your_race(&mons[obj->corpsenm])){
+		if(obj->cursed){
+			pline("The sap clogs your vessels!");
+			losehp(*hpmax(&youmonst)/3, "sap clot", KILLED_BY_AN);
+		}
+		else {
+			You_feel("invigorated.");
+			healup((4*(*hpmax(&youmonst))+9)/10, 0, obj->blessed, FALSE);
+			exercise(A_CON, TRUE);
+		}
+		lesshungry((obj->odiluted ? 1 : 2)*50);
+		cprefx(obj->corpsenm, TRUE, TRUE);
+	}
+	else {
+		You_feel("invigorated.");
+		healup(d(2,8), 0, obj->blessed, FALSE);
+		lesshungry((obj->odiluted ? 1 : 2) *
+			(obj->cursed ? mons[(obj)->corpsenm].cnutrit*1.5/5 : mons[(obj)->corpsenm].cnutrit/5 ));
+		exercise(A_CON, TRUE);
+		cprefx(obj->corpsenm, TRUE, FALSE);
+	}
+	cpostfx(obj->corpsenm, FALSE, FALSE, FALSE);
+	useup(obj);
+	if(phleb_kit->spe < 15)
+		phleb_kit->spe++;
+	return MOVE_STANDARD;
+}
+
+static int
 bloodclone(struct obj *obj)
 {
 	struct obj *bell = find_object_type(invent, BELL);
@@ -2957,7 +3093,7 @@ bloodclone(struct obj *obj)
 	}
 	Sprintf(qbuf, "Create a blood clone with %s?", the(xname(obj)));
 	if(yn(qbuf) != 'y'){
-		pline("Never mind");
+		pline1(Never_mind);
 		// obj->use
 		return MOVE_CANCELLED;
 	}
@@ -3228,7 +3364,7 @@ reanimation_score(void)
 {
 	int count = reanimation_count()+1;
 	count *= 4; //TIER_B	4
-	return (count*(count+1))/2 + (u.antenae_upgrades)*4;
+	return (count*(count+1))/2 + (u.antennae_upgrades)*4;
 }
 
 boolean
@@ -3354,6 +3490,14 @@ reanimation_upgrade(struct obj *research_kit)
 			 "Reveal the insubstantial world", MENU_UNSELECTED);
 	}
 
+	ch++;
+	any.a_int = 11;
+	if(u.ublood_smithing && !check_reanimation(RE_FLAME) && u.silver_atten){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Study the catoptrics of the Silver rays", MENU_UNSELECTED);
+	}
+
 	if(!n){
 		destroy_nhwindow(tmpwin);
 		return MOVE_CANCELLED;
@@ -3367,6 +3511,7 @@ reanimation_upgrade(struct obj *research_kit)
 	}
 	n = selected[0].item.a_int;
 	free(selected);
+	boolean minor_upgrade = FALSE;
 	if(n == 1){
 		add_reanimation(RE_BOLT_RES);
 		HShock_resistance |= W_UPGRADE;
@@ -3389,7 +3534,8 @@ reanimation_upgrade(struct obj *research_kit)
 		if(uwep){
 			You("tune your weapon.");
 			add_oprop(uwep, OPROP_ANTAW);
-			u.antenae_upgrades++;
+			u.antennae_upgrades++;
+			minor_upgrade = TRUE;
 		}
 	}
 	if(n == 6){
@@ -3409,17 +3555,34 @@ reanimation_upgrade(struct obj *research_kit)
 		add_reanimation(LAMP_PHASE);
 	}
 	if(n == 10){
-		u.antenae_upgrades += 50;
+		u.antennae_upgrades += 50;
 		expert_undead_hunter_skill();
 		expert_undead_hunter_skill();
 		expert_undead_hunter_skill();
 		pline("The ancient knowledge sinks into your subconscious.");
+		minor_upgrade = TRUE;
+	}
+	if(n == 11){
+		You("glimpse the source of the Silver Light!");
+		change_usanity(-15, FALSE);
+		change_usanity(-15, TRUE);
+		add_reanimation(RE_FLAME);
+		if(u.umortalgifted > 1){
+			u.ucultsval -= FLAME_MORTAL_TIER*(u.umortalgifted - 1);
+		}
+		if(u.utruedeathgifted > 1){
+			u.ucultsval -= FLAME_DEATH_TIER*(u.utruedeathgifted - 1);
+		}
+		if(u.uunworthygifted > 1){
+			u.ucultsval -= FLAME_UNWORTHY_TIER*(u.uunworthygifted - 1);
+		}
 	}
 
 	if(research_kit && research_kit->spe > 0)
 		research_kit->spe--;
 	// u.udefilement_research += rn2(defile_score());
-	u.mental_scores_down++;
+	if(!minor_upgrade)
+		u.mental_scores_down++;
 	ABASE(A_INT) -= 1;
 	// check_brainlessness();
 	ABASE(A_INT) = max(ABASE(A_INT), ATTRMIN(A_INT));
@@ -3536,6 +3699,14 @@ defile_vampire(struct obj *obj, struct obj *research_kit)
 			 "Hypnotic gaze", MENU_UNSELECTED);
 	}
 
+	ch++;
+	any.a_int = 6;
+	if(u.ublood_smithing && !check_rot(ROT_SHUB) && !check_vampire(VAMPIRE_SHUB) && u.shubbie_atten){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Partake of the blood of Shub-Nugganoth", MENU_UNSELECTED);
+	}
+
 	if(!n){
 		destroy_nhwindow(tmpwin);
 		return MOVE_CANCELLED;
@@ -3559,6 +3730,13 @@ defile_vampire(struct obj *obj, struct obj *research_kit)
 		add_vampire(VAMPIRE_BLOOD_SPIKES);
 	if(n == 5)
 		add_vampire(VAMPIRE_GAZE);
+	if(n == 6){
+		add_vampire(VAMPIRE_SHUB);
+		if(u.udroolgifted > 1){
+			u.ugifts -= (u.udroolgifted - 1);
+			u.ucultsval -= SHUB_DROOL_TIER*(u.udroolgifted - 1);
+		}
+	}
 
 	// u.udefilement_research += rn2(defile_score());
 	u.mental_scores_down++;
@@ -3625,30 +3803,35 @@ blood_draw(struct obj *obj)
 		// if(n == 3) continue
 	}
 	else if(yn("Draw your own blood?") != 'y'){
-		pline("Never mind");
+		pline1(Never_mind);
 		return MOVE_CANCELLED;
 	}
 	if(*hp(&youmonst) <= (*hpmax(&youmonst))/2){
 		pline("You're too injured!");
 		return MOVE_CANCELLED;
 	}
-	struct obj *blood = mksobj(POT_BLOOD, MKOBJ_NOINIT);
-	blood->corpsenm = youracedata->mtyp;
+	struct obj *fluid;
+	if(has_sap(youracedata)){
+		fluid = mksobj(POT_SAP, MKOBJ_NOINIT);
+	} else {
+		fluid = mksobj(POT_BLOOD, MKOBJ_NOINIT);
+	}
+	fluid->corpsenm = youracedata->mtyp;
 	if(u.uhs > NOT_HUNGRY)
-		blood->odiluted = TRUE;
-	losehp((*hpmax(&youmonst))/2, "bad blood draw", KILLED_BY_AN);
+		fluid->odiluted = TRUE;
+	losehp((*hpmax(&youmonst))/2, has_sap(youracedata) ? "bad sap draw" : "bad blood draw", KILLED_BY_AN);
 	nightmare_mold_lose_experience();
-	morehungry((blood->odiluted ? 1 : 2) * (mons[(blood)->corpsenm].cnutrit/5 ));
+	morehungry((fluid->odiluted ? 1 : 2) * (mons[(fluid)->corpsenm].cnutrit/5 ));
 	exercise(A_CON, FALSE);
 	IMPURITY_UP(u.uimp_blood)
 
 	if(obj->spe > 0)
 		obj->spe--;
-	blood->cursed = obj->cursed;
-	blood->blessed = obj->blessed;
-	blood->bknown = obj->bknown;
-	blood->known = TRUE;
-	blood = hold_another_object(blood, "You drop %s!", doname(blood), (const char *)0);
+	fluid->cursed = obj->cursed;
+	fluid->blessed = obj->blessed;
+	fluid->bknown = obj->bknown;
+	fluid->known = TRUE;
+	fluid = hold_another_object(fluid, "You drop %s!", doname(fluid), (const char *)0);
 	if(uwep && (uwep->otyp == TWINGUN_SHANTA || uwep->otyp == SHANTA_PATA)){
 		if(uwep->ovar1_last_blooded > moves - 10)
 			uwep->ovar1_last_blooded += 10;
@@ -3769,7 +3952,7 @@ doresearch(void)
 		}
 
 		if (otmp->researched) {
-			pline("Someone has already disected this corpse.");
+			pline("Someone has already dissected this corpse.");
 			return MOVE_CANCELLED;
 		}
 		
@@ -4063,6 +4246,9 @@ dojump(void)
 			dist = P_SKILL(P_MARTIAL_ARTS);
 		return jump(dist);
 	}
+	else if(!Upolyd && Role_if(PM_KENSEI) && uwep && is_kensei_weapon(uwep) && P_SKILL(P_MARTIAL_ARTS)){
+		return jump(P_SKILL(P_MARTIAL_ARTS));
+	}
 	return jump(0);
 }
 
@@ -4225,7 +4411,24 @@ jump(int magic) /* 0=Physical, otherwise skill level */
 		    set_wounded_legs(RIGHT_SIDE, rn1(10, 11));
 		    return MOVE_STANDARD;
 		}
-
+		if(Role_if(PM_KENSEI) && u.role_variant == ART_SKY_REFLECTED && !Is_spire(&u.uz)){
+			if(artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_VILQUAR){
+				if((HInvis&TIMEOUT) < 8){
+					set_itimeout(&HInvis, 8L);
+					newsym(u.ux, u.uy);
+				}
+			}
+			if(artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_WILL){
+				if(u.uspellprot < 1){
+					u.uspellprot = 1;
+					find_ac();
+				}
+				if(u.uspellprot == 1 && u.usptime < 16)
+					u.usptime = 16;
+				if(u.uspellprot == 1 && u.uspmtime < 16)
+					u.uspmtime = 16;
+			}
+		}
 	    /*
 	     * Check the path from uc to cc, calling hurtle_step at each
 	     * location.  The final position actually reached will be
@@ -4241,7 +4444,7 @@ jump(int magic) /* 0=Physical, otherwise skill level */
 	    if (range < temp)
 		range = temp;
 	    u.lastmoved = monstermoves;
-	    (void) walk_path(&uc, &cc, hurtle_step, (void *)&range);
+	    (void) walk_path(&uc, &cc, hurtle_step, ((Role_if(PM_KENSEI) || Role_if(PM_MONK)) && uwep && is_pole(uwep)) ? &jumping_polearm : (void *) 0, (void *)&range);
 
 	    /* A little Sokoban guilt... */
 	    if (In_sokoban(&u.uz))
@@ -4250,7 +4453,7 @@ jump(int magic) /* 0=Physical, otherwise skill level */
 	    teleds(cc.x, cc.y, TRUE);
 	    nomul(-1, "jumping around");
 	    nomovemsg = "";
-		if(!Role_if(PM_MONK))
+		if(!Role_if(PM_MONK) && !Role_if(PM_KENSEI))
 			morehungry(max_ints(1, rnd(25) * get_uhungersizemod()));
 	    return MOVE_STANDARD;
 	}
@@ -4366,6 +4569,12 @@ use_treph_parasites(register struct obj *obj)
 	add_menu(tmpwin, NO_GLYPH, &any , 's', 0, ATR_NONE,
 		 "Sting adjacent enemies", MENU_UNSELECTED);
 
+	if(u.ublood_smithing && !check_parasitology(PARISITE_WINDOWS) && u.yog_sothoth_atten){
+		any.a_int = 6;
+		add_menu(tmpwin, NO_GLYPH, &any , 's', 0, ATR_NONE,
+			 "Embrace the visions of Yog-Sothoth", MENU_UNSELECTED);
+	}
+
 	end_menu(tmpwin, "Pick upgrade:");
 	n = select_menu(tmpwin, PICK_ONE, &selected);
 	destroy_nhwindow(tmpwin);
@@ -4394,6 +4603,14 @@ use_treph_parasites(register struct obj *obj)
 	if(n == 5){
 		You("put the parasite in your medial prefrontal cortex.");
 		u.cuckoo++;
+	}
+	if(n == 6){
+		You("put the parasite in your corpus callosum.");
+		add_parasitology(PARISITE_WINDOWS);
+		if(u.uwindowgifted > 1){
+			u.ugifts -= (u.uwindowgifted - 1);
+			u.ucultsval -= YOG_WINDOW_TIER*(u.uwindowgifted - 1);
+		}
 	}
 	u.mental_scores_down++;
 	ABASE(A_INT) -= 1;
@@ -4462,7 +4679,7 @@ use_trephination_kit(register struct obj *obj)
 static void
 use_tinning_kit(register struct obj *obj)
 {
-	register struct obj *corpse, *can=0, *bld=0;
+	register struct obj *corpse, *can=0, *bld=0, *sap=0;
 
 	/* This takes only 1 move.  If this is to be changed to take many
 	 * moves, we've got to deal with decaying corpses...
@@ -4505,7 +4722,7 @@ use_tinning_kit(register struct obj *obj)
 		return;
 	}
 	consume_obj_charge(obj, TRUE);
-	if((has_blood(&mons[corpse->corpsenm]) && !corpse->odrained)
+	if(((has_blood(&mons[corpse->corpsenm]) || has_sap(&mons[corpse->corpsenm])) && !corpse->odrained)
 		|| !(Race_if(PM_VAMPIRE) || Race_if(PM_INCANTIFIER) || Race_if(PM_ETHEREALOID) || 
 			umechanoid)
 		|| yn("This corpse does not have blood. Tin it?") == 'y'
@@ -4519,7 +4736,15 @@ use_tinning_kit(register struct obj *obj)
 			can->owt = weight(can);
 			can->known = 1;
 			can->spe = -1;  /* Mark tinned tins. No spinach allowed... */
-			if(has_blood(&mons[corpse->corpsenm]) && !corpse->odrained){
+			if(has_sap(&mons[corpse->corpsenm]) && !corpse->odrained){
+				if ((sap = mksobj(POT_SAP, MKOBJ_NOINIT)) != 0) {
+					sap->corpsenm = corpse->corpsenm;
+					sap->cursed = obj->cursed;
+					sap->blessed = obj->blessed;
+					sap->known = 1;
+				}
+			}
+			else if(has_blood(&mons[corpse->corpsenm]) && !corpse->odrained){
 				if ((bld = mksobj(POT_BLOOD, MKOBJ_NOINIT)) != 0) {
 					bld->corpsenm = corpse->corpsenm;
 					bld->cursed = obj->cursed;
@@ -4540,6 +4765,8 @@ use_tinning_kit(register struct obj *obj)
 						  doname(can), (const char *)0);
 			if(bld) bld = hold_another_object(bld, "You make, but cannot pick up, %s.",
 						  doname(bld), (const char *)0);
+			if(sap) sap = hold_another_object(sap, "You make, but cannot pick up, %s.",
+						  doname(sap), (const char *)0);
 		} else impossible("Tinning failed.");
 	}
 }
@@ -4594,7 +4821,7 @@ use_dissection_kit(struct obj *obj)
 	}
 
 	if (otmp->researched) {
-		pline("Someone has already disected this corpse.");
+		pline("Someone has already dissected this corpse.");
 		return;
 	}
 	
@@ -4623,6 +4850,13 @@ use_dissection_kit(struct obj *obj)
 		// pline("That's too insubstantial to dissect.");
 		// return;
 	// }
+	boolean hold_another = FALSE;
+	if(otmp->quan > 1L){
+		otmp = splitobj(otmp, 1L);
+		if(otmp->where == OBJ_INVENT){
+			hold_another = TRUE;
+		}
+	}
 	consume_obj_charge(obj, TRUE);
 
 	//San check
@@ -4743,7 +4977,10 @@ use_dissection_kit(struct obj *obj)
 			You("have devised a new experiment into the great animating thoughts.");
 		}
 	}
-	
+	if(hold_another){
+		freeinv(otmp);
+		hold_another_object(otmp, "You drop %s!", doname(otmp), (const char *)0);
+	}
 }
 
 static int
@@ -4780,6 +5017,7 @@ use_smithing_hammer(struct obj *obj)
 			if((is_future_otyp(i) && !(Role_if(PM_UNDEAD_HUNTER) && objects[i].oc_name_known))
 				|| ensouled_otyp(i)
 				|| is_harmonium_otyp(i)
+				|| is_silverknight_otyp(i)
 			)
 				continue;
 			if(i != CHURCH_HAMMER && i != BOX && !metallic_material(objects[i].oc_material))
@@ -6007,26 +6245,7 @@ use_hypospray(struct obj *hypo)
 					newcham(mtarg, NON_PM, FALSE, FALSE);
 			break;
 			case POT_AMNESIA:
-				if(!amp->cursed){
-					if (canseemon(mtarg))
-						pline("%s looks more tranquil.", Monnam(mtarg));
-					if(!amp->blessed){
-						untame(mtarg, 1);
-						mtarg->mferal = 0;
-					}
-					mtarg->mcrazed = 0;
-					mtarg->mdisrobe = 0;
-					mtarg->mberserk = 0;
-					mtarg->mdoubt = 0;
-				} else {
-					if (canseemon(mtarg))
-						pline("%s looks angry and confused!", Monnam(mtarg));
-					untame(mtarg, 0);
-					mtarg->mcrazed = 1;
-					mtarg->mberserk = 1;
-					mtarg->mconf = 1;
-					mtarg->mferal = 0;
-				}
+				mon_forget(mtarg, 100, amp->blessed, amp->cursed, !canseemon(mtarg));
 			break;
 		}
 	} else {
@@ -6620,8 +6839,10 @@ use_whip(struct obj *obj)
 	boolean ranged = FALSE;
 
     if (obj != uwep) {
-	if (!wield_tool(obj, "lash")) return MOVE_CANCELLED;
-	else res = MOVE_STANDARD;
+		if (uwep && uwep->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return MOVE_CANCELLED;
+		else if (!wield_tool(obj, "lash")) return MOVE_CANCELLED;
+		else res = MOVE_STANDARD;
     }
 	if(Straitjacketed){
 		You("can't snap a whip while your %s are bound!", makeplural(body_part(ARM)));
@@ -6745,7 +6966,7 @@ use_whip(struct obj *obj)
 				wrapped_what = strcpy(buf, mon_nam(mtmp));
 			} else if (proficient) {
 				struct attack attk = {AT_WEAP, AD_PHYS, 0, 0};
-				if (ranged ? (xmeleehity(&youmonst, mtmp, &attk, &otmp, -1, 0, TRUE) != MM_AGR_DIED) : attack2(mtmp)) return MOVE_ATTACKED;
+				if (ranged ? (xmeleehity(&youmonst, mtmp, &attk, &otmp, -1, 0, TRUE, 0) != MM_AGR_DIED) : attack2(mtmp)) return MOVE_ATTACKED;
 				else pline("%s", msg_snap);
 			}
 		}
@@ -6878,7 +7099,7 @@ use_whip(struct obj *obj)
 			else You("flick your whip towards %s.", mon_nam(mtmp));
 			if (proficient) {
 				struct attack attk = {AT_WEAP, AD_PHYS, 0, 0};
-				if (ranged ? (xmeleehity(&youmonst, mtmp, &attk, &otmp, -1, 0, TRUE) != MM_AGR_DIED) : attack2(mtmp)) return MOVE_ATTACKED;
+				if (ranged ? (xmeleehity(&youmonst, mtmp, &attk, &otmp, -1, 0, TRUE, 0) != MM_AGR_DIED) : attack2(mtmp)) return MOVE_ATTACKED;
 				else pline("%s", msg_snap);
 			}
 		}
@@ -6906,7 +7127,9 @@ use_nunchucks(struct obj *obj)
     const char *msg_snap = "Swish!";
 
     if (obj != uwep) {
-		if (!wield_tool(obj, "nunchaku")) return MOVE_CANCELLED;
+		if (uwep && uwep->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return MOVE_CANCELLED;
+		else if (!wield_tool(obj, "nunchaku")) return MOVE_CANCELLED;
 		else res = Role_if(PM_MONK) ? MOVE_PARTIAL : MOVE_STANDARD;
     }
 	if(Straitjacketed){
@@ -7134,6 +7357,13 @@ polearm_menu(struct obj *pole)
 			's', 0, ATR_NONE, buf,
 			MENU_UNSELECTED);
 	}
+	if(pole->otyp == SILVERKNIGHT_SCYTHE){
+		Sprintf(buf, "(send forth rogue halo)");
+		any.a_int = N_POLEDIRS+2;
+		add_menu(tmpwin, NO_GLYPH, &any,
+			'r', 0, ATR_NONE, buf,
+			MENU_UNSELECTED);
+	}
 
 	/* add an option to target manually */
 	Sprintf(buf, "(some location)");
@@ -7153,6 +7383,26 @@ polearm_menu(struct obj *pole)
 		return picked;
 	}
 	return 0;
+}
+
+void
+use_silverknight_scythe_at(int x, int y)
+{
+	struct monst *halo;
+	if(u.uen >= 10){
+		u.uen -= 10;
+		pline("You swing the Silverknight Scythe and a rogue halo flies forth!");
+		halo = makemon(&mons[PM_ROGUE_HALO], x, y, MM_ADJACENTOK|MM_NOCOUNTBIRTH|MM_EDOG|MM_ESUM);
+		if(halo){
+			halo->mpeaceful = TRUE;
+			initedog(halo);
+			mark_mon_as_summoned(halo, &youmonst, u.ulevel + rnd(u.ulevel), 0);
+			halo->movement = 3*NORMAL_SPEED;
+		}
+	}
+	else {
+		pline("Nothing happens.");
+	}
 }
 
 static const char
@@ -7185,7 +7435,9 @@ pick_polearm_target(struct obj *obj, struct monst **outptr, coord *ccp)
 	    return MOVE_CANCELLED;
 	}
 	if (obj != uwep && obj != uarmg) {
-	    if (!wield_tool(obj, "swing")) return MOVE_CANCELLED;
+	    if (uwep && uwep->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return MOVE_CANCELLED;
+		else if (!wield_tool(obj, "swing")) return MOVE_CANCELLED;
 	    else res = MOVE_STANDARD;
 	}
 	if(Straitjacketed){
@@ -7203,9 +7455,11 @@ pick_polearm_target(struct obj *obj, struct monst **outptr, coord *ccp)
 			ccp->x = 0; ccp->y = 0;
 			return res;	/* user pressed ESC */
 		}
-		if((obj->otyp == HUNTER_S_AXE || obj->otyp == HUNTER_S_LONG_AXE) && ccp->x == u.ux && ccp->y == u.uy){
-			ccp->x = 0; ccp->y = 0;
-			return use_hunter_axe(obj);
+		if(ccp->x == u.ux && ccp->y == u.uy){
+			if(obj->otyp == HUNTER_S_AXE || obj->otyp == HUNTER_S_LONG_AXE){
+				ccp->x = 0; ccp->y = 0;
+				return use_hunter_axe(obj);
+			}
 		}
 	}
 	else {
@@ -7217,7 +7471,14 @@ pick_polearm_target(struct obj *obj, struct monst **outptr, coord *ccp)
 			}
 			else if(i == N_POLEDIRS+1){
 				ccp->x = 0; ccp->y = 0;
-				return use_hunter_axe(obj);
+				if(obj->otyp == HUNTER_S_AXE || obj->otyp == HUNTER_S_LONG_AXE)
+					return use_hunter_axe(obj);
+				if(obj->otyp == SILVERKNIGHT_SCYTHE){
+					use_silverknight_scythe_at(u.ux, u.uy);
+					return MOVE_ATTACKED;
+				}
+				impossible("Unhandled special polearm action.");
+				return res; //Should never reach here
 			}
 			else {
 				/* use standard targeting; save retval to return */
@@ -7293,6 +7554,8 @@ use_pole(struct obj *obj)
 		   if(!rn2(3)) mksobj_at(SHEAF_OF_HAY,cc.x,cc.y,NO_MKOBJ_FLAGS);
 		   You("cut away the grass!");
 		   newsym(cc.x,cc.y);
+	} else if(obj->otyp == SILVERKNIGHT_SCYTHE){
+		use_silverknight_scythe_at(cc.x,cc.y);
 	} else {
 	    /* Now you know that nothing is there... */
 	    pline("%s", nothing_happens);
@@ -7352,7 +7615,9 @@ use_grapple(struct obj *obj)
 	    return MOVE_CANCELLED;
 	}
 	if (obj != uwep) {
-	    if (!wield_tool(obj, "cast")) return MOVE_CANCELLED;
+	    if (uwep && uwep->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return MOVE_CANCELLED;
+		else if (!wield_tool(obj, "cast")) return MOVE_CANCELLED;
 	    else res = MOVE_STANDARD;
 	}
 	if(Straitjacketed){
@@ -7481,7 +7746,9 @@ use_crook(struct obj *obj)
 	    return MOVE_CANCELLED;
 	}
 	if (obj != uwep) {
-	    if (!wield_tool(obj, "hook")) return MOVE_CANCELLED;
+	    if (uwep && uwep->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return MOVE_CANCELLED;
+		else if (!wield_tool(obj, "hook")) return MOVE_CANCELLED;
 	    else res = MOVE_STANDARD;
 	}
 	if(Straitjacketed){
@@ -7860,6 +8127,55 @@ use_chrysalis(struct obj *obj)
 			accident_n = any.a_int;
 	}
 
+	ch++;
+	any.a_int = 10;
+	if(u.ublood_smithing && !check_rot(ROT_SHUB) && !check_vampire(VAMPIRE_SHUB) && u.shubbie_atten){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Rot of Shub-Nugganoth", MENU_UNSELECTED);
+		if(!rn2(n))
+			accident_n = any.a_int;
+	}
+
+	ch++;
+	any.a_int = 11;
+	if(!check_rot(ROT_EXHULT)){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Exhultation of Rot", MENU_UNSELECTED);
+		if(!rn2(n))
+			accident_n = any.a_int;
+	}
+
+	ch++;
+	any.a_int = 12;
+	if(!check_rot(ROT_WINGSWORD)){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Wings of ruin", MENU_UNSELECTED);
+		if(!rn2(n))
+			accident_n = any.a_int;
+	}
+
+	ch++;
+	any.a_int = 13;
+	if(!check_rot(ROT_CRICKET)){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Chorus of destruction", MENU_UNSELECTED);
+		if(!rn2(n))
+			accident_n = any.a_int;
+	}
+
+	ch++;
+	any.a_int = 14;
+	if(check_rot(ROT_KIN) && !check_rot(ROT_FORAGE)){
+		n++;
+		add_menu(tmpwin, NO_GLYPH, &any , ch, 0, ATR_NONE,
+			 "Gifts of the forager brood", MENU_UNSELECTED);
+		if(!rn2(n))
+			accident_n = any.a_int;
+	}
 	if(!n){
 		destroy_nhwindow(tmpwin);
 		return MOVE_CANCELLED;
@@ -7903,6 +8219,7 @@ use_chrysalis(struct obj *obj)
 	if(n == 5){
 		add_rot(ROT_KIN);
 		You("are followed by the kin of rot.");
+		reset_rndmonst(NON_PM);
 	}
 	if(n == 6){
 		add_rot(ROT_FEAST);
@@ -7919,6 +8236,33 @@ use_chrysalis(struct obj *obj)
 	if(n == 9){
 		add_rot(ROT_SPORES);
 		pline("Puffball mushrooms errupt from your skin.");
+	}
+	if(n == 10){
+		add_rot(ROT_SHUB);
+		pline("Strange spores take root in your flesh.");
+		if(u.udroolgifted > 1){
+			u.ugifts -= (u.udroolgifted - 1);
+			u.ucultsval -= SHUB_DROOL_TIER*(u.udroolgifted - 1);
+		}
+	}
+	if(n == 11){
+		add_rot(ROT_EXHULT);
+		pline("You feel something stir in your breast.");
+	}
+	if(n == 12){
+		add_rot(ROT_WINGSWORD);
+		if(!Blind)
+			pline("Insect wings sprout from the %s of your sword %s!", !strcmpi(body_part(BODY_SKIN), "skin") ? "flesh" : body_part(BODY_SKIN), body_part(ARM));
+		else
+			Your("sword arm tickles.");
+	}
+	if(n == 13){
+		add_rot(ROT_CRICKET);
+		pline("Cricket wings tear free from the %s of your %s and %s!", !strcmpi(body_part(BODY_SKIN), "skin") ? "flesh" : body_part(BODY_SKIN), makeplural(body_part(ARM)), makeplural(body_part(LEG)));
+	}
+	if(n == 14){
+		add_rot(ROT_FORAGE);
+		pline("...the bugs on the %s are bowing to you in humble greeting.", surface(u.ux, u.uy));
 	}
 	// u.udefilement_research += rn2(defile_score());
 	u.mental_scores_down++;
@@ -7975,12 +8319,14 @@ use_doll_tear(struct obj *obj)
 			if(!mtmp)
 				return MOVE_CANCELLED;
 			
-			if(!is_dollable(mtmp->data)){
+			if(!is_dollable_mtyp(mtmp->mtyp)){
 				pline("That's not a doll.");
 				return MOVE_CANCELLED;
 			}
 			
 			if(mtmp->m_insight_level){
+				if(wizard)
+					pline("Monster haws insight level %d", mtmp->m_insight_level);
 				pline("Nothing happens....");
 				return MOVE_CANCELLED;
 			}
@@ -8002,10 +8348,16 @@ use_doll_tear(struct obj *obj)
 			return MOVE_CANCELLED;
 		}
 		
-		if(!get_ox(dollobj, OX_EMON))
+		if(get_ox(dollobj, OX_EMON))
 			mtmp = get_mtraits(dollobj, FALSE);
 
-		if(!mtmp || !is_dollable(mtmp->data)){
+		if(!mtmp || !is_dollable_mtyp(mtmp->mtyp)){
+			if(wizard){
+				if(!mtmp)
+					pline("There is no attached monster.");
+				else
+					pline("The attached monster is not dollable.");
+			}
 			pline("Nothing happens....");
 			return MOVE_CANCELLED;
 		}
@@ -8104,6 +8456,8 @@ use_doll(struct obj *obj)
 			}
 			healup(0, 0, TRUE, FALSE);
 			if (Stoned || Golded || Salted) fix_petrification();
+			youmonst.mgmld_skin = 0;
+			youmonst.mgmld_throat = 0;
 			res = MOVE_STANDARD;
 			pline("You feel very healthy.");
 			give_intrinsic(GOOD_HEALTH, 100L);
@@ -8481,16 +8835,14 @@ do_candle_menu(void)
 	end_menu(tmpwin, "What creature do you wish to summon?");
 
 	how = PICK_ONE;
-	do{
-		n = select_menu(tmpwin, how, &selected);
-	} while (n <= 0);
+	n = select_menu(tmpwin, how, &selected);
 	destroy_nhwindow(tmpwin);
 	if(n > 0){
 		int picked = selected[0].item.a_int;
 		free(selected);
 		return picked;
 	}
-	return 0;
+	return MISINPUT;
 }
 
 int
@@ -9474,7 +9826,7 @@ use_mist_projector(struct obj *obj)
 	struct region_arg cloud_data;
 	cloud_data.damage = 3+3*P_SKILL(P_FIREARM);
 	cloud_data.adtyp = AD_COLD;
-	(void) create_generic_cloud(u.ux, u.uy, 4+bcsign(obj), &cloud_data, TRUE);
+	(void) create_generic_cloud(u.ux, u.uy, 3+bcsign(obj), &cloud_data, TRUE);
 	pline("Whirling snow swirls out from around the %s.", xname(obj));
 	obj->spe--;
 	use_skill(P_FIREARM, 1);
@@ -10367,7 +10719,7 @@ upgradeImpArmor(void)
 		case IMPERIAL_ELVEN_HELM:
 			upitm = getobj(imperial_repairs, "repair the helm with");
 			if(!upitm || !helm_upgrade_obj(upitm)){
-				pline("Never mind.");
+				pline1(Never_mind);
 				return MOVE_CANCELLED;
 			}
 			if(upitm->owornmask){
@@ -10414,7 +10766,7 @@ upgradeImpArmor(void)
 		case IMPERIAL_ELVEN_GAUNTLETS:
 			upitm = getobj(imperial_repairs, "repair the gauntlets with");
 			if(!upitm || !gauntlets_upgrade_obj(upitm)){
-				pline("Never mind.");
+				pline1(Never_mind);
 				return MOVE_CANCELLED;
 			}
 			if(upitm->owornmask){
@@ -10454,7 +10806,7 @@ upgradeImpArmor(void)
 		case IMPERIAL_ELVEN_ARMOR:
 			upitm = getobj(imperial_repairs, "repair the armor with");
 			if(!upitm || !armor_upgrade_obj(upitm)){
-				pline("Never mind.");
+				pline1(Never_mind);
 				return MOVE_CANCELLED;
 			}
 			if(upitm->owornmask){
@@ -10517,7 +10869,7 @@ upgradeImpArmor(void)
 		case IMPERIAL_ELVEN_BOOTS:
 			upitm = getobj(imperial_repairs, "repair the boots with");
 			if(!upitm || !boots_upgrade_obj(upitm)){
-				pline("Never mind.");
+				pline1(Never_mind);
 				return MOVE_CANCELLED;
 			}
 			if(upitm->owornmask){
@@ -10581,7 +10933,7 @@ doUseUpgradeKit(struct obj **optr)
 				case WOOD_STOVE:
 					comp = getobj(tools, "upgrade your stove with");
 					if(!comp || comp->otyp != TINNING_KIT){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("use the components in the upgrade kit and the tinning kit to install a wood-burning stove.");
@@ -10601,7 +10953,7 @@ doUseUpgradeKit(struct obj **optr)
 				case EFFICIENT_SWITCH:
 					comp = getobj(tools, "upgrade your switch with");
 					if(!comp || comp->otyp != CROSSBOW){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("use the components in the upgrade kit and the crossbow to upgrade the switch on your clock.");
@@ -10616,7 +10968,7 @@ doUseUpgradeKit(struct obj **optr)
 					if(!comp ||
 						!((comp->otyp == ARCHAIC_PLATE_MAIL || comp->otyp == PLATE_MAIL) &&
 						(comp->obj_material == COPPER))){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("use the components in the upgrade kit to reinforce your armor with bronze plates.");
@@ -10629,7 +10981,7 @@ doUseUpgradeKit(struct obj **optr)
 				case PHASE_ENGINE:
 					comp = getobj(all_classes, "build a phase engine with");
 					if(!comp || comp->otyp != SUBETHAIC_COMPONENT){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("combine the components in the upgrade kit with the subethaic component and build a phase engine.");
@@ -10642,7 +10994,7 @@ doUseUpgradeKit(struct obj **optr)
 				case MAGIC_FURNACE:
 					comp = getobj(apply_wand, "build a magic furnace with");
 					if(!comp || comp->otyp != WAN_DRAINING){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("combine the components in the upgrade kit with the wand and build a magic furnace.");
@@ -10655,7 +11007,7 @@ doUseUpgradeKit(struct obj **optr)
 				case HELLFIRE_FURNACE:
 					comp = getobj(all_classes, "build a hellfire furnace with");
 					if(!comp || comp->otyp != HELLFIRE_COMPONENT){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("combine the components in the upgrade kit with the hellfire component and build a hellfire furnace.");
@@ -10668,7 +11020,7 @@ doUseUpgradeKit(struct obj **optr)
 				case SCRAP_MAW:
 					comp = getobj(tools, "build a scrap maw with");
 					if(!comp || comp->otyp != SCRAP){
-						pline("Never mind.");
+						pline1(Never_mind);
 						return MOVE_CANCELLED;
 					}
 					You("combine the components in the upgrade kit with the scrap and build a scrap maw.");
@@ -10680,11 +11032,6 @@ doUseUpgradeKit(struct obj **optr)
 				break;
 				case HIGH_TENSION:
 					// Maybe one day a spring pistol or something
-					// comp = getobj(tools, "build a scrap maw with");
-					// if(!comp || comp->otyp != SCRAP){
-						// pline("Never mind.");
-						// return MOVE_CANCELLED;
-					// }
 					You("use the components in the upgrade kit to increase the maximum tension in your mainspring.");
 					u.uhungermax += DEFAULT_HMAX; // 2000 per, capped at 9 kits for 20,000 max
 					if(u.uhungermax >= DEFAULT_HMAX*10) u.clockworkUpgrades |= upgrade;
@@ -10727,7 +11074,7 @@ doapply(void)
 
 	if(check_capacity((char *)0)) return MOVE_CANCELLED;
 
-	if (carrying(POT_OIL) || carrying(POT_BLOOD) || uhave_usablestone() || carrying(ROCK))
+	if (carrying(POT_OIL) || carrying(POT_BLOOD) || carrying(POT_SAP) || uhave_usablestone() || carrying(ROCK))
 		Strcpy(class_list, tools_too);
 	else
 		Strcpy(class_list, tools);
@@ -10792,6 +11139,7 @@ doapply(void)
 	else if(obj->oartifact == ART_STAFF_OF_AESCULAPIUS) res = aesculapius_poke(obj);
 	else if(obj->oartifact == ART_ESSCOOAHLIPBOOURRR) res = aesculapius_poke(obj);
 	else if(obj->oartifact == ART_RED_CORDS_OF_ILMATER) res = ilmater_touch(obj);
+	else if(obj->oartifact == ART_ANSERMEE) res = ansermee_scan(obj);
 	else if(obj->otyp == RAKUYO || obj->otyp == RAKUYO_SABER){
 		return use_rakuyo(obj);
 	}
@@ -11262,7 +11610,8 @@ doapply(void)
   	case BEAMSWORD:
 	case DOUBLE_LIGHTSABER:
 	case ROD_OF_FORCE:
-		if (uwep != obj && !(u.twoweap && uswapwep == obj) && !wield_tool(obj, (const char *)0)) break;
+		if (uwep != obj && !(u.twoweap && uswapwep == obj) && !((uwep && uwep->oartifact == ART_MORTAL_BLADE
+			&& yesno("Release the Mortal Blade?", TRUE) == 'n') || wield_tool(obj, (const char *)0))) break;
 		/* Fall through - activate via use_lamp */
 		    
 /* MRKR: dwarvish helms are mining helmets. 
@@ -11290,6 +11639,14 @@ doapply(void)
 	break;
 	case PHLEBOTOMY_KIT:
 		return blood_draw(obj);
+	case POT_SAP:
+		if(has_sap(youracedata))
+			return sap_transfusion(obj);
+		else {
+			pline("Sorry, I don't know how to use that.");
+			return MOVE_CANCELLED;
+		}
+	break;
 	case POT_BLOOD:
 		if(check_reanimation(RE_CLONE_SELF)){
 			if(find_object_type(invent, PHLEBOTOMY_KIT) && find_object_type(invent, BELL)){
@@ -11324,7 +11681,7 @@ doapply(void)
 		res = use_towel(obj);
 	break;
 	case CRYSTAL_BALL:
-		res = use_crystal_ball(obj);
+		res = use_crystal_ball(&obj);
 	break;
 	case MAGIC_MARKER:
 		res = dowrite(obj);
@@ -11347,6 +11704,39 @@ doapply(void)
 	case CRYSTAL_SKULL:
 		res = use_crystal_skull(&obj);
 	break;
+	case WORM_GNAWED_SKULL:{
+		if(!IS_ALTAR(levl[u.ux][u.uy].typ)){
+			pline("You need a workbench.");
+			res = MOVE_CANCELLED;
+			break;
+		}
+		int godnum = god_at_altar(u.ux, u.uy);
+		aligntyp altaralign = (a_align(u.ux,u.uy));
+		if(!philosophy_index(godnum)){
+			pline("This is an actual holy altar and thus unsuitable for your use.");
+			res = MOVE_CANCELLED;
+			break;
+		}
+		else if(u.veil){
+			You("feel reality threatening to slip away!");
+			if (yn("Are you sure you want to continue studying the skull?") == 'y'){
+				pline("So be it.");
+				You("feel a sharp pain in your temple.");
+				u.veil = FALSE;
+				change_uinsight(10);
+				useup(obj);
+				obj = 0;
+			}
+			res = MOVE_STANDARD;
+		}
+		else {
+			pline("A glassy furred worm emerges from the skull and burrows into your brow!");
+			change_uinsight(10);
+			useup(obj);
+			obj = 0;
+			res = MOVE_STANDARD;
+		}
+	}break;
 	case EFFIGY:{
 	    struct obj *curo;
 		if (Hallucination) You_feel("the tall leather doll take up your burdens!");
@@ -11435,7 +11825,8 @@ doapply(void)
 			make_doubtful(0L, TRUE);
 		}
 		
-		youmonst.mbleed = FALSE;
+		youmonst.mbleed = 0;
+		youmonst.mubled = FALSE;
 		youmonst.momud = FALSE;
 		youmonst.mcaterpillars = FALSE;
 		

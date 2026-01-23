@@ -570,6 +570,10 @@ drop(struct obj *obj)
 			weldmsg(obj);
 			return(0);
 		}
+
+		if (obj->oartifact == ART_MORTAL_BLADE && yesno("Release the Mortal Blade?", TRUE) == 'n')
+			return(0);
+
 		setuwep((struct obj *)0);
 	}
 	if(obj == uquiver) {
@@ -669,7 +673,7 @@ dropy(register struct obj *obj)
 				       FALSE, could_slime);
 			delobj(obj);	/* corpse is digested */
 		    } else if (could_petrify) {
-			minstapetrify(u.ustuck, TRUE);
+			minstapetrify(u.ustuck, TRUE, FALSE);
 			/* Don't leave a cockatrice corpse in a statue */
 			if (!u.uswallow) delobj(obj);
 		    } else if (could_grow) {
@@ -1262,6 +1266,7 @@ goto_level(d_level *newlevel, boolean at_stairs, boolean falling, int portal)
 	 */
 	if ((!up && Is_qhome(&u.uz) && !newdungeon && !ok_to_quest() && !flags.stag)
 	&& !(Race_if(PM_HALF_DRAGON) && Role_if(PM_NOBLEMAN) && flags.initgend)
+	&& !(Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 10)
 	) {
 		pline("A mysterious force prevents you from descending.");
 		return;
@@ -1277,7 +1282,7 @@ goto_level(d_level *newlevel, boolean at_stairs, boolean falling, int portal)
 	/* Mysterious force to shake up the uh quest*/
 	if(!up && !newdungeon && !portal && In_quest(&u.uz) 
 		&& Role_if(PM_UNDEAD_HUNTER) && !mvitals[PM_MOON_S_CHOSEN].died
-		&& dunlev(&u.uz) < qlocate_level.dlevel
+		&& dunlev(&u.uz) >= qlocate_level.dlevel
 		&& rnd(20) < Insight && rn2(2)
 	){
 		int diff = rn2(2);	/* 0 - 1 */
@@ -1325,10 +1330,10 @@ goto_level(d_level *newlevel, boolean at_stairs, boolean falling, int portal)
 	u.uinwater = 0;
 	u.usubwater = 0;
 	u.uundetected = 0;	/* not hidden, even if means are available */
-	u.uz.flags.mirror = 0; /*Level has a mirror on it (needed for Nudzirath) */
+	level.flags.mirror = 0; /*Level has a mirror on it (needed for Nudzirath) */
 	for(obj = fobj; obj; obj = obj->nobj){
 		if(obj->otyp == MIRROR)
-			u.uz.flags.mirror = 1;
+			level.flags.mirror = 1;
 	}
 	if(!Is_nowhere(newlevel)) keepdogs(FALSE, newlevel, portal);
 	u.ux = u.uy = 0;			/* comes after keepdogs() */
@@ -1497,7 +1502,7 @@ remake:
 				}
 			}
 			/* Remove bug which crashes with levitation/punishment  KAA */
-			if (Punished && !Levitation) {
+			if (Punished && uball->oartifact != ART_IRON_BALL_OF_LEVITATION && !Levitation) {
 				pline("With great effort you climb the %s.",
 				at_ladder ? "ladder" : "stairs");
 			} else if (at_ladder)
@@ -1519,7 +1524,7 @@ remake:
 				You("fly down along the %s.",
 				at_ladder ? "ladder" : "stairs");
 			else if (u.dz &&
-				(near_capacity() > UNENCUMBERED || (Punished &&
+				(near_capacity() > UNENCUMBERED || (Punished && uball->oartifact != ART_IRON_BALL_OF_LEVITATION &&
 				((uwep != uball) || ((P_SKILL(P_FLAIL) < P_BASIC))
 				|| !Role_if(PM_CONVICT)))
 				 || Fumbling)
@@ -2101,6 +2106,7 @@ revive_corpse(struct obj *corpse, int different)
     Strcpy(cname, corpse_xname(corpse, TRUE));
     mcarry = (where == OBJ_MINVENT) ? corpse->ocarry : 0;
 	int ox, oy;
+	int pm = corpse->corpsenm;
 	if(where == OBJ_FLOOR){
 		ox = corpse->ox;
 		oy = corpse->oy;
@@ -2114,12 +2120,16 @@ revive_corpse(struct obj *corpse, int different)
 		if (container_where == OBJ_MINVENT && mtmp2) mcarry = mtmp2;
     }
     mtmp = revive(corpse, FALSE);      /* corpse is gone if successful && quan == 1 */
+	if(different == GROW_MOLD && mtmp && mtmp->mtyp != pm){
+		set_mon_data(mtmp, pm);
+	}
 
     if (mtmp) {
 	/*
 	 * [ALI] Override revive's HP calculation. The HP that a mold starts
 	 * with do not depend on the HP of the monster whose corpse it grew on.
 	 */
+	mtmp->mprobed = 0;
 	if (different)
 	    mtmp->mhp = mtmp->mhpmax;
 	else if(has_sunflask(mtmp->mtyp))
@@ -2411,6 +2421,103 @@ moldy_corpse(void * arg, long timeout)
 				body->quan++;
 			oldquan = body->quan;
 			if (revive_corpse(body, (pmtype == PM_BRAINBLOSSOM_PATCH) ? GROW_BBLOOM : GROW_MOLD)) {
+				if (oldquan != 1) {		/* Corpse still valid */
+					body->corpsenm = oldtyp;
+					if (body->where == OBJ_INVENT) {
+						useup(body);
+						oldquan--;
+					}
+				}
+				if (oldquan == 1)
+				body = (struct obj *)0;	/* Corpse gone */
+			}
+		}
+	}
+
+	/* If revive_corpse succeeds, it handles the reviving corpse.
+	 * If there was more than one corpse, or the revive failed,
+	 * set the remaining corpse(s) to rot away normally.
+	 * Revive_corpse handles genocides
+	 */
+	if (body) {
+		body->corpsenm = oldtyp; /* Fixup corpse after (attempted) revival */
+		body->owt = weight(body);
+		(void) start_timer(250L - (monstermoves-peek_at_iced_corpse_age(body)),
+			TIMER_OBJECT, ROT_CORPSE, arg);
+	}
+}
+
+/* Revive the corpse as a gray mold via a timeout. */
+/*ARGSUSED*/
+void
+gray_moldy_corpse(void *arg, long timeout)
+{
+	int pmtype, oldtyp, oldquan;
+	struct obj *body = (struct obj *) arg;
+
+	/* Turn the corpse into a mold corpse if molds are available */
+	oldtyp = body->corpsenm;
+
+	struct monst *attchmon = 0;
+	if(get_ox(body, OX_EMON)) attchmon = EMON(body);
+	struct permonst *ptr = attchmon ? &mons[attchmon->mtyp] : &mons[body->corpsenm];
+	if(attchmon && attchmon->mtemplate)
+		ptr = permonst_of(ptr->mtyp, attchmon->mtemplate);
+	boolean magical = is_magical(ptr);
+	boolean regrow = FALSE;
+	if(ptr->mtyp == PM_VEGEPYGMY_SHAMAN){
+		pmtype = rn2(10) ? PM_VEGEPYGMY_SHAMAN : PM_RUSTY_GRAY_MOLD;
+		regrow = pmtype == PM_VEGEPYGMY_SHAMAN;
+	}
+	else if(ptr->mtyp == PM_VEGEPYGMY){
+		pmtype = rn2(10) ? PM_VEGEPYGMY : PM_VEGEPYGMY_SHAMAN;
+		regrow = pmtype == PM_VEGEPYGMY;
+	}
+	else if(magical){
+		pmtype = PM_VEGEPYGMY_SHAMAN;
+	}
+	else {
+		pmtype = PM_VEGEPYGMY;
+	}
+
+	/* [ALI] Molds don't grow in adverse conditions.  If it ever
+	 * becomes possible for molds to grow in containers we should
+	 * check for iceboxes here as well.
+	 */
+	if ((
+			(body->where == OBJ_FLOOR || body->where==OBJ_BURIED) &&
+			(is_lava(body->ox, body->oy) ||
+				is_ice(body->ox, body->oy))
+		) || (
+			(body->where == OBJ_CONTAINED && body->ocontainer->otyp == ICE_BOX)
+		)
+	) pmtype = -1;
+
+	if (pmtype != -1) {
+		if(couldsee(body->ox, body->oy) && distmin(body->ox, body->oy, u.ux, u.uy) <= BOLT_LIM){
+			IMPURITY_UP(u.uimp_rot)
+		}
+		/* We don't want special case revivals */
+		if (cant_create(&pmtype, TRUE))
+			pmtype = -1; /* cantcreate might have changed it so change it back */
+		else {
+				body->corpsenm = pmtype;
+
+			/* oeaten isn't used for hp calc here, and zeroing it 
+			 * prevents eaten_stat() from worrying when you've eaten more
+			 * from the corpse than the newly grown mold's nutrition
+			 * value.
+			 */
+			body->oeaten = 0;
+
+			/* [ALI] If we allow revive_corpse() to get rid of revived
+			 * corpses from hero's inventory then we run into problems
+			 * with unpaid corpses.
+			 */
+			if (body->where == OBJ_INVENT)
+				body->quan++;
+			oldquan = body->quan;
+			if (revive_corpse(body, (regrow) ? REVIVE_MOLD : GROW_MOLD)) {
 				if (oldquan != 1) {		/* Corpse still valid */
 					body->corpsenm = oldtyp;
 					if (body->where == OBJ_INVENT) {
@@ -2737,7 +2844,7 @@ donull(void)
 			stop_occupation();
 			(*hp) = (*hpmax);
 		}
-	} else if (!Role_if(PM_MONK) && u.sealsActive&SEAL_EURYNOME && ++u.eurycounts>5) {
+	} else if (!Role_if(PM_MONK) && !Role_if(PM_KENSEI) && u.sealsActive&SEAL_EURYNOME && ++u.eurycounts>5) {
 		// monks meditate & fast, increasing pw regen and lowering hunger rate while they haven't moved
 		unbind(SEAL_EURYNOME,TRUE);
 	}

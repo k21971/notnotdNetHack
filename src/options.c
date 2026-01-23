@@ -39,6 +39,7 @@ static struct Bool_Opt
 	int optflags;
 } boolopt[] = {
 	{"altmeta", (boolean *)0, TRUE, DISP_IN_GAME},
+	{"artifact_descriptors",    &iflags.artifact_descriptors, FALSE, SET_IN_GAME},
 	{"ascii_map",     &iflags.wc_ascii_map, !PREFER_TILED, SET_IN_GAME},	/*WC*/
 	{"asksavedisk", (boolean *)0, FALSE, SET_IN_FILE},
 	{"autodig", &flags.autodig, FALSE, SET_IN_GAME},
@@ -72,6 +73,9 @@ static struct Bool_Opt
 	{"cursesgraphics", (boolean *)0, FALSE, SET_IN_FILE},
 #endif
 	{"DECgraphics", &iflags.DECgraphics, FALSE, SET_IN_GAME},
+	{"default_template_hilite", &iflags.default_template_hilite, TRUE, SET_IN_FILE },
+	{"dnethack_dungeon_colors",    &iflags.dnethack_dungeon_colors, TRUE, SET_IN_GAME},
+	{"dnethack_start_text",    &iflags.dnethack_start_text, TRUE, DISP_IN_GAME},
 	{"eight_bit_tty", &iflags.wc_eight_bit_input, FALSE, SET_IN_GAME},	/*WC*/
 #if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS)
 	{"extmenu", &iflags.extmenu, FALSE, SET_IN_GAME},
@@ -86,6 +90,7 @@ static struct Bool_Opt
 	{"female", &flags.female, FALSE, DISP_IN_GAME},
 	{"fixinv", &flags.invlet_constant, TRUE, SET_IN_GAME},
 	{"flush", (boolean *)0, FALSE, SET_IN_FILE},
+	{"force_artifact_names",    &iflags.force_artifact_names, TRUE, SET_IN_GAME},
 	{"fullscreen", &iflags.wc2_fullscreen, FALSE, SET_IN_FILE},
 	{"guicolor", &iflags.wc2_guicolor, TRUE, SET_IN_GAME},
 	{"help", &flags.help, TRUE, SET_IN_GAME},
@@ -95,19 +100,12 @@ static struct Bool_Opt
 	{"use_inverse",   &iflags.wc_inverse, FALSE, SET_IN_GAME},		/*WC*/
 	{"hilite_hidden_stairs",    &iflags.hilite_hidden_stairs, TRUE, SET_IN_GAME},	/*WC*/
 	{"hilite_obj_piles",    &iflags.hilite_obj_piles, FALSE, SET_IN_GAME},	/*WC*/
-	{"default_template_hilite", &iflags.default_template_hilite, TRUE, SET_IN_FILE },
-	{"dnethack_start_text",    &iflags.dnethack_start_text, TRUE, DISP_IN_GAME},
-	{"artifact_descriptors",    &iflags.artifact_descriptors, FALSE, SET_IN_GAME},
-	{"force_artifact_names",    &iflags.force_artifact_names, TRUE, SET_IN_GAME},
-	{"role_obj_names",    &iflags.role_obj_names, TRUE, SET_IN_GAME},
-	{"obscure_role_obj_names",    &iflags.obscure_role_obj_names, FALSE, SET_IN_GAME},
-	{"dnethack_dungeon_colors",    &iflags.dnethack_dungeon_colors, TRUE, SET_IN_GAME},
-	{"invweight",    &iflags.invweight, TRUE, SET_IN_GAME},
 	{"hitpointbar", &iflags.hitpointbar, FALSE, SET_IN_GAME},
 	{"hp_monitor", (boolean *)0, TRUE, SET_IN_FILE}, /* For backward compat, HP monitor patch */
 	{"hp_notify", &iflags.hp_notify, FALSE, SET_IN_GAME},
 	{"IBMgraphics", &iflags.IBMgraphics, FALSE, SET_IN_GAME},
 	{"ignintr", &flags.ignintr, FALSE, SET_IN_GAME},
+	{"invweight",    &iflags.invweight, TRUE, SET_IN_GAME},
 	{"item_use_menu", &iflags.item_use_menu, TRUE, SET_IN_GAME},
 	{"large_font", &iflags.obsolete, FALSE, SET_IN_FILE},	/* OBSOLETE */
 	{"legacy", &flags.legacy, TRUE, DISP_IN_GAME},
@@ -142,6 +140,7 @@ static struct Bool_Opt
 #endif
 	{"msg_wall_hits", &iflags.notice_walls, FALSE, SET_IN_GAME},
 	{"null", &flags.null, TRUE, SET_IN_GAME},
+	{"obscure_role_obj_names",    &iflags.obscure_role_obj_names, FALSE, SET_IN_GAME},
 	{"old_C_behaviour", &iflags.old_C_behaviour, FALSE, SET_IN_GAME},
 	{"page_wait", (boolean *)0, FALSE, SET_IN_FILE},
 	{"paranoid_self_cast", &iflags.paranoid_self_cast, TRUE, SET_IN_GAME},
@@ -151,7 +150,7 @@ static struct Bool_Opt
 	{"paranoid_swim", &iflags.paranoid_swim, TRUE, SET_IN_GAME},
 	{"paranoid_wand_break", &iflags.paranoid_wand_break, TRUE, SET_IN_GAME},
 	{"perm_invent", &flags.perm_invent, FALSE, SET_IN_GAME},
-       {"pickup_thrown", &iflags.pickup_thrown, FALSE, SET_IN_GAME},
+	{"pickup_thrown", &iflags.pickup_thrown, FALSE, SET_IN_GAME},
 	{"polearm_old_style", &flags.standard_polearms, FALSE, SET_IN_GAME},
 	{"polearm_peace_safe", &flags.peacesafe_polearms, TRUE, SET_IN_GAME},
 	{"polearm_pet_safe", &flags.petsafe_polearms, TRUE, SET_IN_GAME},
@@ -165,6 +164,7 @@ static struct Bool_Opt
 	{"quiver_fired", &iflags.quiver_fired, TRUE, SET_IN_GAME},
 	{"qwertz_movement", &iflags.qwertz_movement, FALSE, SET_IN_GAME},
 	{"rest_on_space", &flags.rest_on_space, FALSE, SET_IN_GAME},
+	{"role_obj_names",    &iflags.role_obj_names, TRUE, SET_IN_GAME},
 	{"safe_pet", &flags.safe_dog, TRUE, SET_IN_GAME},
 #ifdef WIZARD
 	{"sanity_check", &iflags.sanity_check, FALSE, SET_IN_GAME},
@@ -1877,10 +1877,12 @@ parseoptions(register char *opts, boolean tinitial, boolean tfrom_file)
 				ADD_REMOVE_SECTION(POKEDEX_SHOW_MV);
 			else if (!strncmpi(op, "attacks",    l= 7))
 				ADD_REMOVE_SECTION(POKEDEX_SHOW_ATTACKS);
-			else if (!strncmpi(op, "summary",    l= 7))
-				ADD_REMOVE_SECTION(POKEDEX_SHOW_CRITICAL);
 			else if (!strncmpi(op, "wards",    l= 5))
 				ADD_REMOVE_SECTION(POKEDEX_SHOW_WARDS);
+			else if (!strncmpi(op, "encyclopedia", l= 12))
+				ADD_REMOVE_SECTION(POKEDEX_SHOW_ENCYC);
+			else if (!strncmpi(op, "summary",    l= 7))
+				ADD_REMOVE_SECTION(POKEDEX_SHOW_CRITICAL);
 			else
 				badoption(opts);
 #undef ADD_REMOVE_SECTION
@@ -3295,7 +3297,7 @@ static const char *burdentype[] = {
 
 static const char *pokedexsections[] = {
 	"stats", "generation", "weight", "resists", "conveys",
-	"movement", "thinking", "biology", "mechanics", "race", "vision", "attacks"/*, "summary"*/
+	"movement", "thinking", "biology", "mechanics", "race", "vision", "attacks", "wards", "encyclopedia"/*, "summary"*/
 };
 
 static const char *runmodes[] = {

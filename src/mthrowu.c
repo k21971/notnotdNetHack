@@ -57,7 +57,7 @@ mtarget_adjacent(struct monst *magr)
 			if(!(mtmp = m_u_at(ix, jy)))
 				continue;
 			if(mtmp == &youmonst){
-				if(mtmp->mpeaceful)
+				if(magr->mpeaceful)
 					continue;
 				else return TRUE;
 			}
@@ -111,6 +111,8 @@ mfind_target(
 		weap_attack = mon_attacktype(magr, AT_WEAP);
 		if(!weap_attack)
 			weap_attack = mon_attacktype(magr, AT_DEVA);
+		if(!weap_attack)
+			weap_attack = mon_attacktype(magr, AT_JUGL);
 	}
 	boolean breath_attack = 0;
 	boolean splash_attack = 0;
@@ -175,7 +177,6 @@ mfind_target(
 	}
 	
 	pole_range = m_pole_range(magr);
-	dist_min = distmin(magr->mx, magr->my, tarx, tary);
 
 	/* target-finding loop */
 	do {

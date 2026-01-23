@@ -9,6 +9,7 @@
 #include "permonst.h"
 #include "mondata.h"
 #include "pm.h"
+#include "artifact.h"
 
 
 /* KMH, intrinsics patch.
@@ -113,6 +114,8 @@
 #define EStrangled		u.uprops[STRANGLED].extrinsic
 #define Strangled		(HStrangled || EStrangled)
 
+#define Strangled_cant_speak	(HStrangled || (EStrangled && !separate_respiration(youracedata)))
+
 #define Drowning		(Underwater && !Breathless && !amphibious(youracedata))
 
 #define HChastity		u.uprops[CHASTITY].intrinsic
@@ -151,6 +154,14 @@
 #define EYogSpell		u.uprops[YOG_SPELLS].extrinsic
 #define YogSpell		(HYogSpell || EYogSpell)
 
+#define HFocusAura		u.uprops[FOCUS_AURA].intrinsic
+#define EFocusAura		u.uprops[FOCUS_AURA].extrinsic
+#define FocusAura		(HFocusAura || EFocusAura)
+
+#define HGokorei		u.uprops[DIAMOND_BELL].intrinsic
+#define EGokorei		u.uprops[DIAMOND_BELL].extrinsic
+#define Gokorei		(HGokorei || EGokorei)
+
 #define HQuickDraw		u.uprops[QUICK_DRAW].intrinsic
 #define EQuickDraw		u.uprops[QUICK_DRAW].extrinsic
 #define QuickDraw		(HQuickDraw || EQuickDraw)
@@ -182,7 +193,7 @@
 
 #define Insight	(u.uinsight)
 
-#define	FacelessHelm(obj) ((obj)->otyp == PLASTEEL_HELM || (obj)->otyp == CRYSTAL_HELM || (obj)->otyp == PONTIFF_S_CROWN || (obj)->otyp == FACELESS_HELM || (obj)->otyp == FACELESS_HOOD || (obj)->otyp == IMPERIAL_ELVEN_HELM)
+#define	FacelessHelm(obj) ((obj)->otyp == PLASTEEL_HELM || (obj)->otyp == CRYSTAL_HELM || (obj)->otyp == PONTIFF_S_CROWN || (obj)->otyp == FACELESS_HELM || (obj)->otyp == FACELESS_HOOD || (obj)->otyp == SILVERKNIGHT_HELM || (obj)->otyp == IMPERIAL_ELVEN_HELM)
 #define	FacelessCloak(obj) ((obj)->otyp == WHITE_FACELESS_ROBE || (obj)->otyp == BLACK_FACELESS_ROBE || (obj)->otyp == SMOKY_VIOLET_FACELESS_ROBE)
 #define	Faceless(obj) (FacelessHelm(obj) || FacelessCloak(obj))
 
@@ -190,10 +201,22 @@
 #define is_left_ring(obj) ((obj) == uleft || (obj) == urings[2])
 #define is_right_ring(obj) ((obj) == uright || (obj) == urings[3])
 
+#define Disguised	((ublindf && (ublindf->otyp == LENSES || ublindf->otyp == SUNGLASSES \
+								|| ublindf->otyp == MASK || ublindf->otyp == R_LYEHIAN_FACEPLATE \
+								|| ublindf->otyp == TOWEL \
+							) \
+					) \
+					|| (uarmh && (FacelessHelm(uarmh) || uarmh->otyp == find_vhelm()) && is_opaque(uarmh)) \
+					|| (uarmc && FacelessCloak(uarmc) && is_opaque(uarmc)) \
+				)
+
 #define save_vs_sanloss()	((uwep && uwep->oartifact == ART_NODENSFORK) || (rnd(30) < (ACURR(A_WIS) + (uring_art(ART_NARYA) ? narya() : 0))))
 
+#define HDark_res		u.uprops[DARK_RES].intrinsic
+#define EDark_res		u.uprops[DARK_RES].extrinsic
+#define Dark_resistant		(HDark_res || EDark_res)
 #define Mortal_race	(!nonliving(youracedata) && !is_minion(youracedata) && !is_demon(youracedata) && !is_primordial(youracedata))
-#define Dark_immune	(is_unalive(youracedata) || is_primordial(youracedata))
+#define Dark_immune	(is_unalive(youracedata) || is_primordial(youracedata) || Dark_resistant)
 
 /* Those implemented solely as timeouts (we use just intrinsic) */
 #define HStun			u.uprops[STUNNED].intrinsic
@@ -415,9 +438,7 @@
 
 #define HWeldproof	u.uprops[WELDPROOF].intrinsic
 #define EWeldproof	u.uprops[WELDPROOF].extrinsic
-#define Weldproof	(HWeldproof || EWeldproof || \
-			 is_weldproof(youracedata) || (u.ulycn >= LOW_PM) || \
-			 Race_if(PM_ANDROID) || Race_if(PM_PARASITIZED_ANDROID))
+#define Weldproof	(HWeldproof || EWeldproof || is_weldproof(youracedata) || (u.ulycn >= LOW_PM))
 
 /*** Appearance and behavior ***/
 #define Adornment		u.uprops[ADORNED].extrinsic
@@ -550,6 +571,15 @@
 				 (uclockwork && u.phasengn)|| species_passes_walls(youracedata))
 # define Phasing            u.uprops[PASSES_WALLS].intrinsic
 
+#define HOffensiveLuck		u.uprops[OFFENSIVE_LUCK].intrinsic
+#define EOffensiveLuck		u.uprops[OFFENSIVE_LUCK].extrinsic
+#define OffensiveLuck		(HOffensiveLuck || EOffensiveLuck)
+
+#define HDefensiveLuck		u.uprops[DEFENSIVE_LUCK].intrinsic
+#define EDefensiveLuck		u.uprops[DEFENSIVE_LUCK].extrinsic
+#define DefensiveLuck		(HDefensiveLuck || EDefensiveLuck)
+
+
 /*** Physical attributes ***/
 #define HSlow_digestion		u.uprops[SLOW_DIGESTION].intrinsic
 #define ESlow_digestion		u.uprops[SLOW_DIGESTION].extrinsic
@@ -650,7 +680,7 @@
 
  /*Note: the rings only give life saving when charged, so it can't be a normal property*/
 #define ELifesaved		u.uprops[LIFESAVED].extrinsic
-#define Lifesaved		(ELifesaved || Check_crystal_lifesaving() || Check_iaso_lifesaving() || Check_twin_lifesaving() || Check_ring_lifesaving() || (check_rot(ROT_CENT) && !(mvitals[PM_CENTIPEDE].mvflags & G_GENOD) && !HUnchanging) || (check_mutation(ABHORRENT_SPORE) && !(mvitals[PM_DARK_YOUNG].mvflags & G_GENOD)))
+#define Lifesaved		(ELifesaved || Check_crystal_lifesaving() || Check_iaso_lifesaving() || Check_twin_lifesaving() || Check_ring_lifesaving() || (check_rot(ROT_CENT) && !(mvitals[PM_CENTIPEDE].mvflags & G_GENOD) && !HUnchanging) || (check_mutation(ABHORRENT_SPORE) && !(mvitals[PM_DARK_YOUNG].mvflags & G_GENOD)) || (uwep && uwep->oartifact == ART_MORTAL_BLADE && artinstance[ART_MORTAL_BLADE].mortalLives > 0))
 
 #define Necrospellboost	(u.uprops[NECROSPELLS].extrinsic)
 

@@ -18,6 +18,15 @@ static void move_update(boolean);
 static struct obj * all_items(boolean, int *, boolean);
 
 #define IS_SHOP(x)	(rooms[x].rtype >= SHOPBASE)
+#define ww_boots	(uarmf && uarmf->otyp == WATER_WALKING_BOOTS && objects[WATER_WALKING_BOOTS].oc_name_known)
+#define visible_ww	(ww_boots || u.sealsActive&SEAL_EURYNOME || HWwalking ||\
+					(u.uprops[WWALKING].extrinsic & W_ARTI) || (u.uprops[WWALKING].extrinsic & W_ART) ||\
+					uring_art(ART_NENYA))
+#define lava_vis_ww	(visible_ww && Fire_resistance && (!uarmf || (uarmf->oerodeproof && uarmf->rknown) || !is_flammable(uarmf)))
+#define BAD_PUDDLE ((!u.usteed &&\
+		((uarmf && is_rustprone(uarmf) && !uarmf->oerodeproof && uarmf->oeroded != MAX_ERODE) ||\
+		(verysmall(youracedata) && !Waterproof))) ||\
+	(u.umonnum == PM_GREMLIN) || (is_iron(youracedata) && (!uarmf || strncmp(OBJ_DESCR(objects[uarmf->otyp]), "mud ", 4))))
 
 
 int
@@ -693,11 +702,14 @@ test_move(int ux, int uy, int dx, int dy, int mode)
      * (but not u.ux/u.uy because findtravelpath walks toward u.ux/u.uy) */
     if (flags.run == 8 && mode != DO_MOVE && (x != u.ux || y != u.uy)) {
 	struct trap* t = t_at(x, y);
-
 	if ((t && t->tseen) ||
         (((!Levitation && !Flying &&
          !is_clinger(youracedata)) || is_3dwater(x, y)) &&
-         (is_pool(x, y, TRUE) || is_lava(x, y)) && levl[x][y].seenv))
+         (
+			(is_pool(x, y, FALSE) && !visible_ww) ||
+			(IS_PUDDLE(levl[x][y].typ) && BAD_PUDDLE && !visible_ww) ||
+			(is_lava(x, y) && !lava_vis_ww)
+		) && levl[x][y].seenv))
         return FALSE;
     }
 
@@ -1094,10 +1106,11 @@ domove(void)
 			flags.move |= MOVE_CANCELLED;
 			return;
 		}
+
 		if (((trap = t_at(x, y)) && trap->tseen) ||
-		    (Blind && !Levitation && !Flying &&
+		    (Blind && !Levitation && !Flying && !visible_ww &&
 		     !is_clinger(youracedata) &&
-		     (is_pool(x, y, TRUE) || is_lava(x, y)) && levl[x][y].seenv)) {
+		     (is_pool(x, y, FALSE) || (IS_PUDDLE(levl[x][y].typ) && BAD_PUDDLE) || (is_lava(x, y) && !lava_vis_ww)) && levl[x][y].seenv)) {
 			if(flags.run >= 2) {
 				nomul(0, NULL);
 				flags.move |= MOVE_CANCELLED;
@@ -1289,7 +1302,7 @@ domove(void)
 				/* Streaming mercurial weapons hit an aditional target if your insight is high enough */
 				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && otmp && is_streaming_merc(otmp)){
 					if(mlev(&youmonst) > 20 && (Insight > 20 && YOU_MERC_SPECIAL)){
-						result |= hit_with_streaming(&youmonst, otmp, x, y, 0, attk);
+						result |= hit_with_streaming(&youmonst, otmp, x, y, u.ux, u.uy, 0, attk);
 					}
 				}
 				/* Rakuyo hit additional targets, if your insight is high enough to percieve the blood */
@@ -1297,7 +1310,7 @@ domove(void)
 					result |= hit_with_rblood(&youmonst, otmp, x, y, 0, attk);
 				}
 				/* Chikage launch blood iff you DON'T have a primary target, if your insight is high enough to percieve the blood */
-				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 20 && otmp && otmp->otyp == CHIKAGE && otmp->obj_material == HEMARGYOS){
+				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 20 && otmp && otmp->otyp == CHIKAGE && (otmp->obj_material == HEMARGYOS || check_oprop(otmp, OPROP_HAEM))){
 					result |= hit_with_cblood(&youmonst, otmp, x, y, 0, attk);
 				}
 				/* Club-claw insight weapons strike additional targets if your insight is high enough to perceive the claw */
@@ -1308,11 +1321,15 @@ domove(void)
 				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 22 && otmp && otmp->otyp == ISAMUSEI){
 					result |= hit_with_iwarp(&youmonst, otmp, x, y, 0, attk);
 				}
+				/* Isamusei-skies hits additional targets, if your insight is high enough to percieve the distortions */
+				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && Insight >= 22 && otmp && (otmp->oartifact == ART_AMALGAMATED_SKIES && artinstance[ART_SKY_REFLECTED].ZerthOtyp == ISAMUSEI)){
+					result |= hit_with_iwarp(&youmonst, otmp, x, y, 0, attk);
+				}
 				/* Dancers hit additional targets */
 				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && is_dancer(&youmonst)){
 					result |= hit_with_dance(&youmonst, otmp, x, y, 0, attk);
 				}
-				/* Rejection antenae hit additional targets (last) */
+				/* Rejection antennae hit additional targets (last) */
 				if(!(result&(MM_AGR_DIED|MM_AGR_STOP)) && otmp && check_oprop(otmp, OPROP_ANTAW) && check_reanimation(ANTENNA_REJECT)){
 					result |= hit_with_rreject(&youmonst, otmp, x, y, 0, attk);
 				}
@@ -1599,16 +1616,12 @@ domove(void)
 		 * checks extrinsic from carry/invoke artifacts as well, but not worn :( those are W_WORN not W_ART(I)
 		 * this also assumes the only "object" that grants ww is ww boots
 		 */
-		boolean ww_boots = (uarmf && uarmf->otyp == WATER_WALKING_BOOTS && objects[WATER_WALKING_BOOTS].oc_name_known);
-		boolean visible_ww = ww_boots || u.sealsActive&SEAL_EURYNOME || HWwalking ||
-			(u.uprops[WWALKING].extrinsic & W_ARTI) || (u.uprops[WWALKING].extrinsic & W_ART) ||
-		        uring_art(ART_NENYA);
 
 	    /* Going into 3D water with limited breath can be dangerous. */
 	    boolean safe_3dwater = safe_inwater && Breathless;
 	    boolean safe_water = safe_inwater || safe_air || (!u.usteed && visible_ww);
 	    boolean safe_lava = safe_air ||	(!u.usteed &&
-			(likes_lava(youracedata) || (visible_ww && Fire_resistance && (!uarmf || uarmf->oerodeproof || !is_flammable(uarmf)))));
+			(likes_lava(youracedata) || (lava_vis_ww)));
 
 	    if ((!safe_air && !safe_air_level && levl[x][y].typ == AIR && levl[u.ux][u.uy].typ != AIR) ||
 			(!safe_water && is_pool(x, y, FALSE) && !is_pool(u.ux, u.uy, FALSE)) ||
@@ -2624,14 +2637,16 @@ bcorr:
 	    /* water and lava only stop you if directly in front, and stop
 	     * you even if you are running
 	     */
-	    if(!Levitation && !Flying && !is_clinger(youracedata) &&
+	    if(!Levitation && !Flying && !visible_ww && !(IS_PUDDLE(levl[x][y].typ) && !BAD_PUDDLE) && !(is_lava(x, y) && lava_vis_ww) && !is_clinger(youracedata) &&
 				x == u.ux+u.dx && y == u.uy+u.dy)
 			/* No Wwalking check; otherwise they'd be able
 			 * to test boots by trying to SHIFT-direction
 			 * into a pool and seeing if the game allowed it
+			 * ---- amended, check visible_ww
 			 */
 			goto stop;
 	    continue;
+#undef BAD_PUDDLE
 	} else {		/* e.g. objects or trap or stairs */
 	    if(flags.run == 1) goto bcorr;
 	    if(flags.run == 8) continue;
@@ -3003,7 +3018,7 @@ weight_cap(void)
 	}
 	
 	carrcap += u.ucarinc;
-	if(u.sealsActive&SEAL_FAFNIR) carrcap *= 1+((double) u.ulevel)/100;
+	if(u.sealsActive&SEAL_MAEGERA) carrcap *= 1+((double) u.ulevel)/100;
 	if(active_glyph(COMMUNION)) carrcap *= 1.25;
 	if(active_glyph(LUMEN)) carrcap *= 1.064;
 	if(animaloid(mdat) || naoid(mdat)){

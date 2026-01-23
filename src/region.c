@@ -981,6 +981,12 @@ inside_gas_cloud(void * p1, void * p2)
     if (p2 == NULL) {		/* This means *YOU* Bozo! */
 		if (Invulnerable)
 			return FALSE;
+		if (ublindf && ublindf->otyp == TOWEL){
+			if (!rn2(4))
+				pline("The %s wards off the noxious fumes!", simple_typename(ublindf->otyp));
+
+			return FALSE;
+		}
 		if (nonliving(youracedata) || Breathless ||
 			youmonst.mtyp == PM_GREEN_DRAGON || (Race_if(PM_HALF_DRAGON) && flags.HDbreath == AD_DRST) ||
 			wearing_dragon_armor(&youmonst, PM_GREEN_DRAGON))
@@ -999,6 +1005,10 @@ inside_gas_cloud(void * p1, void * p2)
     } else {			/* A monster is inside the cloud */
 		mtmp = (struct monst *) p2;
 
+		struct obj *otmp = which_armor(mtmp, W_TOOL);
+		if (otmp && otmp->otyp == TOWEL){
+			return FALSE;
+		}
 		/* Non living, non breathing, and
 		   poison-resistant monsters are not concerned */
 		if (!nonliving(mtmp->data) && !breathless_mon(mtmp) &&
@@ -1211,6 +1221,12 @@ inside_dust_cloud(void * p1, void * p2)
 			
 			return FALSE;
 		}
+		if (ublindf && ublindf->otyp == TOWEL){
+			if (!rn2(4))
+				pline("The %s protects you from the dust!", simple_typename(ublindf->otyp));
+
+			return FALSE;
+		}
 		if (!Blind)
 			make_blinded(1L, FALSE);
 		if(damage > 3 && !rn2(20) && !Sick_resistance){ //Only a large dust storm
@@ -1242,6 +1258,10 @@ inside_dust_cloud(void * p1, void * p2)
 		struct obj *otmp = which_armor(mtmp, W_ARMH);
 		
 		if (otmp && otmp->otyp == SHEMAGH)
+			return FALSE;
+
+		otmp = which_armor(mtmp, W_TOOL);
+		if (otmp && otmp->otyp == TOWEL)
 			return FALSE;
 		
 		/* Non living or non breathing are not concerned */

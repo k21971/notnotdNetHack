@@ -146,8 +146,10 @@ doattributes(void)
 			break;
 		case DOATTRIB_GENOCIDE:
 			genocide_enlightenment();
+			break;
 		case DOATTRIB_UH_RESEARCH:
 			research_enlightenment();
+			break;
 		default:
 			return MOVE_INSTANT;
 		}
@@ -389,7 +391,7 @@ minimal_enlightenment(void)
 	}
 
 	//Role-specific info goes here (currently just undead-hunter research.
-	if (Role_if(PM_UNDEAD_HUNTER)) {
+	if (Role_if(PM_UNDEAD_HUNTER) || active_glyph(DEFILEMENT) || active_glyph(LUMEN) || active_glyph(ROTTEN_EYES)) {
 		Sprintf(buf, "Research progress.");
 		any.a_int = DOATTRIB_UH_RESEARCH;
 		add_menu(tmpwin, NO_GLYPH, &any,
@@ -423,6 +425,29 @@ show_enlightenment(
 	put_enl(final ? "Final Attributes:" : "Current Attributes:");
 	put_enl("");
 
+
+	char *directions[3][3] = {
+		{"NW","W","SW"},
+		{"N","","S"},
+		{"NE","E","SE"},
+	};
+	
+	if(!(u.prev_dir.x || u.prev_dir.y)){
+		Sprintf(buf, "You did not move last turn");
+	}
+	else if(!(u.prev_dir.x > -2 && u.prev_dir.x < 2 && u.prev_dir.y > -2 && u.prev_dir.y < 2)){
+		Sprintf(buf, "You moved multiple tiles last turn");
+	}
+	else {
+		Sprintf(buf, "You moved %s last turn", directions[u.prev_dir.x+1][u.prev_dir.y+1]);
+	}
+	if(u.did_move){
+		Sprintf(eos(buf), ", and aren't eligible to perform a mystic move this turn.");
+	}
+	else Sprintf(eos(buf), ".");
+	put_enl(buf);
+	
+	
 	if (u.uevent.uhand_of_elbereth) {
 	    you_are(crowning_title());
 	}
@@ -1206,6 +1231,28 @@ resistances_enlightenment(void)
 	en_win = create_nhwindow(NHW_MENU);
 	putstr(en_win, 0, "Current Status:");
 	putstr(en_win, 0, "");
+	
+	char *directions[3][3] = {
+		{"NW","W","SW"},
+		{"N","","S"},
+		{"NE","E","SE"},
+	};
+	
+	if(!(u.prev_dir.x || u.prev_dir.y)){
+		Sprintf(buf, "You did not move last turn");
+	}
+	else if(!(u.prev_dir.x > -2 && u.prev_dir.x < 2 && u.prev_dir.y > -2 && u.prev_dir.y < 2)){
+		Sprintf(buf, "You moved multiple tiles last turn");
+	}
+	else {
+		Sprintf(buf, "You moved %s last turn", directions[u.prev_dir.x+1][u.prev_dir.y+1]);
+	}
+	if(u.did_move){
+		Sprintf(eos(buf), ", and aren't eligible to perform a mystic move this turn.");
+	}
+	else Sprintf(eos(buf), ".");
+	putstr(en_win, 0, buf);
+	
 	
 	if(check_partial_action())
 		putstr(en_win, 0, "You have used your partial action this round.");
@@ -2120,12 +2167,6 @@ signs_enlightenment(void)
 			message = TRUE;
 		}
 	}
-	if(u.sealsActive&SEAL_FAFNIR && !NoBInvis){ 
-		if(!(uright || uarmg)){
-			putstr(en_win, 0, "There is a ring-shaped burn scar around your right ring-finger.");
-			message = TRUE;
-		}
-	}
 	if(u.sealsActive&SEAL_HUGINN_MUNINN){
 		putstr(en_win, 0, "There is something rustling around in your ear.");
 		message = TRUE;
@@ -2145,6 +2186,12 @@ signs_enlightenment(void)
 	if(u.sealsActive&SEAL_JACK){
 		putstr(en_win, 0, "There is something on your back.");
 		message = TRUE;
+	}
+	if(u.sealsActive&SEAL_MAEGERA && !NoBInvis){ 
+		if(!(uleft || uarmg)){
+			putstr(en_win, 0, "There is a star-shaped hole burned to the gilded bone of your left ring-finger.");
+			message = TRUE;
+		}
 	}
 	if(u.sealsActive&SEAL_MALPHAS){
 		putstr(en_win, 0, "You feel things pecking the inside of your mouth.");
@@ -2676,12 +2723,6 @@ signs_mirror(void)
 			message = TRUE;
 		}
 	}
-	if(u.sealsActive&SEAL_FAFNIR && !NoBInvis){ 
-		if(!(uright || uarmg)){
-			putstr(en_win, 0, "There is a ring-shaped burn scar around your right ring-finger.");
-			message = TRUE;
-		}
-	}
 	if(u.sealsActive&SEAL_HUGINN_MUNINN && !NoBInvis){
 		if(!uarmh){
 			putstr(en_win, 0, "You find a raven nesting in each ear!");
@@ -2707,6 +2748,12 @@ signs_mirror(void)
 			putstr(en_win, 0, "You see a bump under your cloak on your back.");
 		}
 		message = TRUE;
+	}
+	if(u.sealsActive&SEAL_MAEGERA && !NoBInvis){ 
+		if(!(uleft || uarmg)){
+			putstr(en_win, 0, "There is a star-shaped hole burned to the gilded bone of your left ring-finger.");
+			message = TRUE;
+		}
 	}
 	if(u.sealsActive&SEAL_MALPHAS && !NoBInvis){
 		if(!(ublindf && (ublindf->otyp==MASK || ublindf->otyp==R_LYEHIAN_FACEPLATE))){
@@ -3121,7 +3168,7 @@ mutations_enlightenment(void)
 static void
 genocide_enlightenment(void)
 {
-        list_genocided('y', FALSE, FALSE);
+    list_genocided('y', FALSE, FALSE);
 }
 
 static void
@@ -3131,17 +3178,22 @@ research_enlightenment(void)
 	int i;
 	en_win = create_nhwindow(NHW_MENU);
 	if(active_glyph(DEFILEMENT) || u.ualign.god == GOD_DEFILEMENT || u.udefilement_research){
-		if(defile_count() >= 6){
-			putstr(en_win, 0, "You have made a great breakthrough in the philosophy of defilement!");
+		if(Role_if(PM_UNDEAD_HUNTER)){
+			if(defile_count() >= 6){
+				putstr(en_win, 0, "You have made a great breakthrough in the philosophy of defilement!");
+			}
+			else {
+				putstr(en_win, 0, "You still have much to learn of defilement.");
+			}
 		}
 		else {
-			putstr(en_win, 0, "You still have much to learn of defilement.");
+			putstr(en_win, 0, "You have learned something of defilement.");
 		}
 		if(!(active_glyph(DEFILEMENT) || (u.ualign.god == GOD_DEFILEMENT && known_glyph(DEFILEMENT)))){
 			putstr(en_win, 0, " Though, you are not currently a serious student of that philosophy.");
 		}
 		else if(u.veil){
-			putstr(en_win, 0, " You have yet to feel beyond.");
+			putstr(en_win, 0, " Dissections and study are useless, as you have yet to feel beyond.");
 		}
 		else {
 			if(!(u.upreservation_upgrades&PRESERVE_MAX) || (Race_if(PM_VAMPIRE) && vampire_count() < VAMPIRE_COUNT)){
@@ -3150,13 +3202,18 @@ research_enlightenment(void)
 					putstr(en_win, 0, " Use your phlebotomy kit while standing at a workbench-altar to defilement.");
 				}
 				else {
-					putstr(en_win, 0, " You are unable to devise further experiments into the nature of defilement.");
-					if(!impurity_ok())
+					if(!impurity_ok()){
+						putstr(en_win, 0, " You are unable to devise further experiments into the nature of defilement.");
 						putstr(en_win, 0, " You must immerse yourself in the ritually unclean to make progress.");
-					else if(ABASE(A_INT) < 6)
+					}
+					else if(ABASE(A_INT) < 6){
+						putstr(en_win, 0, " You are unable to devise further experiments into the nature of defilement.");
 						putstr(en_win, 0, " You must repair the damage to your intellect to survive further self-experimentation.");
-					else
+					}
+					else {
+						putstr(en_win, 0, " You are working to devise your next experiment into the nature of defilement.");
 						putstr(en_win, 0, " You must conduct more dissections to make progress.");
+					}
 				}
 			}
 			else {
@@ -3232,20 +3289,37 @@ research_enlightenment(void)
 			if(check_rot(ROT_SPORES)){
 				putstr(en_win, 0, "    Puffball mushrooms errupt from your skin.");
 			}
+			if(check_rot(ROT_EXHULT)){
+				putstr(en_win, 0, "    Something in your breast exults the Order of Rot.");
+			}
+			if(check_rot(ROT_WINGSWORD)){
+				putstr(en_win, 0, "    Insect wings sprout from the flesh of your sword arm.");
+			}
+			if(check_rot(ROT_CRICKET)){
+				putstr(en_win, 0, "    Ruinously-chirping cricket wings sprout from your arms and legs.");
+			}
+			if(check_rot(ROT_FORAGE)){
+				putstr(en_win, 0, "    The bugs on the floor bring you gifts.");
+			}
 		}
 	}
 	if(active_glyph(LUMEN) || u.ualign.god == GOD_THE_CHOIR || u.uparasitology_research){
-		if(parasite_count() >= 6){
-			putstr(en_win, 0, "You have made a breakthrough in the philosophy of the choir!");
+		if(Role_if(PM_UNDEAD_HUNTER)){
+			if(parasite_count() >= 6){
+				putstr(en_win, 0, "You have made a breakthrough in the philosophy of the choir!");
+			}
+			else {
+				putstr(en_win, 0, "You still have much to learn of parasitology.");
+			}
 		}
 		else {
-			putstr(en_win, 0, "You still have much to learn of parasitology.");
+			putstr(en_win, 0, "You have learned something of parasitology.");
 		}
 		if(!(active_glyph(LUMEN) || (u.ualign.god == GOD_THE_CHOIR && known_glyph(LUMEN)))){
 			putstr(en_win, 0, " Though, you are not currently a serious student of that philosophy.");
 		}
 		else if(u.veil){
-			putstr(en_win, 0, " You have yet to hear the song.");
+			putstr(en_win, 0, "  Dissections and study are useless, as you have yet to hear the song.");
 		}
 		else {
 			if(parasite_ok()){
@@ -3261,11 +3335,14 @@ research_enlightenment(void)
 				putstr(en_win, 0, " You must listen beyond the veil.");
 			}
 			else {
-				putstr(en_win, 0, " You are unable to devise further surgical experiments.");
-				if(ABASE(A_INT) < 6)
+				if(ABASE(A_INT) < 6){
+					putstr(en_win, 0, " You are unable to devise further surgical experiments.");
 					putstr(en_win, 0, " You must repair the damage to your intellect to survive further self-experimentation.");
-				else
+				}
+				else {
+					putstr(en_win, 0, " You are working to devise your next surgical experiment.");
 					putstr(en_win, 0, " You must conduct more dissections to make progress.");
+				}
 			}
 		}
 		//Upgrade list
@@ -3291,17 +3368,22 @@ research_enlightenment(void)
 		}
 	}
 	if(active_glyph(ROTTEN_EYES) || u.ualign.god == GOD_THE_COLLEGE || u.ureanimation_research){
-		if(reanimation_count() >= 6){
-			putstr(en_win, 0, "You have made a breakthrough in the philosophy of the college!");
+		if(Role_if(PM_UNDEAD_HUNTER)){
+			if(reanimation_count() >= 6){
+				putstr(en_win, 0, "You have made a breakthrough in the philosophy of the college!");
+			}
+			else {
+				putstr(en_win, 0, "You still have much to learn of reanimation.");
+			}
 		}
 		else {
-			putstr(en_win, 0, "You still have much to learn of reanimation.");
+			putstr(en_win, 0, "You have learned something of reanimation.");
 		}
 		if(!(active_glyph(ROTTEN_EYES) || (u.ualign.god == GOD_THE_COLLEGE && known_glyph(ROTTEN_EYES)))){
 			putstr(en_win, 0, " Though, you are not currently a serious student of that philosophy.");
 		}
 		else if(u.veil){
-			putstr(en_win, 0, " Your eyes have yet to open.");
+			putstr(en_win, 0, " Dissections and study are useless, as your eyes have yet to open.");
 		}
 		else {
 			if(reanimation_count() < REANIMATION_COUNT){
@@ -3310,13 +3392,18 @@ research_enlightenment(void)
 					putstr(en_win, 0, " Use your portable electrode while standing at a workbench-altar to the college.");
 				}
 				else {
-					putstr(en_win, 0, " You are unable to devise further Galvanic experiments.");
-					if(!reanimation_insight_ok())
+					if(!reanimation_insight_ok()){
+						putstr(en_win, 0, " You are unable to devise further Galvanic experiments.");
 						putstr(en_win, 0, " You must hunt the strange creatures of the veil to make progress.");
-					else if(ABASE(A_INT) < 6)
+					}
+					else if(ABASE(A_INT) < 6){
+						putstr(en_win, 0, " You are unable to devise further Galvanic experiments.");
 						putstr(en_win, 0, " You must repair the damage to your intellect to survive further self-experimentation.");
-					else
+					}
+					else {
+						putstr(en_win, 0, " You are working to devise your next Galvanic experiment.");
 						putstr(en_win, 0, " You must conduct more dissections and reanimations to make progress.");
+					}
 				}
 			}
 			else {

@@ -868,6 +868,10 @@ shopper_financial_report(void)
 int
 inhishop(register struct monst *mtmp)
 {
+	if(!HAS_ESHK(mtmp)) {
+		impossible("inhishop: mon %s has no ESHK struct?", mon_nam(mtmp));
+		return(FALSE);
+	}
 	return(index(in_rooms(mtmp->mx, mtmp->my, SHOPBASE),
 		     ESHK(mtmp)->shoproom) &&
 		on_level(&(ESHK(mtmp)->shoplevel), &u.uz));
@@ -2431,7 +2435,7 @@ contained_cost(struct obj *obj, struct monst *shkp, long price, boolean usell, b
 	    }
 
 	    if (Has_contents(otmp))
-		    price += contained_cost(otmp, shkp, price, usell, unpaid_only);
+		    price += contained_cost(otmp, shkp, 0L, usell, unpaid_only);
 	}
 
 	return(price);
@@ -2699,7 +2703,7 @@ addtobill(struct obj *obj, boolean ininv, boolean dummy, boolean silent)
 		    goto speak;
 		}
 	    } else {
-		cltmp += contained_cost(obj, shkp, cltmp, FALSE, FALSE);
+		cltmp += contained_cost(obj, shkp, 0L, FALSE, FALSE);
 		gltmp += contained_gold(obj);
 	    }
 
@@ -2998,7 +3002,7 @@ sellobj(struct obj *obj, xchar x, xchar y)
 	}
 	if(container) {
 		/* find the price of content before subfrombill */
-		cltmp += contained_cost(obj, shkp, cltmp, TRUE, FALSE);
+		cltmp += contained_cost(obj, shkp, 0L, TRUE, FALSE);
 		/* find the value of contained gold */
 		gltmp += contained_gold(obj);
 		cgold = (gltmp > 0L);
@@ -4748,7 +4752,7 @@ shk_uncurse(char *slang, struct monst *shkp)
 
 	/* Shopkeeper responses */
 	/* KMH -- fixed bknown, curse(), bless(), uncurse() */
-	if (!obj->bknown && !Role_if(PM_PRIEST) &&
+	if (!obj->bknown && !u.upriest &&
 	    !no_cheat)
 	{
 		/* Not identified! */
@@ -5729,7 +5733,7 @@ countFarSigns(struct monst *mon)
 		if(u.sealsActive&SEAL_ENKI && !Invis && !((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc)) count++;
 		if(u.sealsActive&SEAL_EURYNOME && !Invis && levl[u.ux][u.uy].lit != 0) count++;
 		if(u.sealsActive&SEAL_EVE && !NoBInvis && !(uarmf && ((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc))) count++;
-		// if(u.sealsActive&SEAL_FAFNIR);
+		// if(u.sealsActive&SEAL_MAEGERA);
 		// if(u.sealsActive&SEAL_HUGINN_MUNINN);
 		if(u.sealsActive&SEAL_IRIS && !NoBInvis && !((((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc) && moves > u.irisAttack+5) || (uarmc && moves > u.irisAttack+1))) count++;
 		if(u.sealsActive&SEAL_JACK && !NoBInvis && !uarmc) count++;
@@ -5793,7 +5797,7 @@ countCloseSigns(struct monst *mon)
 		// if(u.sealsActive&SEAL_ENKI && !Invis && !((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc)) count++;
 		if(u.sealsActive&SEAL_EURYNOME && !Invis && levl[u.ux][u.uy].lit == 0 && viz_array[u.uy][u.ux]&TEMP_LIT1 && !(viz_array[u.uy][u.ux]&TEMP_DRK3)) count++;
 		// if(u.sealsActive&SEAL_EVE && !NoBInvis && !(uarmf && ((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc))) count++;
-		if(u.sealsActive&SEAL_FAFNIR && !NoBInvis && !(uright || uarmg)) count++;
+		if(u.sealsActive&SEAL_MAEGERA && !NoBInvis && !(uleft || uarmg)) count++;
 		if(u.sealsActive&SEAL_HUGINN_MUNINN && !NoBInvis && !uarmh) count++;
 		// if(u.sealsActive&SEAL_IRIS && !NoBInvis && !((((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc) && moves > u.irisAttack+5) || (uarmc && moves > u.irisAttack+1))) count++;
 		// if(u.sealsActive&SEAL_JACK && !NoBInvis && !uarmc) count++;
@@ -5892,6 +5896,7 @@ pick_object(struct obj *example, int *simple_list, int *extended_simple_list, in
 		if(is_future_otyp(example->otyp) 
 			|| ensouled_item(example) || objects[example->otyp].oc_magic
 			|| is_firearm(example) || is_harmonium_armor(example)
+			|| is_silverknight_armor(example)
 			|| Is_dragon_armor(example)
 		){
 			return 0;
@@ -6210,7 +6215,8 @@ oona_smithy(struct monst *smith)
 	int n;
 	int oona_basic_armor[] =
 		{BUCKLER, EILISTRAN_ARMOR, HARMONIUM_BOOTS,HARMONIUM_GAUNTLETS, HARMONIUM_HELM, HARMONIUM_PLATE,  
-			HARMONIUM_SCALE_MAIL, KITE_SHIELD, WATER_WALKING_BOOTS,  
+			HARMONIUM_SCALE_MAIL, KITE_SHIELD, WATER_WALKING_BOOTS,
+			KIDNEY_BELT,
 			0
 		};
 	int oona_basic_tools[] = {BOX, PICK_AXE, LOCK_PICK, SKELETON_KEY, 0};
@@ -6225,6 +6231,7 @@ oona_smithy(struct monst *smith)
 			HELM_OF_BRILLIANCE, HELM_OF_OPPOSITE_ALIGNMENT, HELM_OF_TELEPATHY, HELM_OF_DRAIN_RESISTANCE, 
 			SHIELD_OF_REFLECTION, 
 			SPEED_BOOTS, JUMPING_BOOTS, KICKING_BOOTS, FUMBLE_BOOTS, FLYING_BOOTS,
+			BELT_OF_POWER, BELT_OF_WEAKNESS, BELT_OF_CARRYING, BELT_OF_WEIGHT, UTILITY_BELT,
 			0
 	};
 	int oona_advanced_tools[] = { 0 };
@@ -6293,7 +6300,7 @@ d_weapon:
 			otyp = pickwep(example, oona_basic_weapons, oona_advanced_weapons, PLATINUM);
 		break;
 		case 4:{
-			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, ARMOR_CLASS, 0 };
+			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, BELT_CLASS, ARMOR_CLASS, 0 };
 			example = getobj(smith_classes, "show to the smith");
 			if(!example)
 				otyp = -1;
@@ -6301,6 +6308,7 @@ d_weapon:
 				case WEAPON_CLASS:
 					goto d_weapon;
 				case ARMOR_CLASS:
+				case BELT_CLASS:
 					goto d_armor;
 				case TOOL_CLASS:
 					goto d_tool;
@@ -6412,14 +6420,16 @@ d_weapon:
 		}
 		fix_object(obj);
 	}
-	else if(objects[otyp].oc_class == ARMOR_CLASS){
+	else if(objects[otyp].oc_class == ARMOR_CLASS || objects[otyp].oc_class == BELT_CLASS){
 		int element = 0;
-		if(yn("Size it to a particular creature?")=='y')
-			smith_resizeArmor(smith, obj);
-		else {
-			//sized for you
-			obj->objsize = youracedata->msize;
-			set_obj_shape(obj, youracedata->mflagsb);
+		if(objects[otyp].oc_class != BELT_CLASS){
+			if(yn("Size it to a particular creature?")=='y')
+				smith_resizeArmor(smith, obj);
+			else {
+				//sized for you
+				obj->objsize = youracedata->msize;
+				set_obj_shape(obj, youracedata->mflagsb);
+			}
 		}
 		any.a_void = 0;         /* zero out all bits */
 		tmpwin = create_nhwindow(NHW_MENU);
@@ -6464,6 +6474,40 @@ d_weapon:
 		if(!is_harmonium_armor(obj))
 			add_oprop(obj, OPROP_AXIO);
 	}
+	else if(objects[otyp].oc_class == WEAPON_CLASS || is_weptool(obj)){
+		if(example)
+			obj->objsize = example->objsize;
+		else
+			obj->objsize = youracedata->msize;
+		fix_object(obj);
+	}
+	if(example){
+		//Note: Not an error, Oona can still do anarchic
+		if(check_oprop(example, OPROP_ANAR)){
+			add_oprop(obj, OPROP_ANAR);
+		}
+		if(check_oprop(example, OPROP_ANARW)){
+			add_oprop(obj, OPROP_ANARW);
+		}
+		if(check_oprop(example, OPROP_LESSER_ANARW)){
+			add_oprop(obj, OPROP_LESSER_ANARW);
+		}
+		if(check_oprop(example, OPROP_REFL)){
+			add_oprop(obj, OPROP_REFL);
+		}
+		if(check_oprop(example, OPROP_BCRS)){
+			add_oprop(obj, OPROP_BCRS);
+		}
+		if(check_oprop(example, OPROP_WRTHW)){
+			add_oprop(obj, OPROP_WRTHW);
+		}
+		if(check_oprop(example, OPROP_SPIKED)){
+			add_oprop(obj, OPROP_SPIKED);
+		}
+		if(check_oprop(example, OPROP_BLADED)){
+			add_oprop(obj, OPROP_BLADED);
+		}
+	}
 	verbalize("It's done.");
 	fix_object(obj);
 	int cost = (int) obj->owt;
@@ -6497,11 +6541,19 @@ dracae_smithy(struct monst *smith)
 		};
 	int dracae_basic_armor[] = 
 		{ARMORED_BOOTS, BANDED_MAIL, BUCKLER, CLOAK, GAUNTLETS, PLAIN_DRESS, PLATE_MAIL,  
-			KITE_SHIELD, SPLINT_MAIL, SCALE_MAIL, WAISTCLOTH,  
+			KITE_SHIELD, SPLINT_MAIL, SCALE_MAIL, WAISTCLOTH,
+			KIDNEY_BELT,
 			0, 0, 0
 		};
 	int dracae_basic_tools[] = {BLINDFOLD, BOX, LOCK_PICK, PICK_AXE, SACK, 0, 0};
-	int dracae_advanced_armor[] = {OILSKIN_CLOAK, 0, 0, 0};
+	int dracae_advanced_armor[] = {OILSKIN_CLOAK, LEO_NEMAEUS_HIDE, ROBE, CLOAK_OF_PROTECTION, CLOAK_OF_INVISIBILITY, CLOAK_OF_MAGIC_RESISTANCE, CLOAK_OF_DISPLACEMENT, 
+			BELT_OF_POWER, BELT_OF_WEAKNESS, BELT_OF_CARRYING, BELT_OF_WEIGHT, UTILITY_BELT,
+			SPEED_BOOTS, JUMPING_BOOTS, FUMBLE_BOOTS, FLYING_BOOTS,
+			GAUNTLETS_OF_DEXTERITY,
+			GRAY_DRAGON_SCALE_MAIL, SILVER_DRAGON_SCALE_MAIL, SHIMMERING_DRAGON_SCALE_MAIL, WHITE_DRAGON_SCALE_MAIL, ORANGE_DRAGON_SCALE_MAIL, BLACK_DRAGON_SCALE_MAIL, BLUE_DRAGON_SCALE_MAIL, GREEN_DRAGON_SCALE_MAIL, RED_DRAGON_SCALE_MAIL, DEEP_DRAGON_SCALE_MAIL, YELLOW_DRAGON_SCALE_MAIL,
+			GRAY_DRAGON_SCALES, SILVER_DRAGON_SCALES, SHIMMERING_DRAGON_SCALES, WHITE_DRAGON_SCALES, ORANGE_DRAGON_SCALES, BLACK_DRAGON_SCALES, BLUE_DRAGON_SCALES, GREEN_DRAGON_SCALES, RED_DRAGON_SCALES, DEEP_DRAGON_SCALES, YELLOW_DRAGON_SCALES,
+			GRAY_DRAGON_SCALE_SHIELD, SILVER_DRAGON_SCALE_SHIELD, SHIMMERING_DRAGON_SCALE_SHIELD, WHITE_DRAGON_SCALE_SHIELD, ORANGE_DRAGON_SCALE_SHIELD, BLACK_DRAGON_SCALE_SHIELD, BLUE_DRAGON_SCALE_SHIELD, GREEN_DRAGON_SCALE_SHIELD, RED_DRAGON_SCALE_SHIELD, DEEP_DRAGON_SCALE_SHIELD, YELLOW_DRAGON_SCALE_SHIELD,
+			0, 0, 0};
 	int dracae_advanced_tools[] = {ARMOR_SALVE, OILSKIN_SACK, UNICORN_HORN, OIL_LAMP, CAN_OF_GREASE, LIVING_MASK, 0};
 	int empty_list[] = {0};
 	struct obj *example = 0;
@@ -6578,7 +6630,7 @@ d_weapon:
 			otyp = pickwep(example, dracae_basic_weapons, empty_list, DRAGON_HIDE);
 		break;
 		case 4:{
-			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, ARMOR_CLASS, 0 };
+			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, BELT_CLASS, ARMOR_CLASS, 0 };
 			example = getobj(smith_classes, "show to the smith");
 			if(!example)
 				otyp = -1;
@@ -6586,6 +6638,7 @@ d_weapon:
 				case WEAPON_CLASS:
 					goto d_weapon;
 				case ARMOR_CLASS:
+				case BELT_CLASS:
 					goto d_armor;
 				case TOOL_CLASS:
 					goto d_tool;
@@ -6688,6 +6741,9 @@ d_weapon:
 		}
 		fix_object(obj);
 	}
+	else if(objects[otyp].oc_material == DRAGON_HIDE){
+		set_material(obj, DRAGON_HIDE);
+	}
 	else if(hard_mat(objects[otyp].oc_material)){
 		set_material(obj, SHELL_MAT);
 	}
@@ -6697,13 +6753,15 @@ d_weapon:
 		else
 			set_material(obj, DRAGON_HIDE);
 	}
-	if(objects[otyp].oc_class == ARMOR_CLASS){
-		if(yn("Size it to a particular creature?")=='y')
-			smith_resizeArmor(smith, obj);
-		else {
-			//sized for you
-			obj->objsize = youracedata->msize;
-			set_obj_shape(obj, youracedata->mflagsb);
+	if(objects[otyp].oc_class == ARMOR_CLASS || objects[otyp].oc_class == BELT_CLASS){
+		if(objects[otyp].oc_class != BELT_CLASS){
+			if(yn("Size it to a particular creature?")=='y')
+				smith_resizeArmor(smith, obj);
+			else {
+				//sized for you
+				obj->objsize = youracedata->msize;
+				set_obj_shape(obj, youracedata->mflagsb);
+			}
 		}
 		add_oprop(obj, OPROP_HOLY);
 		if(accepts_weapon_oprops(obj)){
@@ -6716,6 +6774,51 @@ d_weapon:
 				if(has_template(smith, ILLUMINATED))
 					add_oprop(obj, OPROP_LESSER_HOLYW);
 			}
+		}
+		else if(!objects[obj->otyp].oc_magic){
+			add_oprop(obj, OPROP_ACID);
+		}
+	}
+	else if(objects[otyp].oc_class == WEAPON_CLASS || is_weptool(obj)){
+		if(example)
+			obj->objsize = example->objsize;
+		else
+			obj->objsize = youracedata->msize;
+		fix_object(obj);
+	}
+	if(example){
+		if(check_oprop(example, OPROP_MAGC)){
+			add_oprop(obj, OPROP_MAGC);
+		}
+		if(check_oprop(example, OPROP_ANAR)){
+			add_oprop(obj, OPROP_ANAR);
+		}
+		if(check_oprop(example, OPROP_ANARW)){
+			add_oprop(obj, OPROP_ANARW);
+		}
+		if(check_oprop(example, OPROP_LESSER_ANARW)){
+			add_oprop(obj, OPROP_LESSER_ANARW);
+		}
+		if(check_oprop(example, OPROP_WOOL)){
+			add_oprop(obj, OPROP_WOOL);
+		}
+		if(check_oprop(example, OPROP_RETRW)){
+			add_oprop(obj, OPROP_RETRW);
+		}
+		if(check_oprop(example, OPROP_LIVEW)){
+			add_oprop(obj, OPROP_LIVEW);
+		}
+		if(check_oprop(example, OPROP_ASECW)){
+			add_oprop(obj, OPROP_ASECW);
+		}
+		if(check_oprop(example, OPROP_PSECW)){
+			add_oprop(obj, OPROP_PSECW);
+		}
+		if(check_oprop(example, OPROP_SPIKED)){
+			add_oprop(obj, OPROP_SPIKED);
+		}
+		if(check_oprop(example, OPROP_BLADED)){
+			add_oprop(obj, OPROP_BLADED);
 		}
 	}
 	verbalize("It's done.");
@@ -6749,7 +6852,7 @@ treesinger_smithy(struct monst *smith)
 			0
 		};
 	int treesinger_basic_tools[] = {BLINDFOLD, BOX, FLUTE, LOCK_PICK, PICK_AXE, SACK, 0, 0};
-	int treesinger_advanced_armor[] = {0};
+	int treesinger_advanced_armor[] = {KIDNEY_BELT, UTILITY_BELT};
 	int treesinger_advanced_tools[] = {0};
 	int empty_list[] = {0};
 	struct obj *example = 0;
@@ -6807,7 +6910,7 @@ d_weapon:
 			otyp = pickwep(example, treesinger_basic_weapons, empty_list, DRAGON_HIDE);
 		break;
 		case 4:{
-			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, ARMOR_CLASS, 0 };
+			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, BELT_CLASS, ARMOR_CLASS, 0 };
 			example = getobj(smith_classes, "show to the smith");
 			if(!example)
 				otyp = -1;
@@ -6815,6 +6918,7 @@ d_weapon:
 				case WEAPON_CLASS:
 					goto d_weapon;
 				case ARMOR_CLASS:
+				case BELT_CLASS:
 					goto d_armor;
 				case TOOL_CLASS:
 					goto d_tool;
@@ -6849,6 +6953,13 @@ d_weapon:
 			set_obj_shape(obj, youracedata->mflagsb);
 		}
 	}
+	else if(objects[otyp].oc_class == WEAPON_CLASS || is_weptool(obj)){
+		if(example)
+			obj->objsize = example->objsize;
+		else
+			obj->objsize = youracedata->msize;
+		fix_object(obj);
+	}
 	// Non-tame smiths will charge for their services
 	if(!smith->mtame){
 		/* Init your name */
@@ -6864,7 +6975,23 @@ d_weapon:
 			continue;
 		}
 	}
-	
+	if(example){
+		if(check_oprop(example, OPROP_ANAR)){
+			add_oprop(obj, OPROP_ANAR);
+		}
+		if(check_oprop(example, OPROP_ANARW)){
+			add_oprop(obj, OPROP_ANARW);
+		}
+		if(check_oprop(example, OPROP_LESSER_ANARW)){
+			add_oprop(obj, OPROP_LESSER_ANARW);
+		}
+		if(check_oprop(example, OPROP_SPIKED)){
+			add_oprop(obj, OPROP_SPIKED);
+		}
+		if(check_oprop(example, OPROP_BLADED)){
+			add_oprop(obj, OPROP_BLADED);
+		}
+	}
 	verbalize("It's done.");
 
 	hold_another_object(obj, "Oops!  You drop %s!",
@@ -6953,7 +7080,7 @@ d_weapon:
 			otyp = pickwep(example, basic_weapon, advanced_weapon, mat);
 		break;
 		case 4:{
-			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, ARMOR_CLASS, 0 };
+			const char smith_classes[] = { WEAPON_CLASS, TOOL_CLASS, BELT_CLASS, ARMOR_CLASS, 0 };
 			example = getobj(smith_classes, "show to the smith");
 			if(!example)
 				otyp = -1;
@@ -6961,6 +7088,7 @@ d_weapon:
 				case WEAPON_CLASS:
 					goto d_weapon;
 				case ARMOR_CLASS:
+				case BELT_CLASS:
 					goto d_armor;
 				case TOOL_CLASS:
 					goto d_tool;
@@ -7081,7 +7209,60 @@ d_weapon:
 			continue;
 		}
 	}
-	
+	if(example){
+		if(mat == SHADOWSTEEL){
+			static const int props[] = {
+				OPROP_COLD, OPROP_ELEC, OPROP_ACID, OPROP_MAGC, OPROP_ANAR, OPROP_UNHY,
+				OPROP_FLAYW, OPROP_LESSER_FLAYW, OPROP_PHSEW, OPROP_COLDW, OPROP_LESSER_COLDW,
+				OPROP_ELECW, OPROP_LESSER_ELECW, OPROP_ACIDW, OPROP_LESSER_ACIDW,
+				OPROP_MAGCW, OPROP_LESSER_MAGCW, OPROP_ANARW, OPROP_LESSER_ANARW,
+				OPROP_UNHYW, OPROP_LESSER_UNHYW, OPROP_WATRW, OPROP_LESSER_WATRW,
+				OPROP_PSIOW, OPROP_LESSER_PSIOW, OPROP_DRANW, OPROP_MORGW, OPROP_LESSER_MORGW,
+				OPROP_WRTHW, OPROP_CCLAW, OPROP_LIVEW, OPROP_ASECW, OPROP_PSECW,
+				OPROP_OCLTW, OPROP_RETRW, OPROP_ANTAW
+			};
+
+			for (int i = 0; i < SIZE(props); i++) {
+				if (check_oprop(example, props[i])) {
+					add_oprop(obj, props[i]);
+				}
+			}
+		}
+		else if(mat == MITHRIL){
+			if(check_oprop(example, OPROP_FIREW)){
+				add_oprop(obj, OPROP_FIREW);
+			}
+			if(check_oprop(example, OPROP_LESSER_FIREW)){
+				add_oprop(obj, OPROP_LESSER_FIREW);
+			}
+			if(check_oprop(example, OPROP_LIVEW)){
+				add_oprop(obj, OPROP_LIVEW);
+			}
+			if(check_oprop(example, OPROP_RETRW)){
+				add_oprop(obj, OPROP_RETRW);
+			}
+			if(check_oprop(example, OPROP_WRTHW)){
+				add_oprop(obj, OPROP_WRTHW);
+			}
+			if(check_oprop(example, OPROP_ELFLW)){
+				add_oprop(obj, OPROP_ELFLW);
+			}
+		}
+		else {
+			if(check_oprop(example, OPROP_FIREW)){
+				add_oprop(obj, OPROP_LESSER_FIREW);
+			}
+			if(check_oprop(example, OPROP_LESSER_FIREW)){
+				add_oprop(obj, OPROP_LESSER_FIREW);
+			}
+		}
+		if(check_oprop(example, OPROP_SPIKED)){
+			add_oprop(obj, OPROP_SPIKED);
+		}
+		if(check_oprop(example, OPROP_BLADED)){
+			add_oprop(obj, OPROP_BLADED);
+		}
+	}
 	verbalize("It's done.");
 	fix_object(obj);
 	int cost = (int) obj->owt;
@@ -7102,7 +7283,7 @@ d_weapon:
 void
 goblin_smithy(struct monst *smith)
 {
-	int basic_weapons[] = { ORCISH_ARROW, ORCISH_SPEAR, ORCISH_DAGGER, ORCISH_SHORT_SWORD, ORCISH_BOW, 0 };
+	int basic_weapons[] = { ORCISH_ARROW, ORCISH_SPEAR, ORCISH_DAGGER, ORCISH_SHORT_SWORD, ORCISH_BOW, SMITHING_HAMMER, 0 };
 	int advanced_weapons[] = {0};
 	int basic_armor[] = { ORCISH_HELM, ORCISH_CHAIN_MAIL, ORCISH_RING_MAIL, ORCISH_SHIELD, 0 };
 	int advanced_armor[] = {0};
@@ -7115,7 +7296,7 @@ goblin_smithy(struct monst *smith)
 void
 dwarf_ironsmithy(struct monst *smith)
 {
-	int basic_weapons[] = { ATGEIR, AKLYS, AXE, BATTLE_AXE, DAGGER, DART, DWARVISH_MATTOCK, DWARVISH_SHORT_SWORD, DWARVISH_SPEAR, JAVELIN, WAR_HAMMER, 0 };
+	int basic_weapons[] = { ATGEIR, AKLYS, AXE, BATTLE_AXE, DAGGER, DART, DWARVISH_MATTOCK, DWARVISH_SHORT_SWORD, DWARVISH_SPEAR, JAVELIN, SMITHING_HAMMER, WAR_HAMMER, 0 };
 	int advanced_weapons[] = {0};
 	int basic_armor[] = { CHAIN_MAIL, DWARVISH_HELM, DWARVISH_ROUNDSHIELD, GAUNTLETS, SHOES, 0 };
 	int advanced_armor[] = { 0 };
@@ -7153,7 +7334,7 @@ void
 mithril_smithy(struct monst *smith)
 {
 	int basic_weapons[] = { ELVEN_ARROW, ELVEN_BOW, ELVEN_BROADSWORD, ELVEN_DAGGER, ELVEN_LANCE, ELVEN_MACE,
-							ELVEN_SHORT_SWORD, ELVEN_SICKLE, ELVEN_SPEAR, HIGH_ELVEN_WARSWORD, 
+							ELVEN_SHORT_SWORD, ELVEN_SICKLE, ELVEN_SPEAR, HIGH_ELVEN_WARSWORD, SMITHING_HAMMER, 
 							0 };
 	int advanced_weapons[] = { ATHAME, 0 };
 	int basic_armor[] = { ELVEN_HELM, ELVEN_BOOTS, ELVEN_MITHRIL_COAT, ELVEN_SHIELD, HIGH_ELVEN_HELM, HIGH_ELVEN_PLATE, HIGH_ELVEN_GAUNTLETS, 0 };
@@ -7189,11 +7370,11 @@ human_smithy(struct monst *smith)
 {
 	int basic_weapons[] = { ARROW, AXE, BOW, BROADSWORD, CROSSBOW, CROSSBOW_BOLT, DAGGER, FLAIL, GLAIVE, JAVELIN, LANCE, 
 							LONG_SWORD, MACE, RAPIER, SCIMITAR, SCYTHE, SHORT_SWORD, SICKLE, SPEAR,
-							TRIDENT, TWO_HANDED_SWORD, 0 };
+							TRIDENT, TWO_HANDED_SWORD, SMITHING_HAMMER, 0 };
 	int advanced_weapons[] = {0};
 	int basic_armor[] = { ARMORED_BOOTS, BANDED_MAIL, BUCKLER, CHAIN_MAIL, HELMET, KITE_SHIELD, GAUNTLETS, PLATE_MAIL, 
-						  RING_MAIL, SCALE_MAIL, SPLINT_MAIL, TOWER_SHIELD, 0 };
-	int advanced_armor[] = {0};
+						  RING_MAIL, SCALE_MAIL, SPLINT_MAIL, TOWER_SHIELD, KIDNEY_BELT, 0 };
+	int advanced_armor[] = {UTILITY_BELT};
 	int basic_tools[] = { BOX, LOCK_PICK, MASK, OIL_LAMP, PICK_AXE, SKELETON_KEY, 0 };
 	int advanced_tools[] = {0};
 
@@ -7270,7 +7451,7 @@ initialize_smith_stocks(struct monst *smith)
 			smth->smith_silver_stockpile = u.uz.dlevel > 14 ? 500 : 0;
 		break;
 		case PM_MITHRIL_SMITH:
-			smth->smith_silver_stockpile = 303;
+			smth->smith_mithril_stockpile = 303;
 		break;
 		case PM_TREESINGER:
 			//Nothing
@@ -7283,7 +7464,6 @@ initialize_smith_stocks(struct monst *smith)
 		break;
 		default:
 			impossible("bad smith");
-			// generic_smithy(smith);
 		break;
 	}
 }

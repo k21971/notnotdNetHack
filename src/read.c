@@ -216,6 +216,16 @@ doread(void)
 				pline("\"Turgon aran Gondolin tortha gar a matha i vegil Glamdring gud daedheloth, dam an Glamhoth\".");
 			}
 			return MOVE_READ;
+		} else if(scroll->oartifact == ART_MORTAL_BLADE){
+			if (Blind) {
+				You_cant("see the blade!");
+				return MOVE_INSTANT;
+			} else if(Role_if(PM_SAMURAI) || Role_if(PM_KENSEI)) {
+				pline("\"Gracious Gift of Tears\".");
+			} else {
+				pline("\"Hairui\".");
+			}
+			return MOVE_READ;
 		} else if(scroll->oartifact == ART_BOW_OF_SKADI){
 			if (Blind) {
 				You_cant("see the bow!");
@@ -225,13 +235,9 @@ doread(void)
 				You("read the Galdr of Skadi!");
 				for (i = 0; i < MAXSPELL; i++)  {
 					if (spellid(i) == SPE_CONE_OF_COLD)  {
-						if (spellknow(i) <= 1000) {
-							Your("knowledge of Cone of Cold is keener.");
-							spl_book[i].sp_know = 20000;
-							exercise(A_WIS,TRUE);       /* extra study */
-						} else { /* 1000 < spellknow(i) <= MAX_SPELL_STUDY */
-							You("know Cone of Cold quite well already.");
-						}
+						Your("knowledge of Cone of Cold is keener.");
+						spl_book[i].sp_know = 20000;
+						exercise(A_WIS,TRUE);       /* extra study */
 						break;
 					} else if (spellid(i) == NO_SPELL)  {
 						spl_book[i].sp_id = SPE_CONE_OF_COLD;
@@ -241,25 +247,20 @@ doread(void)
 						break;
 					}
 				}
-				if (further_study(SPE_CONE_OF_COLD))
+				if (Role_if(PM_VALKYRIE) && u.uevent.uhand_of_elbereth && P_SKILL(P_ATTACK_SPELL) >= P_SKILLED && u.ulevel >= 22)
 				{
 					for (i = 0; i < MAXSPELL; i++)  {
 						if (spellid(i) == SPE_BLIZZARD)  {
-							if (spellknow(i) <= 1000) {
-								Your("knowledge of Blizzard is keener.");
-								spl_book[i].sp_know = 20000;
-								exercise(A_WIS, TRUE);       /* extra study */
-							}
-							else { /* 1000 < spellknow(i) <= MAX_SPELL_STUDY */
-								You("know Blizzard quite well already.");
-							}
+							Your("knowledge of Blizzard is keener.");
+							spl_book[i].sp_know = 20000;
+							exercise(A_WIS, TRUE);       /* extra study */
 							break;
 						}
 						else if (spellid(i) == NO_SPELL)  {
 							spl_book[i].sp_id = SPE_BLIZZARD;
 							spl_book[i].sp_lev = objects[SPE_BLIZZARD].oc_level;
 							spl_book[i].sp_know = 20000;
-							You("learn to cast Frost Storm!");
+							You("learn to cast Blizzard!");
 							break;
 						}
 					}
@@ -277,13 +278,9 @@ doread(void)
 				You("read the secret runes!");
 				for (i = 0; i < MAXSPELL; i++){
 					if (spellid(i) == SPE_IDENTIFY)  {
-						if (spellknow(i) <= 1000) {
-							Your("knowledge of Identify is keener.");
-							spl_book[i].sp_know = 20000;
-							exercise(A_WIS,TRUE);       /* extra study */
-						} else { /* 1000 < spellknow(i) <= MAX_SPELL_STUDY */
-							You("know Identify quite well already.");
-						}
+						Your("knowledge of Identify is keener.");
+						spl_book[i].sp_know = 20000;
+						exercise(A_WIS,TRUE);       /* extra study */
 						break;
 					} else if (spellid(i) == NO_SPELL)  {
 						spl_book[i].sp_id = SPE_IDENTIFY;
@@ -306,13 +303,9 @@ doread(void)
 				You("read the dark secrets inscribed on the staff.");
 				for (i = 0; i < MAXSPELL; i++)  {
 					if (spellid(i) == SPE_DRAIN_LIFE)  {
-						if (spellknow(i) <= 1000) {
-							Your("knowledge of Drain Life is keener.");
-							spl_book[i].sp_know = 20000;
-							exercise(A_WIS,TRUE);       /* extra study */
-						} else { /* 1000 < spellknow(i) <= MAX_SPELL_STUDY */
-							You("know Drain Life quite well already.");
-						}
+						Your("knowledge of Drain Life is keener.");
+						spl_book[i].sp_know = 20000;
+						exercise(A_WIS,TRUE);       /* extra study */
 						break;
 					} else if (spellid(i) == NO_SPELL)  {
 						spl_book[i].sp_id = SPE_DRAIN_LIFE;
@@ -320,6 +313,23 @@ doread(void)
 						spl_book[i].sp_know = 20000;
 						You("learn to cast Drain Life!");
 						break;
+					}
+				}
+				if (further_study(SPE_DRAIN_LIFE)){
+					for (i = 0; i < MAXSPELL; i++)  {
+						if (spellid(i) == SPE_FINGER_OF_DEATH)  {
+							Your("knowledge of Finger of Death is keener.");
+							spl_book[i].sp_know = 20000;
+							exercise(A_WIS, TRUE);       /* extra study */
+							break;
+						}
+						else if (spellid(i) == NO_SPELL)  {
+							spl_book[i].sp_id = SPE_FINGER_OF_DEATH;
+							spl_book[i].sp_lev = objects[SPE_FINGER_OF_DEATH].oc_level;
+							spl_book[i].sp_know = 20000;
+							You("learn to cast Finger of Death!");
+							break;
+						}
 					}
 				}
 				if (i == MAXSPELL) impossible("Too many spells memorized!");
@@ -334,13 +344,9 @@ doread(void)
 				You("read the traceries of healing magics inscribed on the staff.");
 				for (i = 0; i < MAXSPELL; i++)  {
 					if (spellid(i) == SPE_MASS_HEALING)  {
-						if (spellknow(i) <= 1000) {
-							Your("knowledge of Mass Healing is keener.");
-							spl_book[i].sp_know = 20000;
-							exercise(A_WIS,TRUE);       /* extra study */
-						} else { /* 1000 < spellknow(i) <= MAX_SPELL_STUDY */
-							You("know Mass Healing quite well already.");
-						}
+						Your("knowledge of Mass Healing is keener.");
+						spl_book[i].sp_know = 20000;
+						exercise(A_WIS,TRUE);       /* extra study */
 						break;
 					} else if (spellid(i) == NO_SPELL)  {
 						spl_book[i].sp_id = SPE_MASS_HEALING;
@@ -362,13 +368,9 @@ doread(void)
 				You("read the still-visible traceries of healing magics inscribed on the shackles fusing the sword together.");
 				for (i = 0; i < MAXSPELL; i++)  {
 					if (spellid(i) == SPE_MASS_HEALING)  {
-						if (spellknow(i) <= 1000) {
-							Your("knowledge of Mass Healing is keener.");
-							spl_book[i].sp_know = 20000;
-							exercise(A_WIS,TRUE);       /* extra study */
-						} else { /* 1000 < spellknow(i) <= MAX_SPELL_STUDY */
-							You("know Mass Healing quite well already.");
-						}
+						Your("knowledge of Mass Healing is keener.");
+						spl_book[i].sp_know = 20000;
+						exercise(A_WIS,TRUE);       /* extra study */
 						break;
 					} else if (spellid(i) == NO_SPELL)  {
 						spl_book[i].sp_id = SPE_MASS_HEALING;
@@ -437,7 +439,7 @@ doread(void)
 			return MOVE_STANDARD;
 		} else {
 			pline("The density of the pyramid increases towards the tip, painfully so, enabling it to stand tip-downwards.");
-			if(Role_if(PM_EXILE) || Role_if(PM_WIZARD) || u.specialSealsKnown&SEAL_NUDZIRATH)
+			if(Role_if(PM_EXILE) || u.uwizard || u.specialSealsKnown&SEAL_NUDZIRATH)
 				pline("The square 'roof' of the pyramid is engraved with curses to the bringers of light.");
 			else
 				pline("There are engravings on the square 'roof' of the pyramid, but you can't read them.");
@@ -700,10 +702,10 @@ doread(void)
 		else
 			impossible("You can't read that book for some reason?");
 	    return MOVE_INSTANT;
-	} else if ((Babble || Strangled || Drowning || mad_turn(MAD_TOO_BIG))
+	} else if ((Babble || Strangled_cant_speak || Drowning || mad_turn(MAD_TOO_BIG))
 		&& (scroll->oclass == SCROLL_CLASS || (scroll->oclass == TILE_CLASS && objects[scroll->otyp].oc_magic))
 	){
-		if(Strangled)
+		if(Strangled_cant_speak)
 			You_cant("read that aloud, you can't breathe!");
 		else if(Drowning)
 			You_cant("read that aloud, you're drowning!");
@@ -758,7 +760,7 @@ doread(void)
 	}
 	scroll->in_use = TRUE;	/* scroll, not spellbook, now being read */
 	if(scroll->oartifact) {
-		if(Blind) {
+		if(Blind && (scroll->oartifact == ART_MARAUDER_S_MAP || scroll->oartifact == ART_RITE_OF_DETESTATION)) {
 			pline("Being blind, you cannot see %s.", the(xname(scroll)));
 			scroll->in_use = FALSE;
 			return MOVE_INSTANT;
@@ -781,7 +783,9 @@ doread(void)
 		}
 	  }
 	}
-	if(!seffects(scroll))  {
+	if(Is_spire(&u.uz) && objects[scroll->otyp].oc_magic)
+	    pline("Nothing happens.");
+	else if(!seffects(scroll))  {
 		if(!objects[scroll->otyp].oc_name_known) {
 		    if(known) {
 			makeknown(scroll->otyp);
@@ -1333,8 +1337,8 @@ recharge(struct obj *obj, int curse_bless)
 	    case LANTERN:
 	    case LANTERN_PLATE_MAIL:
 		if (is_cursed) {
-		    if (obj->otyp == DWARVISH_HELM && obj->otyp != LANTERN_PLATE_MAIL) {
-			/* Don't affect the +/- of the helm */
+		    if (obj->otyp == DWARVISH_HELM || obj->otyp == LANTERN_PLATE_MAIL) {
+			/* Don't affect the +/- of the helm/plate */
 			obj->age = 0;
 		    }
 		    else 
@@ -1529,6 +1533,9 @@ recharge(struct obj *obj, int curse_bless)
 		    if (obj->spe > 20) obj->spe = 20;
 		    p_glow1(obj);
 		}
+		break;
+	    case SAPBURNER:
+		pline("The %s doesn't respond to magical charging.", xname(obj));
 		break;
 	    default:
 		goto not_chargable;
@@ -1735,6 +1742,61 @@ losesaninsight(int percent)
 	    mvitals[indices[i]].insightkill = FALSE;
 	}
 }
+
+void
+mon_forget(struct monst *mtmp, int howmuch, boolean blessed, boolean cursed, boolean silent)
+{
+	if(rn2(100) >= howmuch)
+		return;
+	if(!cursed){
+		if (!silent) pline("%s looks more tranquil.", Monnam(mtmp));
+		if(!blessed){
+			untame(mtmp, 1);
+			mtmp->mferal = 0;
+			mtmp->mpeaceful = TRUE;
+			mtmp->mamnesia = TRUE;
+		}
+		mtmp->seenmadnesses = 0;
+		mtmp->mcrazed = 0;
+		mtmp->mberserk = 0;
+		mtmp->mdisrobe = 0;
+		mtmp->mdoubt = 0;
+		mtmp->mwounded_legs = 0;
+		mtmp->msanctity = 0;
+		mtmp->mgluttony = 0;
+		mtmp->mfrigophobia = 0;
+		mtmp->mcannibal = 0;
+		mtmp->mrage = 0;
+		mtmp->margent = 0;
+		mtmp->msuicide = 0;
+		mtmp->mnudist = 0;
+		mtmp->mophidio = 0;
+		mtmp->marachno = 0;
+		mtmp->mentomo = 0;
+		mtmp->mthalasso = 0;
+		mtmp->mhelmintho = 0;
+		mtmp->mparanoid = 0;
+		mtmp->mtalons = 0;
+		mtmp->mdreams = 0;
+		mtmp->msciaphilia = 0;
+		mtmp->mforgetful = 0;
+		mtmp->mapostasy = 0;
+		mtmp->mtoobig = 0;
+		mtmp->mrotting = 0;
+		mtmp->mformication = 0;
+		mtmp->mscorpions = 0;
+		mtmp->mvermin = 0;
+		mtmp->mcaterpillars = 0;
+	} else {
+		if (!silent) pline("%s looks angry and confused!", Monnam(mtmp));
+		untame(mtmp, 0);
+		mtmp->mcrazed = 1;
+		mtmp->mberserk = 1;
+		mtmp->mconf = 1;
+		mtmp->mferal = 0;
+	}
+}
+
 
 /*
  * Forget some things (e.g. after reading a scroll of amnesia).  When called,
@@ -2926,6 +2988,75 @@ seffects(struct obj *sobj)
 		
 	}
 	break;
+	case SCR_SECRET_ARTS:{
+		You("study a secret manual of the Wudang School.");
+		int skill = P_NONE;
+		int quivered_skill = P_NONE;
+		int offhand_skill = P_NONE;
+		if(uwep && is_weapon(uwep))
+			skill = weapon_type(uwep);
+		if(u.twoweap && uswapwep && is_weapon(uswapwep))
+			offhand_skill = weapon_type(uswapwep);
+		if(uquiver && is_weapon(uquiver))
+			quivered_skill = weapon_type(uquiver);
+		if(skill != P_NONE && OLD_P_SKILL(skill) < P_EXPERT){
+			if(OLD_P_MAX_SKILL(skill) < P_EXPERT){
+				expert_weapon_skill(skill);
+				You("have increased your potential with your %s.", xname(uwep));
+			}
+			else if(OLD_P_SKILL(skill) < P_EXPERT){
+				free_skill_up(skill);
+				You("have increased your skill with your %s.", xname(uwep));
+			}
+		}
+		else if(u.twoweap && OLD_P_SKILL(P_TWO_WEAPON_COMBAT) < P_EXPERT){
+			if(OLD_P_MAX_SKILL(P_TWO_WEAPON_COMBAT) < P_EXPERT){
+				expert_weapon_skill(P_TWO_WEAPON_COMBAT);
+				You("have increased your potential in two-weapon combat.");
+			}
+			else if(OLD_P_SKILL(P_TWO_WEAPON_COMBAT) < P_EXPERT){
+				free_skill_up(P_TWO_WEAPON_COMBAT);
+				You("have increased your skill in two-weapon combat.");
+			}
+		}
+		else if(offhand_skill != P_NONE && OLD_P_SKILL(offhand_skill) < P_EXPERT){
+			if(OLD_P_MAX_SKILL(offhand_skill) < P_EXPERT){
+				expert_weapon_skill(offhand_skill);
+				You("have increased your potential with your %s.", xname(uswapwep));
+			}
+			else if(OLD_P_SKILL(offhand_skill) < P_EXPERT){
+				free_skill_up(offhand_skill);
+				You("have increased your skill with your %s.", xname(uswapwep));
+			}
+		}
+		else if(quivered_skill != P_NONE && OLD_P_SKILL(quivered_skill) < P_EXPERT){
+			if(OLD_P_MAX_SKILL(quivered_skill) < P_EXPERT){
+				expert_weapon_skill(quivered_skill);
+				You("have increased your potential with your %s.", xname(uquiver));
+			}
+			else if(OLD_P_SKILL(quivered_skill) < P_EXPERT){
+				free_skill_up(quivered_skill);
+				You("have increased your skill with your %s.", xname(uquiver));
+			}
+		}
+		else {
+			if(!u.umartial){
+				u.umartial = TRUE;
+				You("have learned fist arts.");
+			}
+			else if(OLD_P_MAX_SKILL(P_MARTIAL_ARTS) < P_GRAND_MASTER){
+				gm_weapon_skill(P_MARTIAL_ARTS);
+				You("have increased your potential in fist law.");
+			}
+			else if(OLD_P_SKILL(skill) < P_GRAND_MASTER){
+				free_skill_up(P_MARTIAL_ARTS);
+				You("have increased your skill in fist law.");
+			}
+			else {
+				You("find you are quite familiar with its teachings.");
+			}
+		}
+	}break;
 	case SCR_CONSECRATION:
 	if (confused) {
 		/* consecrates your weapon */
@@ -3889,7 +4020,13 @@ create_particular(int x, int y, unsigned long specify_attitude, int specify_deri
 			}
 		}
 		else {
-			which = name_to_mon(bufp);
+			/* special groups of random monsters */
+			if(!strncmpi(bufp, "standard smith",		14)){
+				int smiths[] = {PM_GOBLIN_SMITH, PM_DWARF_SMITH, PM_HUMAN_SMITH};
+				which = ROLL_FROM(smiths);
+			}
+			else
+				which = name_to_mon(bufp);
 			if (which < LOW_PM)
 			{
 				pline("I've never heard of such monsters.");

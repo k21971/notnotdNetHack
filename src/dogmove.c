@@ -129,7 +129,7 @@ could_use_item(register struct monst *mtmp, register struct obj *otmp, boolean c
 	    /* slotless non-artifact items */
 		 ((otmp->otyp == ARMOR_SALVE && Insight >= 66) || otmp->otyp == PRESERVATIVE_ENGINE) ||
 	    /* chains for some */
-		 ((mtmp->mtyp == PM_CATHEZAR) && otmp->otyp == CHAIN) ||
+		 ((mtmp->mtyp == PM_CATHEZAR || mtmp->mtyp == PM_CHAIN_DEVIL) && otmp->otyp == CHAIN) ||
 	    /* better weapons */
 	     (is_armed_mon(mtmp) &&
 	      (otmp->oclass == WEAPON_CLASS || is_weptool(otmp)) && 
@@ -327,6 +327,10 @@ dog_nutrition(struct monst *mtmp, struct obj *obj)
 		/* 1/5th multiplier applied in dog_eat */
 		nutrit = ((obj->odiluted ? 1 : 2) *
 					(obj->blessed ? mons[(obj)->corpsenm].cnutrit*3/2 : mons[(obj)->corpsenm].cnutrit ));
+	} else if (obj->otyp == POT_SAP) {
+		/* 1/5th multiplier applied in dog_eat */
+		nutrit = ((obj->odiluted ? 1 : 2) *
+					(obj->cursed ? mons[(obj)->corpsenm].cnutrit*3/2 : mons[(obj)->corpsenm].cnutrit ));
 	} else {
 	    /* Unusual pet such as gelatinous cube eating odd stuff.
 	     * meating made consistent with wild monsters in mon.c.
@@ -362,7 +366,7 @@ dog_eat(struct monst *mtmp, struct obj *obj, int x, int y, boolean devour)
 	poly = polyfodder(obj) && !resists_poly(mtmp->data);
 	grow = mlevelgain(obj);
 	heal = mhealup(obj);
-	ston = (obj->otyp == CORPSE || obj->otyp == EGG || obj->otyp == TIN || obj->otyp == POT_BLOOD) && obj->corpsenm >= LOW_PM && touch_petrifies(&mons[obj->corpsenm]) && !Stone_res(mtmp);
+	ston = (obj->otyp == CORPSE || obj->otyp == EGG || obj->otyp == TIN || obj->otyp == POT_BLOOD || obj->otyp == POT_SAP) && obj->corpsenm >= LOW_PM && touch_petrifies(&mons[obj->corpsenm]) && !Stone_res(mtmp);
 	
 	if(obj->otyp == CORPSE){
 		mtyp = obj->corpsenm;
@@ -501,7 +505,7 @@ dog_eat(struct monst *mtmp, struct obj *obj, int x, int y, boolean devour)
 	}
 
 	if (ston) {
-		xstoney((struct monst *)0, mtmp);
+		xstoney((struct monst *)0, mtmp, FALSE);
 	    if (mtmp->mhp <= 0)
 			return 2;
 	}
@@ -744,6 +748,10 @@ dog_invent(register struct monst *mtmp, register struct edog *edog, int udist)
 		    /* Don't eat if satiated.  (arbitrary) 
 				Non-mindless pets can sense if you are hungry or starving, and will eat less.
 			*/
+			if(HAS_ESMT(mtmp) && ESMT(mtmp)->smith_mtyp == PM_DRACAE_ELADRIN && ESMT(mtmp)->smith_biomass_stockpile <= 7500 && edog->hungrytime > monstermoves + DOG_SATIATED){
+				ESMT(mtmp)->smith_biomass_stockpile += edog->hungrytime - (monstermoves + DOG_SATIATED - 1);
+				edog->hungrytime = (monstermoves + DOG_SATIATED - 1);
+			}
 		    if (edog->hungrytime < monstermoves + DOG_SATIATED || 
 				(!mindless_mon(mtmp) && 
 					(
@@ -780,6 +788,28 @@ dog_invent(register struct monst *mtmp, register struct edog *edog, int udist)
 	return 0;
 }
 
+/* set explosive pet's goal -- gtyp, gx, gy
+ * technically could return -1/0/1 (dog's desire to approach player) or -2 (abort move)
+ * but currently only returns 0 (if no target found) or 1 (target found)
+ */
+static int
+pet_sphere_goal(struct monst *mtmp, struct edog *edog, int after, int udist, int whappr)
+{
+	int appr = 0;
+	int gx, gy;
+	struct monst *m2 = (struct monst *)0;
+	int distminbest = BOLT_LIM;
+	for(m2=fmon; m2; m2 = m2->nmon){
+		if(!m2->mtame && !m2->mpeaceful && distmin(mtmp->mx,mtmp->my,m2->mx,m2->my) < distminbest){
+			distminbest = distmin(mtmp->mx,mtmp->my,m2->mx,m2->my);
+			gx = m2->mx;
+			gy = m2->my;
+			appr = 1;
+		}
+	}
+	return appr;
+}
+
 /* set dog's goal -- gtyp, gx, gy
  * returns -1/0/1 (dog's desire to approach player) or -2 (abort move)
  */
@@ -787,7 +817,7 @@ static int
 dog_goal(struct monst *mtmp, struct edog *edog, int after, int udist, int whappr)
 {
 	register int omx, omy;
-	boolean in_masters_sight, dog_has_minvent;
+	boolean in_masters_sight, dog_has_minvent, explosive = mon_attacktype(mtmp, AT_EXPL) ? TRUE : FALSE;
 	register struct obj *obj;
 	xchar otyp;
 	int appr;
@@ -806,6 +836,8 @@ dog_goal(struct monst *mtmp, struct edog *edog, int after, int udist, int whappr
 	    gtyp = APPORT;
 	    gx = u.ux;
 	    gy = u.uy;
+	} else if(explosive){
+		return pet_sphere_goal(mtmp, edog, after, udist, whappr);
 	} else if(distu(mtmp->mx,mtmp->my) > 5 || (!in_masters_sight && distu(mtmp->mx,mtmp->my) > 2) ){
 	    gtyp = UNDEF;
 	} else {
@@ -1181,7 +1213,13 @@ dog_move(
  * We haven't moved yet, so search for monsters to attack from a
  * distance and attack them if it's plausible.
  */
-	if (find_offensive(mtmp))
+	if (find_artifact(mtmp))
+	{
+	    int ret = use_artifact(mtmp);
+	    if (ret == 1) return 2; /* died */
+	    if (ret == 2) return 1; /* did something */
+	}
+	else if (find_offensive(mtmp))
 	{
 	    int ret = use_offensive(mtmp);
 	    if (ret == 1) return 2; /* died */
@@ -1220,6 +1258,11 @@ dog_move(
 					return 1; /* that was our move for the round */
 			}
 		}
+	}
+
+	// Possibly adjust stance
+	if(MON_WEP(mtmp) && !mtmp->mconf && !mtmp->mberserk && m_martial_skill(mtmp->data) == P_EXPERT && !mtarget_adjacent(mtmp)){
+		adjust_etrait_stance(mtmp);
 	}
 
 	if (!nohands(mtmp->data) && !verysmall(mtmp->data)) {

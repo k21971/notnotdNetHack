@@ -1,6 +1,6 @@
 Octopode race
 	Any alignment.
-	Roles: Binder, Convict, Acu, Monk, Pirate, Rogue, Tourist, Wizard
+	Roles: Binder, Convict, Acu, Monk, Pirate, Rogue, Tourist, Wizard, Barbarian
 	Can wear 8 rings
 	Attribute caps:
 		Str   Int Wis Dex Con Cha
@@ -8,7 +8,7 @@ Octopode race
 	Special spell: poison spray
 	Human HP and energy growth
 	Radius-2 low light vision
-	Medium sized. Can wear barded helmets and soft hats, cloaks, dragon scales (not scale mail) and waistcloths and living armor, shields
+	Medium sized. Can wear barded helmets and soft hats, cloaks, dragon scales (not scale mail) and waistcloths and living armor, shields, belts
 	Extra 1d8 tentacle wrap attack that can drown if over water
 	+level/10 bonus to natural DR and +level/2 bonus to natural AC
 	Starts with stone resistance, poison resistance, stealth, swimming, magical breathing, waterproofing
@@ -46,6 +46,7 @@ Bring back force armor from ndnh1
 	3 AC, 3 DR, MC 3, heavy armor made of gemstone, future tech
 	Ana hlf starts with it
 	Knocks back and stuns attackers
+	There's at least one on the lower filler level of the quest, behind the iron bars
 Remove sokoban guilt (it doesn't make sense with lokoban)
 Player clockwork automata have materials
 	Valid starting materials: bronze, iron, green-steel
@@ -110,3 +111,4 @@ New item: striped hat
 	Octopode convicts start with it instead of a striped shirt
 Death by overeating removed
 	Includes incantifier overeating and clockwork overwinding
+There's two force clubs, a shock mortar, and a sapburner randomly placed on ground zero (Ana and Android quest)

@@ -28,39 +28,42 @@ static void prisoner_speaks(struct monst *);
 static void
 on_start(void)
 {
-  if(!Qstat(first_start)) {
-    qt_pager(QT_FIRSTTIME + (flags.stag ? QT_TURNEDSTAG : 0));
-    Qstat(first_start) = TRUE;
-	if(Race_if(PM_ANDROID) && Role_if(PM_ANACHRONONAUT))
-		livelog_write_string("has already received their quest via sticky-note");
-  } else if((u.uz0.dnum != u.uz.dnum) || (u.uz0.dlevel < u.uz.dlevel)) {
-    if(Qstat(not_ready) <= 2) qt_pager(QT_NEXTTIME + (flags.stag ? QT_TURNEDSTAG : 0));
-    else	qt_pager(QT_OTHERTIME + (flags.stag ? QT_TURNEDSTAG : 0));
-  }
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
+	if(!Qstat(first_start)) {
+		qt_pager(QT_FIRSTTIME + variant);
+		Qstat(first_start) = TRUE;
+		if(Race_if(PM_ANDROID) && Role_if(PM_ANACHRONONAUT))
+			livelog_write_string("has already received their quest via sticky-note");
+	} else if((u.uz0.dnum != u.uz.dnum) || (u.uz0.dlevel < u.uz.dlevel)) {
+		if(Qstat(not_ready) <= 2) qt_pager(QT_NEXTTIME + variant);
+		else	qt_pager(QT_OTHERTIME + variant);
+	}
 }
 
 static void
 on_locate(void)
 {
-  if(!Qstat(first_locate)) {
-    qt_pager(QT_FIRSTLOCATE + (flags.stag ? QT_TURNEDSTAG : 0));
-    Qstat(first_locate) = TRUE;
-  } else if(u.uz0.dlevel < u.uz.dlevel && !Qstat(killed_nemesis))
-	qt_pager(QT_NEXTLOCATE + (flags.stag ? QT_TURNEDSTAG : 0));
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
+	if(!Qstat(first_locate)) {
+		qt_pager(QT_FIRSTLOCATE + variant);
+		Qstat(first_locate) = TRUE;
+	} else if(u.uz0.dlevel < u.uz.dlevel && !Qstat(killed_nemesis))
+		qt_pager(QT_NEXTLOCATE + variant);
 }
 
 static void
 on_goal(void)
 {
-  if (Qstat(killed_nemesis)) {
-    return;
-  } else if (!Qstat(made_goal)) {
-    qt_pager(QT_FIRSTGOAL + (flags.stag ? QT_TURNEDSTAG : 0));
-    Qstat(made_goal) = 1;
-  } else {
-    qt_pager(QT_NEXTGOAL + (flags.stag ? QT_TURNEDSTAG : 0));
-    if(Qstat(made_goal) < 7) Qstat(made_goal)++;
-  }
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
+	if (Qstat(killed_nemesis)) {
+		return;
+	} else if (!Qstat(made_goal)) {
+		qt_pager(QT_FIRSTGOAL + variant);
+		Qstat(made_goal) = 1;
+	} else {
+		qt_pager(QT_NEXTGOAL + variant);
+		if(Qstat(made_goal) < 7) Qstat(made_goal)++;
+	}
 }
 
 void
@@ -78,6 +81,7 @@ onquest(void)
 void
 nemdead(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 	if(!Qstat(killed_nemesis)) {
 	    Qstat(killed_nemesis) = TRUE;
 		give_quest_trophy();
@@ -88,19 +92,20 @@ nemdead(void)
 			//Both don't have proper quest leaders.
 			u.uevent.qcompleted = TRUE;
 		}
-	    qt_pager(QT_KILLEDNEM + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_KILLEDNEM + variant);
 	}
 }
 
 void
 artitouch(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 	if(!Qstat(touched_artifact)) {
 	    Qstat(touched_artifact) = TRUE;
 		if(!Role_if(PM_EXILE)) give_quest_trophy();
 		if(Role_if(PM_NOBLEMAN) && Race_if(PM_DROW) && !flags.initgend)
 			u.uevent.qcompleted = 1; /* Touching this advances the "plot" and will cause the leader to vanish, so set this now. */
-	    qt_pager(QT_GOTIT + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_GOTIT + variant);
 	    exercise(A_WIS, TRUE);
 	}
 }
@@ -240,9 +245,10 @@ finish_quest(
 	struct obj *obj	/* quest artifact; possibly null if carrying Amulet */)
 {
 	struct obj *otmp;
-
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
+	
 	if (u.uhave.amulet) {	/* unlikely but not impossible */
-	    qt_pager(QT_HASAMULET + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_HASAMULET + variant);
 	    /* leader IDs the real amulet but ignores any fakes */
 	    if ((otmp = carrying(AMULET_OF_YENDOR)) != 0)
 			fully_identify_obj(otmp);
@@ -275,7 +281,7 @@ finish_quest(
 		if(Role_if(PM_MADMAN) && mvitals[PM_STRANGER].died)
 			qt_pager(QT_MADMAN_OFFEREDIT);
 		else
-			qt_pager((!Qstat(got_thanks) ? QT_OFFEREDIT : is_primary_quest_artifact(obj) ? QT_OFFEREDIT2 : QT_OFFERART2) + (flags.stag ? QT_TURNEDSTAG : 0));
+			qt_pager((!Qstat(got_thanks) ? QT_OFFEREDIT : is_primary_quest_artifact(obj) ? QT_OFFEREDIT2 : QT_OFFERART2) + variant);
 	    /* should have obtained bell during quest;
 	       if not, suggest returning for it now */
 	    if ((otmp = carrying(BELL_OF_OPENING)) == 0 && !Role_if(PM_ANACHRONONAUT))
@@ -295,6 +301,7 @@ finish_quest(
 static void
 chat_with_leader_uh(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 /*	It is possible for you to get the amulet without completing
  *	the quest.  If so, try to induce the player to quest.
  */
@@ -304,7 +311,7 @@ chat_with_leader_uh(void)
 			//Warn about moon and research
 		}
 /*	Rule 2:	You've gone back before going for the amulet.	*/
-	    else		qt_pager(QT_POSTHANKS + (flags.stag ? QT_TURNEDSTAG : 0));
+	    else		qt_pager(QT_POSTHANKS + variant);
 	}
 
 /*	Rule 3: You've killed the "new" quest nemesis. */
@@ -369,6 +376,7 @@ source of this scourge, and Lay it to Rest.\"");
 static void
 chat_with_leader(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 /*	Rule 0:	Cheater checks.		No -C_ANG			*/
 	// if(u.uhave.questart && !Qstat(met_nemesis))
 	    // Qstat(cheater) = TRUE;
@@ -384,7 +392,7 @@ chat_with_leader(void)
 	    if(u.uhave.amulet)	finish_quest((struct obj *)0);
 
 /*	Rule 2:	You've gone back before going for the amulet.	*/
-	    else		qt_pager(QT_POSTHANKS + (flags.stag ? QT_TURNEDSTAG : 0));
+	    else		qt_pager(QT_POSTHANKS + variant);
 	}
 
 /*	Rule 3: You've got the artifact and are back to return it. */
@@ -399,31 +407,31 @@ chat_with_leader(void)
 
 /*	Rule 4: You haven't got the artifact yet.	*/
 	} else if(Qstat(got_quest)) {
-	    qt_pager(rn1(10, QT_ENCOURAGE + (flags.stag ? QT_TURNEDSTAG : 0)));
+	    qt_pager(rn1(10, QT_ENCOURAGE + variant));
 
 /*	Rule 5: You aren't yet acceptable - or are you? */
 	} else {
 	  if(!Qstat(met_leader)) {
-	    qt_pager(QT_FIRSTLEADER + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_FIRSTLEADER + variant);
 	    Qstat(met_leader) = TRUE;
 	    Qstat(not_ready) = 0;
-	  } else if(Qstat(not_ready) < 3) qt_pager(QT_NEXTLEADER + (flags.stag ? QT_TURNEDSTAG : 0));
-	   else qt_pager(QT_OTHERLEADER + (flags.stag ? QT_TURNEDSTAG : 0));
+	  } else if(Qstat(not_ready) < 3) qt_pager(QT_NEXTLEADER + variant);
+	   else qt_pager(QT_OTHERLEADER + variant);
 	  /* the quest leader might have passed through the portal into
 	     the regular dungeon; none of the remaining make sense there */
 	  if (!In_quest(&u.uz)) return;
 
 	  if(not_capable() && !flags.stag) {
-	    qt_pager(QT_BADLEVEL + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_BADLEVEL + variant);
 	    exercise(A_WIS, TRUE);
 	    expulsion(FALSE);
 	  } else if(is_pure(TRUE) < 0 && !flags.stag) {
-	    com_pager(QT_BANISHED + (flags.stag ? QT_TURNEDSTAG : 0));
+	    com_pager(QT_BANISHED + variant);
 	    expulsion(TRUE);
 	  } else if(is_pure(TRUE) == 0 && !flags.stag) {
-	    qt_pager(QT_BADALIGN + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_BADALIGN + variant);
 	    if(Qstat(not_ready) == MAX_QUEST_TRIES) {
-	      qt_pager(QT_LASTLEADER + (flags.stag ? QT_TURNEDSTAG : 0));
+	      qt_pager(QT_LASTLEADER + variant);
 	      expulsion(TRUE);
 	    } else {
 	      if(!Role_if(PM_EXILE)) Qstat(not_ready)++;
@@ -431,7 +439,7 @@ chat_with_leader(void)
 	      expulsion(FALSE);
 	    }
 	  } else {	/* You are worthy! */
-	    qt_pager(QT_ASSIGNQUEST + (flags.stag ? QT_TURNEDSTAG : 0));
+	    qt_pager(QT_ASSIGNQUEST + variant);
 	    exercise(A_WIS, TRUE);
 	    Qstat(got_quest) = TRUE;
 		livelog_write_string("was given their Quest");
@@ -493,6 +501,7 @@ chat_with_leader(void)
 void
 leader_speaks(register struct monst *mtmp)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 	/* maybe you attacked leader? */
 	if(!mtmp->mpeaceful) {
 		if(!Role_if(PM_EXILE)){
@@ -510,7 +519,7 @@ leader_speaks(register struct monst *mtmp)
 	if (!on_level(&u.uz, &qstart_level) || flags.leader_backstab) return;
 
 	if(Qstat(pissed_off)) {
-	  qt_pager(QT_LASTLEADER + (flags.stag ? QT_TURNEDSTAG : 0));
+	  qt_pager(QT_LASTLEADER + variant);
 	  expulsion(TRUE);
 	} else chat_with_leader();
 
@@ -522,25 +531,27 @@ leader_speaks(register struct monst *mtmp)
 static void
 chat_with_nemesis(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 /*	The nemesis will do most of the talking, but... */
-	qt_pager(rn1(10, QT_DISCOURAGE + (flags.stag ? QT_TURNEDSTAG : 0)));
+	qt_pager(rn1(10, QT_DISCOURAGE + variant));
 	// if(!Qstat(met_nemesis)) Qstat(met_nemesis++);
 }
 
 void
 nemesis_speaks(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 	if(!Qstat(in_battle)) {
 	  if(u.uhave.questart && 
 		(Qstat(met_nemesis) || 
 		!((Race_if(PM_DROW) && Role_if(PM_NOBLEMAN && flags.initgend)) || (Race_if(PM_DWARF) && Role_if(PM_NOBLEMAN)) || (Role_if(PM_EXILE)))
 		)
-	  ) qt_pager(QT_NEMWANTSIT + (flags.stag ? QT_TURNEDSTAG : 0));
+	  ) qt_pager(QT_NEMWANTSIT + variant);
 	  else if(!Qstat(met_nemesis))
-	      qt_pager(QT_FIRSTNEMESIS + (flags.stag ? QT_TURNEDSTAG : 0));
-	  else if(Qstat(made_goal) < 4) qt_pager(QT_NEXTNEMESIS + (flags.stag ? QT_TURNEDSTAG : 0));
-	  else if(Qstat(made_goal) < 7) qt_pager(QT_OTHERNEMESIS + (flags.stag ? QT_TURNEDSTAG : 0));
-	  else if(!rn2(5))	qt_pager(rn1(10, QT_DISCOURAGE + (flags.stag ? QT_TURNEDSTAG : 0)));
+	      qt_pager(QT_FIRSTNEMESIS + variant);
+	  else if(Qstat(made_goal) < 4) qt_pager(QT_NEXTNEMESIS + variant);
+	  else if(Qstat(made_goal) < 7) qt_pager(QT_OTHERNEMESIS + variant);
+	  else if(!rn2(5))	qt_pager(rn1(10, QT_DISCOURAGE + variant));
 	  if(Qstat(made_goal) < 7) Qstat(made_goal)++;
 	  if(!Qstat(met_nemesis) && Race_if(PM_DROW) && 
 		(Role_if(PM_PRIEST) || Role_if(PM_ROGUE) || Role_if(PM_RANGER) || Role_if(PM_WIZARD)) && 
@@ -550,7 +561,7 @@ nemesis_speaks(void)
 	  Qstat(met_nemesis) = TRUE;
 	} else {
 		if(!Qstat(met_nemesis)){
-			qt_pager(QT_FIRSTNEMESIS + (flags.stag ? QT_TURNEDSTAG : 0));
+			qt_pager(QT_FIRSTNEMESIS + variant);
 			  Qstat(met_nemesis) = TRUE;
 			  if(Race_if(PM_DROW) && 
 				(Role_if(PM_PRIEST) || Role_if(PM_ROGUE) || Role_if(PM_RANGER) || Role_if(PM_WIZARD)) && 
@@ -558,7 +569,7 @@ nemesis_speaks(void)
 				turn_stag();
 			  }
 		/* he will spit out random maledictions */
-		} else if(!rn2(5))	qt_pager(rn1(10, QT_DISCOURAGE + (flags.stag ? QT_TURNEDSTAG : 0)));
+		} else if(!rn2(5))	qt_pager(rn1(10, QT_DISCOURAGE + variant));
 	}
 	if(Race_if(PM_DROW) && (Role_if(PM_PRIEST) || Role_if(PM_ROGUE) || Role_if(PM_RANGER) || Role_if(PM_WIZARD)) && flags.stag){
 	/*Correct peacefulness settings*/
@@ -580,14 +591,15 @@ nemesis_speaks(void)
 static void
 chat_with_guardian_uh(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 	if (u.uevent.qrecalled){
 		if(mvitals[PM_MOON_S_CHOSEN].died){
-			qt_pager(rn1(5, QT_GUARDTALK2 + (flags.stag ? QT_TURNEDSTAG : 0)));
+			qt_pager(rn1(5, QT_GUARDTALK2 + variant));
 		}
 		else {
 			switch(rn2(5)){
 				case 0:
-					verbalize("There you are, %s!  What has happened, %s told us youu had succeeded.", rank_of(u.ulevel, Role_switch, flags.female), ldrname());
+					verbalize("There you are, %s!  What has happened, %s told us you had succeeded.", rank_of(u.ulevel, Role_switch, flags.female), ldrname());
 				break;
 				case 1:
 					verbalize("Ah, %s!  Surely you can help us in our hour of need.", plname);
@@ -605,21 +617,22 @@ chat_with_guardian_uh(void)
 		}
 	}
 	else if (u.uhave.questart && Qstat(killed_nemesis))
-	    qt_pager(rn1(5, QT_GUARDTALK2 + (flags.stag ? QT_TURNEDSTAG : 0)));
+	    qt_pager(rn1(5, QT_GUARDTALK2 + variant));
 	else
-	    qt_pager(rn1(5, QT_GUARDTALK + (flags.stag ? QT_TURNEDSTAG : 0)));
+	    qt_pager(rn1(5, QT_GUARDTALK + variant));
 }
 
 static void
 chat_with_guardian(void)
 {
+	int variant = flags.stag || (Role_if(PM_CONVICT) && quest_status.time_doing_quest/CON_QUEST_INCREMENT >= 7) ? QT_VARIANT : 0;
 	/*	These guys/gals really don't have much to say... */
 	if (Role_if(PM_UNDEAD_HUNTER))
 		chat_with_guardian_uh();
 	else if (u.uhave.questart && Qstat(killed_nemesis))
-	    qt_pager(rn1(5, QT_GUARDTALK2 + (flags.stag ? QT_TURNEDSTAG : 0)));
+	    qt_pager(rn1(5, QT_GUARDTALK2 + variant));
 	else
-	    qt_pager(rn1(5, QT_GUARDTALK + (flags.stag ? QT_TURNEDSTAG : 0)));
+	    qt_pager(rn1(5, QT_GUARDTALK + variant));
 }
 
 static void

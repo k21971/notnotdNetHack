@@ -110,6 +110,17 @@ ENDMAP
 #0123456789012345678901234567890123456789012345678901234567890123456789012345
 #0         1         2         3         4         5         6         7     
 
+OBJECT[25%]:'#',"very rotted bed",(07,01)
+OBJECT[25%]:'#',"very rotted bed",(10,01)
+OBJECT[25%]:'#',"very rotted bed",(12,01)
+OBJECT[25%]:'#',"very rotted bed",(14,01)
+
+OBJECT[25%]:'#',"very rotted bed",(06,19)
+OBJECT[25%]:'#',"very rotted bed",(08,19)
+OBJECT[25%]:'#',"very rotted bed",(10,19)
+OBJECT[25%]:'#',"very rotted bed",(12,19)
+OBJECT[25%]:'#',"very rotted bed",(14,19)
+
 CONTAINER:'(',"chest",(16,19)
 	OBJECT[25%]:')',"cutting laser",contained, uncursed, 0
 	OBJECT[25%]:')',"cutting laser",contained, uncursed, 0
@@ -795,6 +806,13 @@ OBJECT:'(',"hypospray ampule",random
 OBJECT:'(',"hypospray ampule",random
 OBJECT:'(',"hypospray ampule",random
 
+OBJECT:')',"force club",random
+OBJECT:')',"force club",random
+
+OBJECT:')',"shock mortar",random
+
+OBJECT:')',"sapburner",random
+
 GEOMETRY:center,center
 #0         1         2         3         4         5         6         7     
 #0123456789012345678901234567890123456789012345678901234567890123456789012345
@@ -1244,6 +1262,10 @@ ENDMAP
 #0123456789012345678901234567890123456789012345678901234567890123456789012
 #0         1         2         3         4         5         6         7     
 
+
+OBJECT:'[',"force armor",random
+OBJECT[75%]:'[',"force armor",random
+OBJECT[10%]:'[',"force armor",random
 
 OBJECT:'#',"color_white thoroughly rotted imperial elven helm",random
 OBJECT[75%]:'#',"color_bright_green thoroughly rotted imperial elven helm",random

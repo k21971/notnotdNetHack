@@ -52,6 +52,7 @@ hooked_tty_getlin(const char *query, char *bufp, getlin_hook_proc hook)
 		Sprintf(toplines, "%s ", query);
 		Strcat(toplines, obufp);
 		if((c = Getchar()) == EOF) {
+			iflags.term_gone = 1;
 			break;
 		}
 		if(c == DOESCAPE) {

@@ -13,6 +13,7 @@ struct zapdata {
 #define ZAP_BREATH	3
 #define ZAP_RAYGUN	4
 #define ZAP_FLAMETHROWER	5
+#define ZAP_SAPBURNER	6
 	int damn;				/* number of dice */
 	int damd;				/* size of dice */
 	int bonus;
@@ -34,6 +35,7 @@ struct zapdata {
 	Bitfield(no_bounce, 1);		/* does not bounce off of walls */
 	Bitfield(no_hit_wall, 1);	/* stops just short of walls */
 	Bitfield(leaves_clouds, 1);	/* leaves a trail of adtyp-appropriate clouds */
+	Bitfield(blinding, 1);	/* has a blinding flash (AD_ELEC always does this) */
 };
 
 

@@ -418,6 +418,7 @@ restgamestate(
 	if (youmonst.light)
 		rest_lightsource(LS_MONSTER, &youmonst, youmonst.light, fd, FALSE);
 	init_uasmon();
+	role_edit();		/* after u is read so that role_variant is set */
 	cliparound(u.ux, u.uy);
 	/* reload random monster*/
 	{

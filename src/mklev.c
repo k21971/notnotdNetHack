@@ -651,6 +651,10 @@ add_altar(int x, int y, aligntyp alignment, boolean shrine, int godnum)
 			mksobj_at(PHLEBOTOMY_KIT, x, y, NO_MKOBJ_FLAGS);
 		}
 	}
+	if (Is_qlocate(&u.uz) && Role_if(PM_ARCHEOLOGIST)) {
+		altars[altarindex].god = rn2(2) ? GOD_XOLOTL : GOD_TLALOC;
+		altars[altarindex].align = galign(altars[altarindex].god);
+	}
 	
 	altarindex++;
 }
@@ -922,6 +926,7 @@ clear_level_structures(void)
 	level.flags.goldkamcount_peace = 0;
 	
 	level.flags.sp_lev_nroom = 0;
+	level.flags.rage = 0;
 	
 	level.flags.has_shop = 0;
 	level.flags.has_vault = 0;
@@ -958,6 +963,10 @@ clear_level_structures(void)
 	level.flags.has_minor_spire = 0;
 	level.flags.has_kamerel_towers = 0;
 	
+	level.flags.mirror = 0;
+	level.flags.day = 0;
+	level.flags.walkers = 0;
+	
 	level.lastmove = monstermoves;
 
 	nroom = 0;
@@ -984,6 +993,7 @@ makelevel(void)
 	struct monst *tmonst;	/* always put a web with a spider */
 	branch *branchp;
 	int room_threshold;
+	boolean magic_chest = FALSE;
 
 	if(wiz1_level.dlevel == 0) init_dungeons();
 	oinit();	/* assign level dependent obj probabilities */
@@ -997,6 +1007,36 @@ makelevel(void)
 	{
 	    register s_level *slev = Is_special(&u.uz);
 
+	    /* Kensei quest subout */
+		if(Role_if(PM_KENSEI) && qstart_level.dnum == u.uz.dnum && qlocate_level.dlevel == u.uz.dlevel){
+		    char	fillname[9];
+			if(u.role_variant == ART_SKY_REFLECTED)
+				Sprintf(fillname, "%s-locb", urole.filecode);
+			else if(u.role_variant == ART_SILVER_SKY)
+				Sprintf(fillname, "%s-locc", urole.filecode);
+			else if(u.role_variant == ART_ANGUIREL)
+				Sprintf(fillname, "%s-locd", urole.filecode);
+			else if(u.role_variant == ART_RINGIL)
+				Sprintf(fillname, "%s-loce", urole.filecode);
+			else if(u.role_variant == ART_ANSERMEE)
+				Sprintf(fillname, "%s-locf", urole.filecode);
+			else if(u.role_variant == ART_EPITAPH_OF_WONGAS)
+				Sprintf(fillname, "%s-locg", urole.filecode);
+			else if(u.role_variant == ART_WINTER_REAPER)
+				Sprintf(fillname, "%s-loch", urole.filecode);
+			else if(u.role_variant == ART_BOREAL_SCEPTER)
+				Sprintf(fillname, "%s-loci", urole.filecode);
+			else if(u.role_variant == ART_MALICE)
+				Sprintf(fillname, "%s-locj", urole.filecode);
+			else if(u.role_variant == ART_KIKU_ICHIMONJI)
+				Sprintf(fillname, "%s-lock", urole.filecode);
+			else if(u.role_variant == ART_PIERCING_FLAME)
+				Sprintf(fillname, "%s-locl", urole.filecode);
+			else 
+				Sprintf(fillname, "%s-loca", urole.filecode);
+			makemaz(fillname);
+		    return;
+		}
 	    /* check for special levels */
 #ifdef REINCARNATION
 	    if (slev && !Is_rogue_level(&u.uz))
@@ -1308,6 +1348,12 @@ skip0:
 		if(!rn2(nroom * 5 / 2))
 		    (void) mksobj_at((rn2(3)) ? BOX : CHEST, somex(croom), somey(croom), NO_MKOBJ_FLAGS);
 
+		//About a 10% chance of a magic chest per level
+		if(!rn2(nroom * 10) && !magic_chest){
+		    (void) mksobj_at(MAGIC_CHEST, somex(croom), somey(croom), NO_MKOBJ_FLAGS);
+			magic_chest = TRUE;
+		}
+
 		/* maybe make some graffiti */
 		if(!rn2(27 + 3 * abs(depth(&u.uz)))) {
 		    char buf[BUFSZ];
@@ -1488,7 +1534,7 @@ mineralize(void)
 					if (!rn2(3) && Can_dig_down(&u.uz)) add_to_buried(otmp);
 					else place_object(otmp, x, y);
 				}
-				else if ((otmp = mksobj(FOSSIL, 0)) != 0) {
+				else if ((otmp = mksobj(FOSSIL, NO_MKOBJ_FLAGS)) != 0) {
 					otmp->quan = 1L;
 					otmp->owt = weight(otmp);
 					otmp->ox = x,  otmp->oy = y;

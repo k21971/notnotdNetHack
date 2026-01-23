@@ -50,11 +50,9 @@ stealgold(register struct monst *mtmp)
 	    Your("purse feels lighter.");
 		IMPURITY_UP(u.uimp_theft)
 	    mtmp->mgold += tmp;
-	if(mtmp->mtyp != PM_FAFNIR){
-		if (!tele_restrict(mtmp)) (void) rloc(mtmp, TRUE);
-		mtmp->mavenge = 1;
-		monflee(mtmp, 0, FALSE, FALSE);
-	}
+	    if (!tele_restrict(mtmp)) (void) rloc(mtmp, TRUE);
+	    mtmp->mavenge = 1;
+	    monflee(mtmp, 0, FALSE, FALSE);
 	    flags.botl = 1;
 	}
 }
@@ -443,7 +441,7 @@ gotobj:
 			 touch_petrifies(&mons[otmp->corpsenm]));
 	(void) mpickobj(mtmp,otmp);	/* may free otmp */
 	if (could_petrify && !(mtmp->misc_worn_check & W_ARMG)) {
-	    minstapetrify(mtmp, TRUE);
+	    minstapetrify(mtmp, TRUE, FALSE);
 	}
 	if(roll_madness(MAD_TALONS)){
 		You("panic after having your property stolen!");
@@ -631,7 +629,7 @@ mdrop_special_objs(struct monst *mon)
 		else if(mon->entangled_oid == obj->o_id){
 			obj_extract_self(obj);
 			//Assumes that the only way the jin gang zuo can come into play is via crowning gift.
-			if(obj->oartifact == ART_JIN_GANG_ZUO){
+			if(is_returning_snare(obj)){
 				hold_another_object(obj, "Oops!  The returning %s slips to the floor!", "snare", (const char *)0);
 			}
 			else {
@@ -669,7 +667,7 @@ relobj(
 		while((otmp = mtmp->minvent)){
 			obj_extract_and_unequip_self(otmp);
 			//Assumes that the only way the jin gang zuo can come into play is via crowning gift.
-			if(otmp->oartifact == ART_JIN_GANG_ZUO){
+			if(is_returning_snare(otmp)){
 				hold_another_object(otmp, "Oops!  The returning %s slips to the floor!", "snare", (const char *)0);
 			}
 			else {
@@ -688,7 +686,80 @@ relobj(
 		mtmp->mgold = 0L;
 	}
 #endif
-	
+	if(HAS_ESMT(mtmp)){
+		if(ESMT(mtmp)->smith_iron_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, IRON);
+			otmp->quan = ESMT(mtmp)->smith_iron_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_iron_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_green_steel_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, GREEN_STEEL);
+			otmp->quan = ESMT(mtmp)->smith_green_steel_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_green_steel_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_metal_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, METAL);
+			otmp->quan = ESMT(mtmp)->smith_metal_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_metal_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_bronze_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, COPPER);
+			otmp->quan = ESMT(mtmp)->smith_bronze_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_bronze_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_silver_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, SILVER);
+			otmp->quan = ESMT(mtmp)->smith_silver_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_silver_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_gold_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, GOLD);
+			otmp->quan = ESMT(mtmp)->smith_gold_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_gold_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_platinum_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, PLATINUM);
+			otmp->quan = ESMT(mtmp)->smith_platinum_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_platinum_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_lead_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, LEAD);
+			otmp->quan = ESMT(mtmp)->smith_lead_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_lead_stockpile = 0;
+		}
+		if(ESMT(mtmp)->smith_mithril_stockpile){
+			otmp = mksobj(INGOT, MKOBJ_NOINIT);
+			set_material_gm(otmp, MITHRIL);
+			otmp->quan = ESMT(mtmp)->smith_mithril_stockpile;
+			fix_object(otmp);
+			mdrop_obj(mtmp, otmp, is_pet && flags.verbose);
+			ESMT(mtmp)->smith_mithril_stockpile = 0;
+		}
+	}
 	if (show & cansee(omx, omy))
 		newsym(omx, omy);
 }

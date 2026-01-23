@@ -276,7 +276,9 @@ mapglyph(int glyph, glyph_t *ochar, int *ocolor, unsigned int *obgcolor, int x, 
 					color = offset == S_litroom ? CLR_GRAY : CLR_BLACK;
 				}
 			} else if(In_quest(&u.uz)){
-				if(Role_if(PM_NOBLEMAN) && Race_if(PM_HALF_DRAGON) && flags.initgend){
+				if((Role_if(PM_NOBLEMAN) && Race_if(PM_HALF_DRAGON) && flags.initgend)
+				 || (Role_if(PM_KENSEI) && u.role_variant == ART_WINTER_REAPER && Is_qlocate(&u.uz))
+				){
 					if (offset == S_tree)
 						color = CLR_CYAN;
 				}

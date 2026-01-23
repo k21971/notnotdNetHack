@@ -699,6 +699,18 @@ oname(struct obj *obj, const char *name)
 		if (obj->oartifact == ART_AMALGAMATED_SKIES || obj->oartifact == ART_SILVER_SKY)
 			add_oprop(obj, OPROP_GSSDW);
 		
+		if (obj->oartifact == ART_WINTER_REAPER)
+			add_oprop(obj, OPROP_LESSER_COLDW);
+		
+		if (obj->oartifact == ART_RINGIL)
+			add_oprop(obj, OPROP_WRTHW);
+		
+		if (obj->oartifact == ART_PIERCING_FLAME)
+			add_oprop(obj, OPROP_UNHYW);
+		
+		if (obj->oartifact == ART_ANGUIREL)
+			add_oprop(obj, OPROP_WRTHW);
+		
 		/* symbol */
 		if (obj->oartifact == ART_LOMYA)
 			obj->oward = LOLTH_SYMBOL;
@@ -731,6 +743,23 @@ oname(struct obj *obj, const char *name)
 		else if (is_malleable_artifact(&artilist[obj->oartifact]));//keep current/default material
 		else
 			tmp = objects[obj->otyp].oc_material;
+		
+		if(obj->oartifact == ART_SKY_REFLECTED){
+			if(obj->obj_material != MERCURIAL){
+				tmp = 0;
+				start_timer(d(8,8), TIMER_OBJECT,
+							REVERT_MERC, (void *)obj);
+			}
+			if(Role_if(PM_KENSEI) && u.role_variant == ART_SKY_REFLECTED){
+				expert_weapon_skill(objects[obj->otyp].oc_skill);
+				if(obj->otyp == LONG_SWORD){
+					expert_weapon_skill(P_GENERIC_KNIGHT_FORM);
+				}
+				else if(is_pole(obj)){
+					expert_weapon_skill(P_RIDING);
+				}
+			}
+		}
 		
 		if(tmp)
 			set_material_gm(obj, tmp);
@@ -966,6 +995,12 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
 		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "%s the swollen", buf);
 		else if (full && template == BLOOD_MON)	Sprintf(buf2, "%s the bloody", buf);
+		else if (full && template == FLAYED){
+			if (!strcmp(buf, "Robert the Lifer"))		Sprintf(buf2, "Robert the Flayed");
+			else 										Sprintf(buf2, "%s the Flayed", buf);
+		}
+		else if(full && template == MANITOU)			Sprintf(buf2, "%s the Vine-strangled", buf);
+		else if(full && template == GUECUBU)			Sprintf(buf2, "%s the Dreaming", buf);
 		else											Strcpy(buf2, buf);
 	}
 	else {
@@ -1000,7 +1035,10 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
 		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "swollen %s", buf);
-		else if (full && template == BLOOD_MON)	Sprintf(buf2, "blood %s", buf);
+		else if (full && template == BLOOD_MON)			Sprintf(buf2, "blood %s", buf);
+		else if (full && template == FLAYED)			Sprintf(buf2, "flayed %s", buf);
+		else if (full && template == MANITOU)			Sprintf(buf2, "vine-strangled %s", buf);
+		else if (full && template == GUECUBU)			Sprintf(buf2, "sleepwalking %s", buf);
 		else											Strcpy(buf2, buf);
 	}
 
@@ -1871,6 +1909,7 @@ static const char * const bogusmons[] = {
 	"obelus",
 	"miniature blimp",
 	"lungfish",
+	"grain neutral spirit", /* Alcohol */
 
 	"hard-to-destroy reptile",
 		"shy guy",								/* SCP Foundation */

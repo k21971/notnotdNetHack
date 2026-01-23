@@ -149,6 +149,7 @@ give_may_advance_msg(int skill)
 static boolean can_advance(int, boolean);
 static boolean could_advance(int);
 static boolean peaked_skill(int);
+static boolean could_advance_lightsaber(int);
 static int slots_required(int);
 
 
@@ -224,7 +225,13 @@ hitval(struct obj *otmp, struct monst *mon, struct monst *magr)
 			tmp += 7; //Quite holy
 		else if(otmp->oartifact == ART_HOLY_MOONLIGHT_SWORD && !otmp->lamplit)
 			tmp += rnd(20); //Quite holy
+		else if(is_silverknight_weapon(otmp))
+			tmp += 3; //Quite holy
 		else tmp += 2;
+
+		if(magr && Focused_aura(magr)){
+			tmp += 4;
+		}
 	}
 	if (is_spear(otmp) &&
 	   index(kebabable, ptr->mlet)) tmp += (ptr->mtyp == PM_SMAUG) ? 20 : 2;
@@ -299,8 +306,10 @@ attack_mask(struct obj *obj, int otyp, int oartifact, struct monst *magr)
 		otyp = obj->otyp;
 		oartifact = obj->oartifact;
 	}
-	
-	if(otyp && (
+	if(obj && is_lightsaber(obj) && !litsaber(obj)){
+		attackmask = WHACK;
+	}
+	else if(otyp && (
 		objects[otyp].oc_class == WEAPON_CLASS
 		|| (objects[otyp].oc_class == TOOL_CLASS && objects[otyp].oc_skill != P_NONE)
 	)){
@@ -354,6 +363,7 @@ attack_mask(struct obj *obj, int otyp, int oartifact, struct monst *magr)
 		|| oartifact == ART_GREAT_CLAWS_OF_URDLEN
 		|| oartifact == ART_SHIELD_OF_THE_RESOLUTE_HEA
 		|| oartifact == ART_PREMIUM_HEART
+		|| oartifact == ART_SEVEN_STAR_SWORD
 		|| (obj && ((otyp == KAMEREL_VAJRA && !litsaber(obj))
 		|| 		   (check_oprop(obj, OPROP_SPIKED) && !litsaber(obj))
 		|| 		   (!litsaber(obj) && is_kinstealing_merc(obj))
@@ -366,8 +376,13 @@ attack_mask(struct obj *obj, int otyp, int oartifact, struct monst *magr)
 		else if(activeFightingForm(FFORM_POMMEL))
 			attackmask = WHACK; // only bashing
 	}
-	if (obj && magr && obj->otyp == TOOTH && obj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(obj, magr, ETRAIT_FOCUS_FIRE)){
-		attackmask = PIERCE; // only thrusting
+	if (obj && magr){
+		if((obj->otyp == TOOTH || obj->otyp == GOEDENDAG || obj->otyp == POLEAXE || obj->oartifact == ART_STORM_CURSE) && obj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(obj, magr, ETRAIT_FOCUS_FIRE))
+			attackmask = PIERCE; // only thrusting
+		if((obj->otyp == POLEAXE) && obj->o_e_trait&ETRAIT_HEW && CHECK_ETRAIT(obj, magr, ETRAIT_HEW))
+			attackmask = SLASH; // only slashing
+		if((obj->otyp == POLEAXE) && obj->o_e_trait&ETRAIT_STUNNING_STRIKE && CHECK_ETRAIT(obj, magr, ETRAIT_STUNNING_STRIKE))
+			attackmask = WHACK; // only bashing
 	}
 	if(obj && obj->o_e_trait == ETRAIT_HEW && magr
 		&& CHECK_ETRAIT(obj, magr, ETRAIT_HEW)
@@ -379,6 +394,8 @@ attack_mask(struct obj *obj, int otyp, int oartifact, struct monst *magr)
 		|| oartifact == ART_INFINITY_S_MIRRORED_ARC
 		|| oartifact == ART_GREAT_CLAWS_OF_URDLEN
 		|| oartifact == ART_CLAWS_OF_THE_REVENANCER
+		|| oartifact == ART_WINTER_REAPER
+		|| oartifact == ART_SHADOWLOCK
 		|| (obj && otyp == KNUCKLE_DUSTERS)
 		|| (obj && check_oprop(obj, OPROP_BLADED) && !litsaber(obj))
 		|| (obj && check_oprop(obj, OPROP_RLYHW) && Insight >= 12)
@@ -403,6 +420,11 @@ attack_mask(struct obj *obj, int otyp, int oartifact, struct monst *magr)
 		else if(!(attackmask&PIERCE))
 			attackmask |= PIERCE;
 		else attackmask |= SLASH;
+	}
+	if (obj && oartifact == ART_MORTAL_BLADE){
+		/* hard to resist when drawn, but the sheath is just a club really */
+		if (obj == uwep) attackmask |= EXPLOSION;
+		else attackmask = WHACK;
 	}
 	/* if it's not any of the above, we're just smacking things with it */
 	if (!attackmask)
@@ -447,10 +469,15 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 {
 	int dmod = 0;						/* die size modifier */
 	int spe_mult = 1;					/* multiplier for enchantment value */
+	int amalg_otyp = 0;
 
 	/* use the otyp of the object called, if we have one */
-	if (obj)
+	if (obj){
 		otyp = obj->otyp;
+		if(obj->oartifact == ART_AMALGAMATED_SKIES){
+			amalg_otyp = artinstance[ART_SKY_REFLECTED].ZerthOtyp;
+		}
+	}
 
 	/* in case we are dealing with a complete lack of a weapon (!obj, !otyp)
 	 * just skip everything and only initialize wdice
@@ -495,6 +522,9 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 	/* set dmod, if possible*/
 	if (obj){
 		dmod = obj->objsize - MZ_MEDIUM;
+		if(magr && Focused_aura(magr)){
+			dmod += 2;
+		}
 
 		/* Use ldice for small cases as well and add 1 to ocn */
 		if(obj->oartifact == ART_DARK_CLAYMORE){
@@ -502,10 +532,14 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 			ocd = objects[otyp].oc_wldam.oc_damd;
 		}
 
-		if(obj->otyp == CHIKAGE && obj->obj_material == HEMARGYOS){
+		if(obj->otyp == CHIKAGE && (obj->obj_material == HEMARGYOS || check_oprop(obj, OPROP_HAEM))){
 			ocn *= 2;
 			bonn *= 2;
 			flat *= 2;
+			if(magr)
+				flat += min(mlev(magr)/3, 10);
+		}
+		else if(amalg_otyp == CHIKAGE){
 			if(magr)
 				flat += min(mlev(magr)/3, 10);
 		}
@@ -514,6 +548,28 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 			dmod += 1;
 			if (obj->lamplit)
 				dmod += 2;
+		}
+		else if (obj->oartifact == ART_WINTER_REAPER){
+			if(large){
+				ocn += 1;
+			}
+			else {
+				dmod += 1;
+			}
+		}
+		else if (obj->oartifact == ART_ANGUIREL){
+			if(large){
+				ocn = 5;
+				ocd = 8; // Will be adjusted to d6 when the material change is processed.
+			}
+			else {
+				ocn = 3;
+				ocd = 8; // Will be adjusted to d6 when the material change is processed.
+			}
+		}
+		else if (obj->oartifact == ART_SHADOWLOCK){
+			ocn = 4;
+			ocd = 6;
 		}
 
 		if(obj->where == OBJ_INVENT && is_slashing(obj) && u.utats & TAT_FALCHION)
@@ -541,12 +597,28 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 				flat = 0;
 			}
 		}
-		if (magr && obj->otyp == TOOTH && obj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(obj, magr, ETRAIT_FOCUS_FIRE)){
+		if (magr && obj->o_e_trait&ETRAIT_FOCUS_FIRE && CHECK_ETRAIT(obj, magr, ETRAIT_FOCUS_FIRE)){
+			if(obj->otyp == TOOTH){
 				ocn = 1;
 				ocd = 8;
 				bonn = 0;
 				bond = 0;
 				flat = 0;
+			}
+			else if(obj->otyp == GOEDENDAG && large){
+				ocn = 1;
+				ocd = 8;
+				bonn = 0;
+				bond = 0;
+				flat = 0;
+			}
+			else if(obj->oartifact == ART_STORM_CURSE){
+				ocn = 1;
+				ocd = large ? 4 : 3;
+				bonn = 0;
+				bond = 0;
+				flat = 0;
+			}
 		}
 		if (obj->oartifact == ART_FRIEDE_S_SCYTHE)
 			dmod += 2;
@@ -644,16 +716,15 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 		if(magr == &youmonst && obj->oartifact){
 			const struct artifact *weap = get_artifact(obj);
 			if((weap->inv_prop == GITH_ART || weap->inv_prop == AMALGUM_ART) && activeMentalEdge(GSTYLE_PENETRATE))
-				ignore_rolls += u.usanity > 50 ? 0 : u.usanity > 25 ? 1 : u.usanity > 10 ? 2 : 3;
+				ignore_rolls += EDGE_KENSEI ? 3 : u.usanity > 50 ? 0 : u.usanity > 25 ? 1 : u.usanity > 10 ? 2 : 3;
 		}
 
 		if (otyp == BALL) {
 			int wt = (int)objects[BALL].oc_weight;
 
 			if ((int)obj->owt > wt) {
-				wt = ((int)obj->owt - wt) / 160;
-				ocd += 4 * wt;
-				if (ocd > 25) ocd = 25;	/* objects[].oc_wldam */
+				wt = ((int)obj->owt - wt) / 40;
+				ocd += wt;
 			}
 		}
 		if (check_oprop(obj, OPROP_BLADED))
@@ -771,17 +842,24 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 						if (is_slashing(obj) || is_stabbing(obj))
 							dmod -= mod;
 						break;
-					/* glass and obsidian have sharp edges and points 
-					 * shadowsteel ??? but gameplay-wise, droven weapons
-					 *   made out of this troublesome-to-maintain material
-					 *   shouldn't be weaker than their obsidian counterparts
-					 */
+					/* glass and obsidian have sharp edges and points */
 					case GLASS:
 					case OBSIDIAN_MT:
-					case SHADOWSTEEL:
 					case GREEN_STEEL:
 						if (is_slashing(obj) || is_stabbing(obj))
 							dmod += mod;
+						break;
+					case SHADOWSTEEL:
+						if(obj->improved_mat){
+							if (is_slashing(obj) || is_stabbing(obj))
+								dmod += mod;
+						}
+						else {
+							if (is_slashing(obj) || is_stabbing(obj))
+								dmod -= mod;
+							else
+								dmod -= 2*mod;
+						}
 						break;
 					/* dragon teeth are good at piercing */
 					case DRAGON_HIDE:
@@ -808,6 +886,7 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 			}
 			else {
 				bond = max(0, dmod * 2);
+				bonn = 1;
 				flat = 0;
 			}
 		}
@@ -1048,7 +1127,13 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 	if (obj && otyp == KAMEREL_VAJRA)
 	{
 		if (litsaber(obj)) {
-			if (obj->where == OBJ_MINVENT && obj->ocarry->mtyp == PM_ARA_KAMEREL)
+			if(obj->oartifact == ART_KISHIN_MIRROR)
+			{
+				spe_mult = u.ulevel == 30 ? 3 : u.ulevel >= 14 ? 2 : 1;
+				ocn *= u.ulevel == 30 ? 3 : u.ulevel >= 14 ? 2 : 1;
+				flat *= u.ulevel == 30 ? 3 : u.ulevel >= 14 ? 2 : 1;
+			}
+			else if (obj->where == OBJ_MINVENT && obj->ocarry->mtyp == PM_ARA_KAMEREL)
 			{
 				spe_mult = 3;
 				ocn *= 3;
@@ -1103,6 +1188,14 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 		/* Fluorite Octet overrides the number of dice -- only 1 per blade, not 3 */
 		ocn /= 3;
 		/* but keep spe_mult */
+	}
+
+	if (obj && obj->oartifact == ART_MORTAL_BLADE && obj != uwep) {
+		/* when sheathed, it's barely a weapon - large club stats */
+		ocn = 1;
+		ocd = (large) ? 5 : 8;
+		bonn = 0;
+		bond = 0;
 	}
 
 	/* the Tentacle Rod gets no damage from enchantment */
@@ -1543,9 +1636,9 @@ dmgval(struct obj *otmp, struct monst *mon, int spec, struct monst *magr)
 
 
 	/* enchantment damage */
-	if ((otmp->oclass == WEAPON_CLASS) || is_weptool(otmp)
+	if (!Is_spire(&u.uz) && ((otmp->oclass == WEAPON_CLASS) || is_weptool(otmp)
 		|| (otmp->otyp >= LUCKSTONE && otmp->otyp <= ROCK && otmp->ovar1_projectileSkill == -P_FIREARM)
-		|| (is_shield(otmp) && magr == &youmonst && activeFightingForm(FFORM_SHIELD_BASH))
+		|| (is_shield(otmp) && magr == &youmonst && activeFightingForm(FFORM_SHIELD_BASH)))
 	){
 		int dambon = otmp->spe;
 		/* player orcs can use their level as their weapon's enchantment */
@@ -1620,6 +1713,7 @@ oselect(struct monst *mtmp, int x, int spot, boolean marilith)
 				( (otmp->owt <= (30 + (mtmp->m_lev/5)*5))
 				|| (marilith && ok_mariwep(otmp, mtmp, mtmp->data, FALSE))
 				|| (otmp->otyp == CHAIN && mtmp->mtyp == PM_CATHEZAR) 
+				|| (otmp->otyp == CHAIN && mtmp->mtyp == PM_CHAIN_DEVIL) 
 				|| (otmp->otyp == CHAIN && mtmp->mtyp == PM_FIERNA)
 				|| (otmp->otyp == BALL && (mtmp->mtyp == PM_WARDEN_ARIANNA || mtmp->mtyp == PM_ARIANNA || mtmp->mtyp == PM_RAGE_WALKER))
 				|| (mtmp->mtyp == PM_BASTARD_OF_THE_BOREAL_VALLEY)
@@ -1708,6 +1802,8 @@ static const int pwep[] =
 	GOLD_BLADED_VIBROSPEAR,/*2d6+3/2d8+3*/
 	WHITE_VIBROSPEAR,/*2d6+3/2d8+3*/
 	ETHERBLADE,/*3d6*/
+	PEST_GLAIVE, /*2d6/1d10*/
+	SILVERKNIGHT_SCYTHE, /*2d6/2d4*/
 	POLEAXE, /*1d10/2d6*/
 	HALBERD, /*1d10/2d6*/
 	DROVEN_LANCE, /*1d10/1d10*/
@@ -1955,6 +2051,7 @@ static const short hwep[] = {
 	  MIRRORBLADE/*your weapon is probably pretty darn good*/,
 	  TOOTH/*6d6/3d12+3*/,
 	  GREATCLUB/*3d6/1d12*/,
+	  SQUARE_CLUB/*3d6/1d12*/,
 	  BALL,/*1d25/1d25*/
 	  VIBROBLADE,/*2d6+3/2d8+4*/
 	  ROD_OF_FORCE/*2d8/2d12*/,
@@ -1965,7 +2062,7 @@ static const short hwep[] = {
 	  BEAST_CRUSHER,/*2d6/1d12*/
 	  DROVEN_GREATSWORD/*1d18/1d30*/, 
 	  SET_OF_CROW_TALONS/*2d4/2d3/+6 study*/,
-	  TSURUGI/*1d16/1d8+2d6*/, 
+	  NAGAMAKI/*1d16/1d8+2d6*/, 
 	  MOON_AXE/*variable, 2d6 to 2d12*/,
 	  GREAT_MACE/*1d6+2d4/1d8+4*/,
 	  HIGH_ELVEN_WARSWORD/*1d10+1d6/1d10+1d6*/,
@@ -1984,6 +2081,7 @@ static const short hwep[] = {
 	  CHIKAGE/*1d10/1d12*/,
 	  KATANA/*1d10/1d12*/,
 	  CRYSKNIFE/*1d10/1d10*/, 
+	  SILVERKNIGHT_SPEAR/*1d10/1d8*/, 
 	  WHIP_SAW/*1d10/1d8*/, 
 	  BESTIAL_CLAW/*1d10/1d8*/, 
 	  SOLDIER_S_RAPIER/*1d10/1d6*/, 
@@ -1992,6 +2090,7 @@ static const short hwep[] = {
 	  DWARVISH_SPEAR/*1d9/1d9*/, 
 	  CHAKRAM/*1d9/1d9*/, 
 	  SCYTHE/*2d4*/, 
+	  NINJA_TO/*2d4/1d6+1*/, 
 	  BROADSWORD/*2d4/1d6+1*/, 
 	  MORNING_STAR/*2d4/1d6+1*/, 
 	  CROW_QUILL/*1d8/1d8*/,
@@ -2009,6 +2108,7 @@ static const short hwep[] = {
 	  HUNTER_S_LONGSWORD/*1d8/1d12*/,
 	  LONG_SWORD/*1d8/1d12*/,
 	  CANE/*1d8/1d10*/,
+	  SILVERKNIGHT_SWORD/*1d6+1/1d8*/,
 	  FLAIL/*1d6+1/2d4*/, 
 	  NAGINATA/*1d6+1/2d4*/, 
 	  SCIMITAR/*1d8/1d8*/,
@@ -2048,6 +2148,7 @@ static const short hwep[] = {
 	  SUNROD/*1d6/1d3*/, 
 	  SHADOWLANDER_S_TORCH/*1d6/1d3*/, 
 	  TORCH/*1d6/1d3*/, 
+	  GOEDENDAG/*1d6/1d3*/, 
 	  CLUB/*1d6/1d3*/, 
 	  PICK_AXE/*1d6/1d3*/,
 	  ELVEN_SICKLE/*1d6/1d3*/,
@@ -2089,6 +2190,7 @@ static const short hpwep[] = {
 	  MIRRORBLADE/*your weapon is probably pretty darn good*/,
 	  TOOTH/*6d6/3d12+3*/,
 	  GREATCLUB/*3d6/1d12*/,
+	  SQUARE_CLUB/*3d6/1d12*/,
 	  BALL,/*1d25/1d25*/
 	  VIBROBLADE,/*2d6+3/2d8+4*/
 	  ROD_OF_FORCE/*2d8/2d12*/,
@@ -2099,11 +2201,13 @@ static const short hpwep[] = {
 	  BEAST_CRUSHER,/*2d6/1d12*/
 	  DROVEN_GREATSWORD/*1d18/1d30*/, 
 	  SET_OF_CROW_TALONS/*2d4/2d3/+6 study*/,
-	  TSURUGI/*1d16/1d8+2d6*/, 
+	  NAGAMAKI/*1d16/1d8+2d6*/, 
 	  MOON_AXE/*variable, 2d6 to 2d12*/,
 	  GREAT_MACE/*1d6+2d4/1d8+4*/,
 	  HIGH_ELVEN_WARSWORD/*1d10+1d6/1d10+1d6*/,
 	  CHURCH_BLADE/*1d12+1/3d8*/, 
+	  PEST_GLAIVE, /*2d6/1d10*/
+	  SILVERKNIGHT_SCYTHE, /*2d6/2d4*/
 	  RUNESWORD/*1d10+1d4/1d10+1*/, 
 	  BATTLE_AXE/*1d8+1d4/1d6+2d4*/,
 	  TWO_HANDED_SWORD/*1d12/3d6*/, 
@@ -2121,6 +2225,7 @@ static const short hpwep[] = {
 	  KATANA/*1d10/1d12*/,
 	  DROVEN_LANCE, /*1d10/1d10*/
 	  CRYSKNIFE/*1d10/1d10*/, 
+	  SILVERKNIGHT_SPEAR/*1d10/1d8*/, 
 	  WHIP_SAW/*1d10/1d8*/, 
 	  BESTIAL_CLAW/*1d10/1d8*/, 
 	  SOLDIER_S_RAPIER/*1d10/1d6*/, 
@@ -2134,6 +2239,7 @@ static const short hpwep[] = {
 	  VOULGE, /*2d4/2d4*/
 	  SCYTHE/*2d4*/, 
 	  GUISARME, /*2d4/1d8*/
+	  NINJA_TO/*2d4/1d6+1*/, 
 	  BROADSWORD/*2d4/1d6+1*/, 
 	  MORNING_STAR/*2d4/1d6+1*/, 
 	  LUCERN_HAMMER, /*2d4/1d6*/
@@ -2153,6 +2259,7 @@ static const short hpwep[] = {
 	  HUNTER_S_LONGSWORD/*1d8/1d12*/,
 	  LONG_SWORD/*1d8/1d12*/,
 	  CANE/*1d8/1d10*/,
+	  SILVERKNIGHT_SWORD/*1d6+1/1d8*/,
 	  FLAIL/*1d6+1/2d4*/, 
 	  NAGINATA/*1d6+1/2d4*/, 
 	  ELVEN_LANCE, /*1d8/1d8*/
@@ -2198,6 +2305,7 @@ static const short hpwep[] = {
 	  SUNROD/*1d6/1d3*/, 
 	  SHADOWLANDER_S_TORCH/*1d6/1d3*/, 
 	  TORCH/*1d6/1d3*/, 
+	  GOEDENDAG/*1d6/1d3*/, 
 	  CLUB/*1d6/1d3*/, 
 	  PICK_AXE/*1d6/1d3*/,
 	  ELVEN_SICKLE/*1d6/1d3*/,
@@ -2260,8 +2368,10 @@ select_hwep(register struct monst *mtmp) /* select a hand to hand weapon for the
 	boolean marilith = mon_attacktype(mtmp, AT_MARI) ? TRUE : FALSE; //Marilith arms don't suffer weight limits, so also don't impose them on the offhand arm.
 
 	/* needs to be capable of wielding a weapon in the mainhand */
-	if (!mon_attacktype(mtmp, AT_WEAP) &&
-		!mon_attacktype(mtmp, AT_DEVA))
+	if (!mon_attacktype(mtmp, AT_WEAP)
+		&& !mon_attacktype(mtmp, AT_DEVA)
+		&& !mon_attacktype(mtmp, AT_JUGL)
+	)
 		return (struct obj *)0;
 
 	/* if using an artifact or oprop weapon keep using it. */
@@ -2281,6 +2391,8 @@ select_hwep(register struct monst *mtmp) /* select a hand to hand weapon for the
 			(otmp->oclass == WEAPON_CLASS || is_weptool(otmp)
 			|| otmp->otyp == CHAIN || otmp->otyp == BALL
 			) &&
+			/* not worn as armor (chain devils etc) */
+			!(otmp->owornmask&W_ARMOR) &&
 			/* an artifact or other special weapon*/
 			(otmp->oartifact
 				|| !check_oprop(otmp, OPROP_NONE)
@@ -2359,6 +2471,8 @@ select_shwep(register struct monst *mtmp) /* select an offhand hand to hand weap
 			) &&
 			/* not already weided in main hand */
 			(otmp != MON_WEP(mtmp)) &&
+			/* not worn as armor (chain devils etc) */
+			!(otmp->owornmask&W_ARMOR) &&
 			/* an artifact or other special weapon*/
 			(otmp->oartifact
 				|| !check_oprop(otmp, OPROP_NONE)
@@ -2467,8 +2581,10 @@ possibly_unwield(struct monst *mon, boolean polyspot)
 		mon->weapon_check = NO_WEAPON_WANTED;
 
 	/* monster can no longer wield any mainhand weapons */
-	if (!mon_attacktype(mon, AT_WEAP) &&
-		!mon_attacktype(mon, AT_DEVA)) {
+	if (!mon_attacktype(mon, AT_WEAP)
+	 && !mon_attacktype(mon, AT_DEVA)
+	 && !mon_attacktype(mon, AT_JUGL)
+	) {
 		if (mw_tmp) {
 			setmnotwielded(mon, mw_tmp);
 			MON_NOWEP(mon);
@@ -2778,9 +2894,11 @@ init_mon_wield_item(register struct monst *mon)
 	struct obj *msw_tmp = MON_SWEP(mon);
 	int toreturn = 0;
 	
-	if (!mon_attacktype(mon, AT_WEAP) &&
-		!mon_attacktype(mon, AT_DEVA) &&
-		!mon_attacktype(mon, AT_XWEP)) return;
+	if (!mon_attacktype(mon, AT_WEAP)
+		&& !mon_attacktype(mon, AT_DEVA)
+		&& !mon_attacktype(mon, AT_JUGL)
+		&& !mon_attacktype(mon, AT_XWEP)
+	) return;
 
 	if(needspick(mon->data)){
 		obj = m_carrying(mon, DWARVISH_MATTOCK);
@@ -2918,6 +3036,9 @@ atr_dbon(struct obj *otmp, struct monst *mtmp, int atr)
 			if (is_rakuyo(otmp))
 				return 0;
 
+			if (check_oprop(otmp, OPROP_BYAKW))
+				return 0;
+
 			if (is_rapier(otmp) || is_mercy_blade(otmp) || otmp->otyp == SET_OF_CROW_TALONS ||
 				(otmp->otyp == LIGHTSABER && !otmp->oartifact && otmp->ovar1_lightsaberHandle == 0))
 				mod *= 0.5;
@@ -2950,6 +3071,8 @@ atr_dbon(struct obj *otmp, struct monst *mtmp, int atr)
 
 			return mod;
 		case A_CON:
+			if (check_oprop(otmp, OPROP_BYAKW))
+				mod = bimanual_mod(otmp, mtmp);
 			return mod;
 		case A_INT:
 			if (otmp->oartifact == ART_HOLY_MOONLIGHT_SWORD && otmp->lamplit)
@@ -2965,6 +3088,9 @@ atr_dbon(struct obj *otmp, struct monst *mtmp, int atr)
 				mod += 0.5;
 
 			if (check_oprop(otmp, OPROP_ELFLW))
+				mod += 0.5;
+
+			if (check_oprop(otmp, OPROP_BYAKW))
 				mod += 0.5;
 
 			return mod;
@@ -2984,6 +3110,9 @@ atr_dbon(struct obj *otmp, struct monst *mtmp, int atr)
 			if (check_oprop(otmp, OPROP_ELFLW))
 				mod += 0.5;
 
+			if (check_oprop(otmp, OPROP_BYAKW))
+				mod += 0.5;
+
 			return mod;
 		case A_CHA:
 			if (otmp->oartifact == ART_HOLY_MOONLIGHT_SWORD && otmp->lamplit)
@@ -2991,6 +3120,10 @@ atr_dbon(struct obj *otmp, struct monst *mtmp, int atr)
 
 			if (check_oprop(otmp, OPROP_ELFLW))
 				mod += 0.5;
+
+			if (check_oprop(otmp, OPROP_BYAKW))
+				mod += 0.5;
+
 			return mod;
 		default:
 			return mod;
@@ -2998,12 +3131,9 @@ atr_dbon(struct obj *otmp, struct monst *mtmp, int atr)
 }
 
 int
-str_dbon(struct monst *mtmp)
+strscore_dbon(int str)
 {
-	int str, strbon;
-	boolean youagr = mtmp == &youmonst;
-
-	str = acurr(A_STR, (youagr) ? ((struct monst *) 0) : mtmp);
+	int strbon;
 
 	if (str < 6) 				strbon = str - 6;
 	else if (str < 16)			strbon= 0;
@@ -3020,9 +3150,25 @@ str_dbon(struct monst *mtmp)
 }
 
 int
+str_dbon(struct monst *mtmp)
+{
+	int str;
+	boolean youagr = mtmp == &youmonst;
+
+	str = acurr(A_STR, (youagr) ? ((struct monst *) 0) : mtmp);
+
+	return strscore_dbon(str);
+}
+
+int
 dbon(struct obj *otmp, struct monst *mtmp)
 {
 	boolean youagr = mtmp == &youmonst;
+	int amalg_otyp = 0;
+	if(otmp){
+		if(otmp->oartifact == ART_AMALGAMATED_SKIES)
+			amalg_otyp = artinstance[ART_SKY_REFLECTED].ZerthOtyp;
+	}
 
 	struct obj *armg = (youagr ? uarmg : which_armor(mtmp, W_ARMG));
 	int bare_bonus = weapon_dam_bonus((struct obj *) 0, P_BARE_HANDED_COMBAT);
@@ -3052,6 +3198,7 @@ dbon(struct obj *otmp, struct monst *mtmp)
 
 	if (otmp){
 		damage_bon = (int)(strbon * atr_dbon(otmp, mtmp, A_STR));
+		//A_STR = 0, A_INT = 1
 		for (int i = A_INT; i < A_MAX; i++){
 			stat = acurr(i, (youagr) ? ((struct monst *) 0) : mtmp);
 			statbon = (stat == 25) ? 8 : ((stat-10)/2);
@@ -3061,8 +3208,11 @@ dbon(struct obj *otmp, struct monst *mtmp)
 			if (otmp->oartifact == ART_IBITE_ARM){
 				if(bare_bonus > 0) damage_bon += ACURR(A_CHA)/5 + bare_bonus*2;
 			}
-			if (otmp->otyp == CHIKAGE && otmp->obj_material == HEMARGYOS){
+			if (otmp->otyp == CHIKAGE && (otmp->obj_material == HEMARGYOS || check_oprop(otmp, OPROP_HAEM))){
 				damage_bon += u.uimpurity/2;
+			}
+			else if(amalg_otyp == CHIKAGE){
+				damage_bon += u.uimpurity/3;
 			}
 		}
 		if(youagr && u.sealsActive&SEAL_OTIAX && (
@@ -3151,25 +3301,26 @@ slots_required(int skill)
 {
     int tmp = OLD_P_SKILL(skill);
 
-    /* The more difficult the training, the more slots it takes.
-     *	unskilled -> basic	1
-     *	basic -> skilled	2
-     *	skilled -> expert	3
-     */
-    if (skill != P_BARE_HANDED_COMBAT && 
-		(skill != P_TWO_WEAPON_COMBAT || !Role_if(PM_MONK))  && 
-		skill != P_MARTIAL_ARTS  && 
-		skill != P_NIMAN
-	) return tmp;
-
-    /* Fewer slots used up for unarmed or martial.
+    /* Fewer slots used up for unarmed/martial, and additional fighting forms.
      *	unskilled -> basic	1
      *	basic -> skilled	1
      *	skilled -> expert	2
      *	expert -> master	2
      *	master -> grand master	3
      */
-    return (tmp + 1) / 2;
+    if ((skill == P_BARE_HANDED_COMBAT) ||
+		(skill == P_MARTIAL_ARTS) ||
+		(skill == P_TWO_WEAPON_COMBAT && OLD_P_MAX_SKILL(P_TWO_WEAPON_COMBAT) == P_GRAND_MASTER) ||
+		(skill >= P_FIRST_FORM && skill <= P_LAST_FORM)
+	)
+		return (tmp + 1) / 2;
+
+	/* The more difficult the training, the more slots it takes.
+     *	unskilled -> basic	1
+     *	basic -> skilled	2
+     *	skilled -> expert	3
+     */
+    return tmp;
 }
 
 /*
@@ -3210,6 +3361,7 @@ can_advance(int skill, boolean speedy)
 				&& practice_needed_to_advance(OLD_P_SKILL(skill)) > 0
 				&& u.skills_advanced < P_SKILL_LIMIT
 				&& u.weapon_slots >= slots_required(skill)
+				&& (!is_lightsaber_skill(skill) || P_SKILL_CORE(skill, FALSE) < flags.lightsaber_max)
 			)
 		);
 }
@@ -3223,6 +3375,7 @@ could_advance(int skill)
 	    P_ADVANCE(skill) >=
 		(unsigned) practice_needed_to_advance(OLD_P_SKILL(skill))
 		&& practice_needed_to_advance(OLD_P_SKILL(skill)) > 0
+		&& u.weapon_slots < slots_required(skill)
 	    && u.skills_advanced < P_SKILL_LIMIT;
 }
 
@@ -3235,6 +3388,19 @@ peaked_skill(int skill)
 	    && P_SKILL_CORE(skill, FALSE) >= P_MAX_SKILL_CORE(skill, FALSE) && (
 	    (P_ADVANCE(skill) >=
 		(unsigned) practice_needed_to_advance(OLD_P_SKILL(skill))));
+}
+
+/* return true if this skill could be advanced if your primary skill was higher */
+static boolean
+could_advance_lightsaber(int skill)
+{
+    return !OLD_P_RESTRICTED(skill)
+	    && P_SKILL_CORE(skill, FALSE) < P_MAX_SKILL_CORE(skill, FALSE) && 
+	    P_ADVANCE(skill) >=
+		(unsigned) practice_needed_to_advance(OLD_P_SKILL(skill))
+		&& practice_needed_to_advance(OLD_P_SKILL(skill)) > 0
+	    && is_lightsaber_skill(skill)
+		&& P_SKILL_CORE(skill, FALSE) >= flags.lightsaber_max;
 }
 
 static void
@@ -3297,7 +3463,7 @@ int enhance_skill(boolean want_dump)
 #endif
 {
     int pass, i, n, len, longest,
-	to_advance, eventually_advance, maxxed_cnt;
+	to_advance, eventually_advance, lightsaber_advance, maxxed_cnt;
     char buf[BUFSZ], sklnambuf[BUFSZ], maxsklnambuf[BUFSZ];
     const char *prefix;
     menu_item *selected;
@@ -3319,13 +3485,14 @@ int enhance_skill(boolean want_dump)
 
 	do {
 	    /* find longest available skill name, count those that can advance */
-	    to_advance = eventually_advance = maxxed_cnt = 0;
+	    to_advance = eventually_advance = lightsaber_advance = maxxed_cnt = 0;
 	    for (longest = 0, i = 0; i < P_NUM_SKILLS; i++) {
 			if (P_RESTRICTED(i)) continue;
 			if ((len = strlen(P_NAME(i))) > longest)
 				longest = len;
 			if (can_advance(i, speedy)) to_advance++;
 			else if (could_advance(i)) eventually_advance++;
+			else if (could_advance_lightsaber(i)) lightsaber_advance++;
 			else if (peaked_skill(i)) maxxed_cnt++;
 	    }
 
@@ -3339,7 +3506,7 @@ int enhance_skill(boolean want_dump)
 
 	    /* start with a legend if any entries will be annotated
 	       with "*" or "#" below */
-	    if (eventually_advance > 0 || maxxed_cnt > 0) {
+	    if (eventually_advance > 0 || lightsaber_advance > 0 || maxxed_cnt > 0) {
 		any.a_void = 0;
 		if (eventually_advance > 0) {
 		    Sprintf(buf,
@@ -3348,6 +3515,13 @@ int enhance_skill(boolean want_dump)
 			    (u.ulevel < MAXULEV) ?
 				"when you're more experienced" :
 				"if skill slots become available");
+		    add_menu(win, NO_GLYPH, &any, 0, 0, ATR_NONE,
+			     buf, MENU_UNSELECTED);
+		}
+		if (lightsaber_advance > 0) {
+		    Sprintf(buf,
+			    "(Skill%s flagged by \")\" may be enhanced once you have sufficient skill with an appropriate weapon.)",
+			    plur(lightsaber_advance));
 		    add_menu(win, NO_GLYPH, &any, 0, 0, ATR_NONE,
 			     buf, MENU_UNSELECTED);
 		}
@@ -3410,10 +3584,12 @@ int enhance_skill(boolean want_dump)
 		    prefix = "";	/* will be preceded by menu choice */
 		else if (could_advance(i))
 		    prefix = "  * ";
+		else if (could_advance_lightsaber(i))
+		    prefix = "  ) ";
 		else if (peaked_skill(i))
 		    prefix = "  # ";
 		else
-		    prefix = (to_advance + eventually_advance +
+		    prefix = (to_advance + eventually_advance + lightsaber_advance +
 				maxxed_cnt > 0) ? "    " : "";
 		(void) skill_level_name(i, sklnambuf);
 		(void) max_skill_level_name(i, maxsklnambuf);
@@ -3751,6 +3927,9 @@ weapon_type(struct obj *obj)
 	}
 	else if(obj->otyp == KHOPESH){
 		CHECK_ALTERNATE_SKILL(P_AXE)
+	}
+	else if(obj->otyp == SILVERKNIGHT_SCYTHE){
+		CHECK_ALTERNATE_SKILL(P_HARVEST)
 	}
 	else if(obj->otyp == BLADE_OF_MERCY || obj->otyp == BLADE_OF_GRACE){
 		if(obj->otyp == BLADE_OF_GRACE)
@@ -4339,7 +4518,8 @@ weapon_dam_bonus(struct obj *weapon, int wep_type)
 	if(uwep && uwep->oartifact == ART_PEN_OF_THE_VOID && type != P_TWO_WEAPON_COMBAT) bonus = max(bonus,0);
 	
 	if(weapon && weapon == uwep && Role_if(PM_SAMURAI) && !Upolyd && !u.twoweap && !u.usteed && !u.ustuck
-	  && (weapon->oclass == WEAPON_CLASS || is_weptool(weapon)) && objects[weapon->otyp].oc_skill == P_LONG_SWORD
+	  && (weapon->oclass == WEAPON_CLASS || is_weptool(weapon)) 
+		&& (objects[weapon->otyp].oc_skill == P_LONG_SWORD || objects[weapon->otyp].oc_skill == P_TWO_HANDED_SWORD)
 	  && (bimanual(weapon, youracedata) || bimanual_mod(weapon, &youmonst) > 1)
 	  && ((u.dx == u.prev_dir.x && u.dy == u.prev_dir.y) || (u.dx == -1*u.prev_dir.x && u.dy == -1*u.prev_dir.y)) 
 	){
@@ -4641,6 +4821,100 @@ get_mariwep(struct monst *magr, struct permonst *pa, int marinum)
 
 }
 
+unsigned long
+process_etraits(unsigned long traits, int otyp, struct obj *obj, struct monst *mon, struct permonst *pa)
+{
+	boolean youagr = (mon == &youmonst);
+	// Remove traits
+	if (obj->o_e_trait&ETRAIT_FOCUS_FIRE && (otyp == TOOTH || otyp == GOEDENDAG || obj->oartifact == ART_STORM_CURSE)) {
+		//Remove everything except the fighting form traits
+		traits &= FFORM_ETRAITS;
+	}
+	if(youagr && objects[otyp].oc_skill == P_LANCE && !((youagr && u.usteed) || centauroid(pa) || animaloid(pa))) {
+		//Lances can't get expert traits when not mounted.
+		traits = 0;
+	}
+	if(youagr && otyp == LONG_SWORD && activeFightingForm(FFORM_POMMEL)) {
+		//Pommels don't graze.
+		traits &= ~ETRAIT_GRAZE;
+	}
 
+	//Add traits
+	if(youagr){
+		if(otyp == LONG_SWORD){
+			if(activeFightingForm(FFORM_HALF_SWORD))
+				traits |= ETRAIT_QUICK;
+			if(activeFightingForm(FFORM_POMMEL))
+				traits |= ETRAIT_PENETRATE_ARMOR;
+		}
+		if(is_makashi_saber(obj) && activeFightingForm(FFORM_MAKASHI)){
+			traits |= ETRAIT_LUNGE|ETRAIT_STOP_THRUST;
+		}
+	}
+	if(otyp == POLEAXE){
+		if(traits & ETRAIT_FOCUS_FIRE)
+			traits |= ETRAIT_STOP_THRUST;
+		if(traits & ETRAIT_STUNNING_STRIKE){
+			traits |= ETRAIT_KNOCK_BACK|ETRAIT_PENETRATE_ARMOR;
+		}
+	}
+	else if(otyp == BESTIAL_CLAW){
+		if(youagr){
+			if(active_glyph(BEASTS_EMBRACE) && u.uinsight < 15)
+				traits |= ETRAIT_QUICK;
+			if(active_glyph(BEASTS_EMBRACE) && u.uinsight < 30)
+				traits |= ETRAIT_LUNGE;
+		}
+		else {
+			if(mon->mcrazed || is_were(pa))
+				traits |= ETRAIT_QUICK|ETRAIT_LUNGE;
+		}
+	}
+	
+	if(obj->o_e_trait&ETRAIT_FOCUS_FIRE){
+		if(otyp == SILVERKNIGHT_SWORD){
+			traits |= ETRAIT_PENETRATE_ARMOR|ETRAIT_CREATE_OPENING;
+		}
+		else if(otyp == GOEDENDAG || obj->oartifact == ART_STORM_CURSE){
+			traits |= ETRAIT_BLEED;
+		}
+	}
+
+	return traits;
+}
+
+boolean
+check_etrait(struct obj *obj, struct monst *mon, unsigned long trait)
+{
+	boolean youagr = (mon == &youmonst);
+	struct permonst *pa = youagr ? youracedata : mon->data;
+
+	if(youagr && P_SKILL(weapon_type(obj)) < P_SKILLED)
+		return FALSE;
+	else if(is_lightsaber(obj) && !litsaber(obj))
+		return FALSE;
+	else if(!youagr && !((pa->mflagsf&MF_MARTIAL_E) || (pa->mflagsf&MF_MARTIAL_S)))
+		return FALSE;
+
+	if(trait != ETRAIT_FOCUS_FIRE && !carried(obj) && !mcarried(obj))
+		return FALSE;
+
+	int otyp = obj->otyp;
+	unsigned long traits = process_etraits(obj->expert_traits, otyp, obj, mon, pa);
+	if(obj->oartifact == ART_AMALGAMATED_SKIES)
+		traits = process_etraits(traits|artinstance[ART_AMALGAMATED_SKIES].TwinSkiesEtraits, artinstance[ART_SKY_REFLECTED].ZerthOtyp, obj, mon, pa);
+
+
+	if(obj->oartifact == ART_HOLY_MOONLIGHT_SWORD){
+		if(obj->lamplit)
+			traits |= ETRAIT_CLEAVE;
+		if(youagr && u.uinsight >= 40)
+			traits |= ETRAIT_FOCUS_FIRE;
+	}
+	
+	if(traits&trait)
+		return TRUE;
+	return FALSE;
+}
 
 /*weapon.c*/

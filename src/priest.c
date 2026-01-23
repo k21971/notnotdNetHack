@@ -776,7 +776,7 @@ priest_talk(register struct monst *priest)
 			Strcpy(class_list, tools);
 			key = getobj(class_list, "wind with");
 			if (!key){
-				pline(Never_mind);
+				pline1(Never_mind);
 				return;
 			}
 			start_clockwinding(key, priest, 10);
@@ -982,6 +982,14 @@ ghod_hitsu(struct monst *priest)	/* when attacking "priest" in his temple */
 	ax = x = EPRI(priest)->shrpos.x;
 	ay = y = EPRI(priest)->shrpos.y;
 	troom = &rooms[roomno - ROOMOFFSET];
+
+	int godnum = god_at_altar(ax, ay);
+	if(philosophy_index(godnum)
+		|| godnum == GOD_BOKRUG__THE_WATER_LIZARD
+		|| godnum == GOD_THE_VOID
+	)
+		return;
+
 
 	if((u.ux == x && u.uy == y) || !linedup(u.ux, u.uy, x, y)) {
 	    if(IS_DOOR(levl[u.ux][u.uy].typ)) {
