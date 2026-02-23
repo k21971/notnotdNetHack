@@ -572,7 +572,7 @@ dmgval_core(struct weapon_dice *wdice, boolean large, struct obj *obj, int otyp,
 			ocd = 6;
 		}
 
-		if(obj->where == OBJ_INVENT && is_slashing(obj) && u.utats & TAT_FALCHION)
+		if(obj->where == OBJ_INVENT && (attack_mask(obj, 0, 0, &youmonst) & SLASH) && u.utats & TAT_FALCHION)
 			ocd++;
 
 		if (obj->oartifact == ART_BLOODLETTER && artinstance[ART_BLOODLETTER].BLactive >= moves)
