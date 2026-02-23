@@ -27,9 +27,7 @@ GAMELIBS = $(shell $(PKG_CONFIG) --libs ncursesw) -lm
 
 CPPFLAGS += -Iinclude
 CPPFLAGS += -Wall
-#CPPFLAGS += -Wdeprecated-non-prototype
 CPPFLAGS += -Wold-style-definition
-CPPFLAGS += -Wold-style-declaration
 CPPFLAGS += -Wno-comment
 CPPFLAGS += -Wno-unused-variable
 CPPFLAGS += -Wno-misleading-indentation
@@ -39,6 +37,15 @@ CPPFLAGS += -Wno-unused-label
 CPPFLAGS += -Wno-unknown-pragmas
 CPPFLAGS += -Wno-missing-braces
 CPPFLAGS += -Wno-format-overflow
+
+CC_VERSION = $(shell $(CC) --version)
+ifneq ($(findstring clang version,$(CC_VERSION)),)
+    # clang-specific options
+    CPPFLAGS += -Wdeprecated-non-prototype
+else ifneq ($(findstring GCC,$(CC_VERSION)),)
+    # GCC-specific options
+    CPPFLAGS += -Wold-style-declaration
+endif
 
 .DELETE_ON_ERROR:
 
