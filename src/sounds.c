@@ -3259,7 +3259,7 @@ dotatmenu(const char *prompt)
 			'g', 0, ATR_NONE, tat_to_name(TAT_HOURGLASS),
 			MENU_UNSELECTED);
 	}
-	if(!(u.utats & TAT_FALCHION) && (uwep && is_slashing(uwep))){
+	if(!(u.utats & TAT_FALCHION) && (uwep && (attack_mask(uwep, 0, 0, &youmonst) & SLASH))){
 		any.a_int = TAT_FALCHION;	/* must be non-zero */
 		add_menu(tmpwin, NO_GLYPH, &any,
 			'f', 0, ATR_NONE, tat_to_name(TAT_FALCHION),
@@ -4342,7 +4342,7 @@ dobinding(int tx, int ty)
 			}//end search
 			
 			if(!altarfound){
-				pline("A golden flame roars suddenly to life within the seal, throwning the world into a stark relief of hard-edged shadows and brilliant light.");
+				pline("A golden flame roars suddenly to life within the seal, throwing the world into a stark relief of hard-edged shadows and brilliant light.");
 				if(u.sealCounts < numSlots){
 					if(Role_if(PM_ANACHRONOUNBINDER)){
 						pline("Amon, the shadow before the altar, stands before you.");

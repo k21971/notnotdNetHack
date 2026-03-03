@@ -638,7 +638,7 @@ further_study( /* if the player is skilled enough in the book's spell school, th
 		if(u.uwizard
 			|| parasite_count() >= 6
 			|| (u.sealsActive&SEAL_PAIMON)
-			|| (Role_if(PM_HEALER) && spell_skilltype(skill) == P_HEALING_SPELL)
+			|| (Role_if(PM_HEALER) && spell_skilltype(related) == P_HEALING_SPELL)
 		){
 			return related;
 		}
@@ -2640,6 +2640,9 @@ spiriteffects(int power, boolean atme)
 					mon->mstun = 0;
 					mon->mconf = 0;
 					mon->mpunctured = 0;
+					mon->mgmld_skin = 0;
+					mon->mgmld_throat = 0;
+					mon->mbleed = 0;
 					if (canseemon(mon))
 						pline("%s looks recovered.", Monnam(mon));
 				}

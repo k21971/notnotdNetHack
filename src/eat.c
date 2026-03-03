@@ -756,8 +756,8 @@ cprefx(int pm, boolean bld, boolean nobadeffects)
 				}
 			}
 		}
-		if (acidic(&mons[pm]) && (Stoned || Golded || Salted)){
-		    fix_petrification();
+		if (acidic(&mons[pm])){
+		    if (Stoned || Golded || Salted) fix_petrification();
 			youmonst.mgmld_skin = 0;
 			youmonst.mgmld_throat = 0;
 		}
@@ -805,8 +805,8 @@ bite_monster(struct monst *mon)
 	    }
 	    /* Fall through */
 	default:
-	    if (acidic(mon->data) && (Stoned || Golded || Salted)){
-			fix_petrification();
+	    if (acidic(mon->data)){
+			if (Stoned || Golded || Salted) fix_petrification();
 			youmonst.mgmld_skin = 0;
 			youmonst.mgmld_throat = 0;
 	    }
