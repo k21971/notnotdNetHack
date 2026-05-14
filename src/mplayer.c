@@ -659,7 +659,7 @@ init_mplayer_gear(register struct permonst *ptr, boolean female, boolean special
 		}
 		*helm = HELMET;
 		*armor = CHAIN_MAIL;
-		*boots = GLOVES;
+		*gloves = GLOVES;
 		*boots = HIGH_BOOTS;
 		*tool = TORCH;
 	}break;
@@ -844,7 +844,7 @@ init_mplayer_gear(register struct permonst *ptr, boolean female, boolean special
 		}
 	break;
 	case PM_PIRATE:
-		*weapon = SCIMITAR;
+		*weapon = CUTLASS;
 		*armor = JACKET;
 		*shield = BUCKLER;
 		*rweapon = FLINTLOCK;
@@ -897,7 +897,7 @@ init_mplayer_gear(register struct permonst *ptr, boolean female, boolean special
 		*tool = CREDIT_CARD;
 	break;
 	case PM_UNDEAD_HUNTER:
-		switch(rn2(rn2(15))){
+		switch(rn2(15)){
 			case 0:
 				*weapon = WHIP_SAW;
 			break;
@@ -992,7 +992,6 @@ init_mplayer_gear(register struct permonst *ptr, boolean female, boolean special
 	default:
 		pline("Received %d.",monsndx(ptr));
 		impossible("bad mplayer monster");
-		weapon = 0;
 		break;
 	}
 }

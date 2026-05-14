@@ -380,6 +380,13 @@ addinv(struct obj *obj)
 	if (obj->where != OBJ_FREE)
 	    panic("addinv: obj not free");
 	obj->no_charge = 0;	/* not meaningful for invent */
+	if(obj->otyp == EYE && obj->ovar1_your_eye && flags.aasimar_type == AASIMAR_TYPE_SERAPH) {
+		if(u.seraph_eyes < 7){
+			recover_seraph_eye();
+			set_material_gm(obj, GLASS);
+		}
+		obj->ovar1_your_eye = 0;
+	}
 
 	addinv_core1(obj);
 #ifndef GOLDOBJ
@@ -1068,6 +1075,7 @@ getobj(register const char *let, register const char *word)
 	long cnt;
 	boolean prezero = FALSE;
 	long long dummymask;
+	boolean saddleable = generic_saddle(youracedata);
 
 	if(nextgetobj) return getnextgetobj();
 
@@ -1139,12 +1147,13 @@ getobj(register const char *let, register const char *word)
 
 		/* ugly check: remove inappropriate things */
 		if ((taking_off(word) &&
-		    (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT))
-		     || (otmp==uarm && uarmc && arm_blocks_upper_body(uarm->otyp))
-		     || (otmp==uarmu && ((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc))
+		    (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_SADDLE | W_TOOL | W_BELT))
+		     || (otmp==uarmc && usaddle)
+		     || (otmp==uarm && ((uarmc && arm_blocks_upper_body(uarm->otyp)) || usaddle))
+		     || (otmp==uarmu && ((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc || usaddle))
 		    ))
 		|| (putting_on(word) &&
-		     (otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_BELT | W_TOOL)))
+		     (otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_SADDLE | W_BELT | W_TOOL)))
 							/* already worn */
 #if 0	/* 3.4.1 -- include currently wielded weapon among the choices */
 		|| (!strcmp(word, "wield") &&
@@ -1164,7 +1173,9 @@ getobj(register const char *let, register const char *word)
 		    ((otmp->oclass == FOOD_CLASS && otmp->otyp != MEAT_RING) ||
 		    (otmp->oclass == TOOL_CLASS &&
 		     otyp != BLINDFOLD && otyp != MASK && otyp != R_LYEHIAN_FACEPLATE && 
-			 otyp != TOWEL && otyp != ANDROID_VISOR && otyp != LIVING_MASK && otyp != LENSES && otyp != SUNGLASSES && otyp != SOUL_LENS && otyp != NIGHT_VISION_GOGGLES) ||
+			 otyp != TOWEL && otyp != ANDROID_VISOR && otyp != LIVING_MASK && otyp != LENSES && otyp != SUNGLASSES && otyp != SOUL_LENS && otyp != NIGHT_VISION_GOGGLES &&
+			 !(otyp == SADDLE && saddleable)
+			) ||
 			 (otmp->oclass == CHAIN_CLASS)
 			))
 		|| (!strcmp(word, "wield") &&
@@ -1205,6 +1216,7 @@ getobj(register const char *let, register const char *word)
 		    (otyp != CORPSE &&
 		     otyp != SEVERED_HAND &&                    
 		     otyp != EYEBALL &&	/* KMH -- fixed */
+		     otyp != EFFIGY &&
 		     otyp != AMULET_OF_YENDOR && otyp != FAKE_AMULET_OF_YENDOR))
 		|| (!strcmp(word, "research") &&
 		    ((otyp != CORPSE &&
@@ -1564,6 +1576,7 @@ getobj(register const char *let, register const char *word)
 #ifdef GOLDOBJ
 	   && !(usegold && otmp->oclass == COIN_CLASS)
 #endif
+	   && !(!strcmp(word, "sacrifice") && otmp->otyp == EFFIGY)
 	   ) {
 		silly_thing(word, otmp);
 		return((struct obj *)0);
@@ -2528,7 +2541,7 @@ itemactions(struct obj *obj)
 	add_menu(win, NO_GLYPH, &any, 't', 0, ATR_NONE,
 			"Throw this item", MENU_UNSELECTED);
 	/* T: unequip worn item */
-	if ((obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT))) {
+	if ((obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_SADDLE | W_TOOL | W_BELT))) {
 	    if ((obj->owornmask & (W_ARMOR)))
 		any.a_void = (void *)dotakeoff;
 	    if ((obj->owornmask & (W_RING | W_AMUL | W_TOOL | W_BELT)))
@@ -2556,7 +2569,7 @@ itemactions(struct obj *obj)
 		add_menu(win, NO_GLYPH, &any, 'w', 0, ATR_NONE,
 				"Hold this item in your hands", MENU_UNSELECTED);
 	/* W: Equip this item */
-	if (!(obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL | W_BELT))) {
+	if (!(obj->owornmask & (W_ARMOR | W_RING | W_AMUL | W_SADDLE | W_TOOL | W_BELT))) {
 	    any.a_void = (void *)dowear;
 	    if (obj->oclass == ARMOR_CLASS)
 		add_menu(win, NO_GLYPH, &any, 'W', 0, ATR_NONE,
@@ -2762,7 +2775,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			if (oc.oc_skill > 0) {
 				if (obj) {
 					Sprintf(buf, "%s-handed %s%s%s.", 
-						((obj ? bimanual(obj, youracedata) : oc.oc_bimanual) ? "Two" : "One"),
+						((obj ? bimanual_mon(obj, &youmonst) : oc.oc_bimanual) ? "Two" : "One"),
 						(otyp_is_blaster || otyp_is_launcher) ? "" : buf2,
 						(otyp_is_blaster ? "blaster" : otyp_is_launcher ? "launcher" : "weapon"),
 						((obj && is_weptool(obj)) && !otyp_is_launcher ? "-tool" : "")
@@ -3146,6 +3159,27 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 					OBJPUTSTR(buf2);
 				}
 			}
+			if(obj->otyp == BREAKING_WHEEL){
+				if(obj->ovar1_wheelspeed){
+					int extra = 50*obj->ovar1_wheelspeed;
+					int flat = (ACURR(A_CHA)-9)/2;
+					Sprintf(buf2, "Deals +%d%% + %d unholy magic damage", extra, flat);
+					if(obj == uwep || (obj == uswapwep && u.twoweap) || uquiver){
+						int recoil = obj->ovar1_wheelspeed;
+						if(hates_holy(youracedata) && !hates_unholy(youracedata) && Antimagic)
+							recoil = 0;
+						else if((hates_holy(youracedata) && !hates_unholy(youracedata)) || Antimagic)
+							recoil /= 2;
+						if(recoil)
+							Sprintf(eos(buf2), ", but causes %d damage per turn to you", recoil);
+					}
+					Strcat(buf2, ".");
+					OBJPUTSTR(buf2);
+					Sprintf(buf2, "Physical damage is reduced by 1/3rd.");
+					OBJPUTSTR(buf2);
+				}
+			}
+				
 			if(obj->otyp == CROW_QUILL || obj->otyp == SET_OF_CROW_TALONS){
 				Sprintf(buf2, "Makes struck targets vulnerable, adding %d stacks per hit.", (obj->otyp == CROW_QUILL) ? 4 : 3);
 				OBJPUTSTR(buf2);
@@ -3352,6 +3386,9 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			
 			if(size_penalty < 0) size_penalty = 0;
 			hitbon -= size_penalty * 4;
+			if(CHECK_ETRAIT(obj, &youmonst, ETRAIT_STRIKING)){
+				hitbon += ROLL_ETRAIT(obj, &youmonst, 5, 2);
+			}
 		} 
 		
 		if (hitbon != 0)
@@ -3649,6 +3686,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 		EXPERTTRAITS(ETRAIT_FOCUS_FIRE, "can target gaps in enemy armor");
 		EXPERTTRAITS(ETRAIT_STUNNING_STRIKE, "can deliver powerful stunning blows");
 		EXPERTTRAITS(ETRAIT_GRAZE, "may graze foes on a near miss");
+		EXPERTTRAITS(ETRAIT_STRIKING, "skilled users can strike more accurately");
 		EXPERTTRAITS(ETRAIT_STOP_THRUST, "can harness enemy momentum to deliver powerful blows");
 		EXPERTTRAITS(ETRAIT_PENETRATE_ARMOR, "penetrates enemy armor");
 		EXPERTTRAITS(ETRAIT_LONG_SLASH, "deals extra damage against lightly-armored enemies");
@@ -3671,6 +3709,44 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 	else {
 		Sprintf(buf2, "No expert traits.");
 		OBJPUTSTR(buf2);
+	}
+	if (obj && obj->otyp == PEST_GLAIVE && obj->known) {
+		buf[0] = '\0';
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_POSN), "poison");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_ACID), "acid");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_FLTH), "filth");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_SLEP), "soporific");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_BLND), "blinding stain");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_PARL), "paralytic venom");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_AMNS), "lethe toxin");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_SLVR), "starwater");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_HLLU), "hallucinogen");
+		ADDCLASSPROP(check_oprop(obj, OPROP_SECR_DIRE), "god venom");
+		if (buf[0]) {
+			Sprintf(buf2, "Secretes: %s.", buf);
+			OBJPUTSTR(buf2);
+		}
+		buf[0] = '\0';
+		ADDCLASSPROP(check_oprop(obj, OPROP_FIRE), "fire resistance");
+		ADDCLASSPROP(check_oprop(obj, OPROP_COLD), "cold resistance");
+		ADDCLASSPROP(check_oprop(obj, OPROP_ELEC), "shock resistance");
+		ADDCLASSPROP(check_oprop(obj, OPROP_ACID), "acid resistance");
+		if (buf[0]) {
+			Sprintf(buf2, "Confers while wielded: %s.", buf);
+			OBJPUTSTR(buf2);
+		}
+		buf[0] = '\0';
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_HANDPROTECT), "protects the wielder's hands");
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_BULLWHIP), "performs whip tricks");
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_MATTOCK), "can dig");
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_JOUST), "can joust");
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_AXE), "can cut trees");
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_CROOK), "has a shepherd's crook");
+		ADDCLASSPROP((obj->ovar1_pestglaive_props&PG_SPEARTHROWER), "can launch spears");
+		if (buf[0]) {
+			Sprintf(buf2, "Additional traits: %s.", buf);
+			OBJPUTSTR(buf2);
+		}
 	}
 	/* other artifact weapon effects */
 	if (oartifact) {
@@ -3756,13 +3832,13 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			ADDCLASSPROP(TRUE, "iron");
 #define	ZERTHMATS(prop, string)	\
 	ADDCLASSPROP(artinstance[ART_SKY_REFLECTED].ZerthMaterials&prop, string);
-			ZERTHMATS(ZMAT_SILVER, "silver");
-			ZERTHMATS(ZMAT_GREEN, "green steel");
-			ZERTHMATS(ZMAT_GOLD, "gold");
-			ZERTHMATS(ZMAT_PLATINUM, "platinum");
-			ZERTHMATS(ZMAT_MITHRIL, "mithril");
-			ZERTHMATS(ZMAT_COPPER, "copper");
-			ZERTHMATS(ZMAT_LEAD, "lead");
+			ZERTHMATS(AMAT_SILVER, "silver");
+			ZERTHMATS(AMAT_GREEN, "green steel");
+			ZERTHMATS(AMAT_GOLD, "gold");
+			ZERTHMATS(AMAT_PLATINUM, "platinum");
+			ZERTHMATS(AMAT_MITHRIL, "mithril");
+			ZERTHMATS(AMAT_COPPER, "copper");
+			ZERTHMATS(AMAT_LEAD, "lead");
 			Sprintf(buf2, "Amalgamated metals: %s.", buf);
 			OBJPUTSTR(buf2);
 		}
@@ -3892,7 +3968,7 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 			} if (u.specialSealsActive&SEAL_UNKNOWN_GOD){
 				Sprintf(buf2, "Channels the presence of the Unknown God, not adding enchantment to damage but instead subtracting %sits enchantment from your AC.", acer("double ", ""));
 				OBJPUTSTR(buf2);
-			} 
+			}
 		}
 	}
 	if (olet == ARMOR_CLASS || olet == BELT_CLASS) {
@@ -3927,10 +4003,10 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 		if (obj && obj->known) {// calculate the actual AC and DR this armor gives
 			if(is_shield(obj) && obj->objsize != youracedata->msize){
 				Sprintf(buf, "Is worth %d AC (%d to you, due to its size) and %d DR.",
-					arm_ac_bonus(obj), max(0, arm_ac_bonus(obj) + (obj->objsize - youracedata->msize)), arm_dr_bonus(obj));
+					arm_ac_bonus(obj), max(0, arm_ac_bonus(obj) + (obj->objsize - youracedata->msize)), arm_dr_bonus(obj, 0));
 			} else {
 				Sprintf(buf, "Is worth %d AC and %d DR.",
-					arm_ac_bonus(obj), arm_dr_bonus(obj));
+					arm_ac_bonus(obj), arm_dr_bonus(obj, 0));
 			}
 		}
 		else {// say what the base stats are
@@ -4350,12 +4426,15 @@ describe_item(struct obj *obj, int otyp, int oartifact, winid *datawin)
 		get_art_property_list(properties_art_carried, obj->cobj->oartifact, TRUE);
 		
 
+	struct objclass props_oc = oc;
+	if(obj && is_silverknight_armor(obj) && obj->ovar1_silverknight_otyp)
+		props_oc = objects[obj->ovar1_silverknight_otyp];
 	for (i = 0; propertynames[i].prop_name; i++) {
 		boolean got_prop = FALSE, while_carried = FALSE;
 		int j = 0;
 
-		while(oc.oc_oprop[j] && !got_prop) {
-			if (oc.oc_oprop[j] == propertynames[i].prop_num)
+		while(props_oc.oc_oprop[j] && !got_prop) {
+			if (props_oc.oc_oprop[j] == propertynames[i].prop_num)
 				got_prop = TRUE;
 			j++;
 		}
@@ -5117,9 +5196,15 @@ int
 count_buc(struct obj *list, int type)
 {
     int count = 0;
+	boolean knows_curses = KNOWS_CURSES;
+	boolean knows_blessings = KNOWS_BLESSINGS;
+	boolean knows_buc = KNOWS_BUC;
 
     while (list) {
-	if (u.upriest) list->bknown = TRUE;
+	if (knows_buc) list->bknown = TRUE;
+	else if (list->cursed && knows_curses) list->bknown = TRUE;
+	else if (list->blessed && knows_blessings) list->bknown = TRUE;
+
 	switch(type) {
 	    case BUC_BLESSED:
 		if (list->oclass != COIN_CLASS && list->bknown && list->blessed)
@@ -6485,6 +6570,28 @@ u_healing_penalty(void)
 }
 
 int
+u_breath_penalty(void)
+{
+	int count = 0;
+	if(flags.aasimar_type != AASIMAR_TYPE_CLOUDFACE || Upolyd)
+		return 0;
+	if(uarm && arm_blocks_upper_body(uarm->otyp) && !check_omod(uarm, OMOD_SHOULDER_BARING))
+		count++;
+	if(uarmu && (uarmu->otyp == BODYGLOVE || uarmu->otyp == VICTORIAN_UNDERWEAR) && !check_omod(uarmu, OMOD_SHOULDER_BARING))
+		count++;
+	if(uarmc && (uarmc->otyp == MUMMY_WRAPPING
+			|| uarmc->otyp == PRAYER_WARDED_WRAPPING
+			|| uarmc->otyp == WHITE_FACELESS_ROBE
+			|| uarmc->otyp == BLACK_FACELESS_ROBE
+			|| uarmc->otyp == SMOKY_VIOLET_FACELESS_ROBE
+			|| uarmc->otyp == ROBE
+		)
+	)
+		count++;
+	return count;
+}
+
+int
 u_clothing_discomfort(void)
 {
 	int count = 0;
@@ -6539,6 +6646,9 @@ u_clothing_discomfort(void)
 		count++;
 	}
 	if(ubelt){
+		count++;
+	}
+	if(usaddle){
 		count++;
 	}
 	count += count_worn_rings(FALSE);
@@ -6717,6 +6827,8 @@ u_material_next_to_skin(int material)
 		count++;
 	if(ubelt && ubelt->obj_material == material && !uarmu && !uarm)
 		count++;
+	if(usaddle && usaddle->obj_material == material && !uarmu && !uarm && !uarmc)
+		count++;
 	if(u.uentangled_oid && !uarmu && !uarm && !(uarm && arm_blocks_upper_body(uarm->otyp)) && entangle_material(&youmonst, material))
 		count++;
 	if(ublindf && ublindf->obj_material == material)
@@ -6759,6 +6871,8 @@ u_bcu_next_to_skin(int bcu)
 	if(uamul && bcu(uamul) == bcu && !uarmu && !(uarm && arm_blocks_upper_body(uarm->otyp)))
 		count++;
 	if(ubelt && bcu(ubelt) == bcu && !uarmu && !uarm)
+		count++;
+	if(usaddle && bcu(usaddle) == bcu && !uarmu && !uarm && !uarmc)
 		count++;
 	if(u.uentangled_oid && !uarmu && !(uarm && arm_blocks_upper_body(uarm->otyp)) && !uarmc && entangle_beatitude(&youmonst, bcu))
 		count++;

@@ -122,14 +122,14 @@ dosit(void)
 	    else if (obj->otyp == BERGONIC_CHAIR){
 			return sit_bergonic(obj);
 		}
-	    else if (obj->otyp == EXPENSIVE_BED || obj->otyp == BED || obj->otyp == BEDROLL || obj->otyp == GURNEY){
+	    else if (obj->otyp == EXPENSIVE_BED || obj->otyp == BED || obj->otyp == BEDROLL || obj->otyp == GURNEY || obj->otyp == TOWEL){
 			if(obj->otyp == EXPENSIVE_BED){
 				You("climb into the bed.");
 			}
 			else {
-				You("sit on the %s.", obj->otyp == BED ? "bed" : obj->otyp == BEDROLL ? "bedroll" : obj->otyp == GURNEY ? "gurney" : "unidentified bedlike object");
+				You("sit on the %s.", obj->otyp == BED ? "bed" : obj->otyp == BEDROLL ? "bedroll" : obj->otyp == GURNEY ? "gurney" : obj->otyp == TOWEL ? "towel" : "unidentified bedlike object");
 			}
-			if((u.nextsleep <= monstermoves && !(obj->otyp == BEDROLL && obj->nexthere)) || obj->otyp == EXPENSIVE_BED){
+			if((u.nextsleep <= monstermoves && !((obj->otyp == BEDROLL || obj->otyp == TOWEL) && obj->nexthere)) || obj->otyp == EXPENSIVE_BED){
 				if(yn("Take a nap?") == 'y'){
 					u.nextsleep = moves+rnz(100)+180;
 					u.lastslept = moves;
@@ -137,7 +137,7 @@ dosit(void)
 				}
 			}
 			else {
-				if(obj->otyp == BEDROLL && obj->nexthere)
+				if((obj->otyp == BEDROLL || obj->otyp == TOWEL) && obj->nexthere)
 					pline("It's not very comfortable...");
 				else
 					pline("It's %scomfortable, but you're not tired.", obj->otyp == BED ? "" : "reasonably ");
@@ -701,8 +701,7 @@ rndcurse(void)			/* curse a few inventory items at random! */
 
 /* returns TRUE if the caller should print a message */
 boolean
-mrndcurse(			/* curse a few inventory items at random! */
-	register struct monst *mtmp)
+mrndcurse(struct monst *mtmp, boolean silent)			/* curse a few inventory items at random! */
 {
 	int	nobj = 0;
 	int	cnt, onum;
@@ -710,7 +709,7 @@ mrndcurse(			/* curse a few inventory items at random! */
 	static const char mal_aura[] = "feel a malignant aura surround %s.";
 
 	boolean resists = resist(mtmp, 0, 0, FALSE);
-	boolean visible = canseemon(mtmp);
+	boolean visible = !silent && canseemon(mtmp);
 	
 	if(Curse_res(mtmp, TRUE))
 		return FALSE;

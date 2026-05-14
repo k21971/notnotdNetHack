@@ -475,14 +475,16 @@ fall_through(
 	else if(Levitation || u.ustuck || !Can_fall_thru(&u.uz)
 	   || Flying || is_clinger(youracedata)
 	   || (Role_if(PM_ARCHEOLOGIST) && uwep && 
-			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP || uwep->otyp == WHIP_SAW))
+			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP || uwep->otyp == WHIP_SAW || (uwep->otyp == PEST_GLAIVE && (uwep->ovar1_pestglaive_props & PG_BULLWHIP))))
 	   || (Inhell && !u.uevent.invoked &&
 					newlevel == (dunlevs_in_dungeon(&u.uz) - 1))/*seal off sanctum and square level until the invocation is performed*/
 		) {
-		if (Role_if(PM_ARCHEOLOGIST) && uwep && 
-			(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP || uwep->otyp == WHIP_SAW)
-		)            
-		pline("But thanks to your trusty whip ...");
+		if (Role_if(PM_ARCHEOLOGIST) && uwep){
+			if(uwep->otyp == BULLWHIP || uwep->otyp == VIPERWHIP || uwep->otyp == FORCE_WHIP || uwep->otyp == WHIP_SAW)
+				pline("But thanks to your trusty whip ...");
+			else if (uwep->otyp == PEST_GLAIVE && (uwep->ovar1_pestglaive_props & PG_BULLWHIP))
+				pline("But thanks to your trusty pest glaive ...");
+		}
 	    dont_fall = "don't fall in.";
 	} else if (youracedata->msize >= MZ_HUGE) {
 	    dont_fall = "don't fit through.";
@@ -604,20 +606,21 @@ animate_statue(struct obj *statue, xchar x, xchar y, int cause, int *fail_reason
 		|| statue->spe&STATUE_LOYAL)
 	){
 		struct monst *newmon;
-		newmon = tamedog(mon, (struct obj *)0);
+		boolean loyal = (In_quest(&u.uz) && Role_if(PM_HEALER) && (mon->mtyp == PM_IASOIAN_ARCHON ||
+																   mon->mtyp == PM_PANAKEIAN_ARCHON ||
+																   mon->mtyp == PM_HYGIEIAN_ARCHON ||
+																   mon->mtyp == PM_IKSH_NA_DEVA
+																)
+						)
+						|| (statue->spe&STATUE_LOYAL);
+		newmon = tamedog_core(mon, (struct obj *)0, TD_ENHANCED|(loyal ? TD_LOYAL : 0));
 		if(newmon) mon = newmon;
 
 		if(canspotmon(mon) && mon->mtame)
 			grateful = TRUE;
 
-		if((In_quest(&u.uz) && Role_if(PM_HEALER) && (mon->mtyp == PM_IASOIAN_ARCHON || mon->mtyp == PM_PANAKEIAN_ARCHON || mon->mtyp == PM_HYGIEIAN_ARCHON || mon->mtyp == PM_IKSH_NA_DEVA))
-			|| (statue->spe&STATUE_LOYAL)
-		){
-			if(Role_if(PM_HEALER) && (mon->mtyp == PM_IASOIAN_ARCHON || mon->mtyp == PM_PANAKEIAN_ARCHON || mon->mtyp == PM_HYGIEIAN_ARCHON || mon->mtyp == PM_IKSH_NA_DEVA))
-				set_template(mon, PLAGUE_TEMPLATE);
-			if(get_mx(mon, MX_EDOG))
-				EDOG(mon)->loyal = TRUE;
-		}
+		if(Role_if(PM_HEALER) && (mon->mtyp == PM_IASOIAN_ARCHON || mon->mtyp == PM_PANAKEIAN_ARCHON || mon->mtyp == PM_HYGIEIAN_ARCHON || mon->mtyp == PM_IKSH_NA_DEVA))
+			set_template(mon, PLAGUE_TEMPLATE);
 	}
 
 	/* in case statue is wielded and hero zaps stone-to-flesh at self */
@@ -915,7 +918,7 @@ dotrap(register struct trap *trap, unsigned trflags)
 	    case BEAR_TRAP:
 		if(Levitation || Flying) break;
 		seetrap(trap);
-		if(amorphous(youracedata) || is_whirly(youracedata) ||
+		if(amorphous_mon(&youmonst) || is_whirly(youracedata) ||
 						    unsolid(youracedata)) {
 		    pline("%s %s closes harmlessly through you.",
 			    A_Your[trap->madeby_u],
@@ -961,7 +964,7 @@ dotrap(register struct trap *trap, unsigned trflags)
 
 	    case FLESH_HOOK:
 		seetrap(trap);
-		if(amorphous(youracedata) || is_whirly(youracedata) ||
+		if(amorphous_mon(&youmonst) || is_whirly(youracedata) ||
 						    unsolid(youracedata)) {
 		    pline("%s %s passes harmlessly through you.",
 			    A_Your[trap->madeby_u],
@@ -1047,7 +1050,7 @@ dotrap(register struct trap *trap, unsigned trflags)
 				    body_part(ARM));
 			if (rust_dmg(uarms, "shield", 1, TRUE, &youmonst, FALSE))
 			    break;
-			if (u.twoweap || (uwep && bimanual(uwep,youracedata)))
+			if (u.twoweap || (uwep && bimanual_mon(uwep,&youmonst)))
 			    erode_obj(u.twoweap ? uswapwep : uwep, FALSE, TRUE);
 glovecheck:		(void) rust_dmg(uarmg, "gauntlets", 1, TRUE, &youmonst, FALSE);
 			/* Not "metal gauntlets" since it gets called
@@ -1252,7 +1255,7 @@ glovecheck:		(void) rust_dmg(uarmg, "gauntlets", 1, TRUE, &youmonst, FALSE);
 
 	    case WEB: /* Our luckless player has stumbled into a web. */
 		seetrap(trap);
-		if (amorphous(youracedata) || is_whirly(youracedata) ||
+		if (amorphous_mon(&youmonst) || is_whirly(youracedata) ||
 						    unsolid(youracedata)) {
 		    if (acidic(youracedata) || u.umonnum == PM_GELATINOUS_CUBE ||
 			u.umonnum == PM_FIRE_ELEMENTAL) {
@@ -1271,7 +1274,7 @@ glovecheck:		(void) rust_dmg(uarmg, "gauntlets", 1, TRUE, &youmonst, FALSE);
 			    a_your[trap->madeby_u]);
 		    break;
 		}
-		if (webmaker(youracedata) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK)) {
+		if (webmaker(youracedata) || check_mutation(TT_WEBS) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK)) {
 		    if (webmsgok)
 		    	pline(trap->madeby_u ? "You take a walk on your web."
 					 : "There is a spider web here.");
@@ -2103,7 +2106,7 @@ mintrap(struct monst *mtmp)
 
 		case BEAR_TRAP:
 			if(mptr->msize > MZ_SMALL &&
-				!amorphous(mptr) && !mon_resistance(mtmp,FLYING) &&
+				!amorphous_mon(mtmp) && !mon_resistance(mtmp,FLYING) &&
 				!is_whirly(mptr) && !unsolid(mptr)) {
 			    mtmp->mtrapped = 1;
 			    if(in_sight) {
@@ -2123,7 +2126,7 @@ mintrap(struct monst *mtmp)
 			break;
 
 		case FLESH_HOOK:
-			if(	!amorphous(mptr) &&
+			if(	!amorphous_mon(mtmp) &&
 				!is_whirly(mptr) && !unsolid(mptr)) {
 			    mtmp->mtrapped = 1;
 			    if(in_sight) {
@@ -2177,7 +2180,7 @@ mintrap(struct monst *mtmp)
 			    if (rust_dmg(target, "shield", 1, TRUE, mtmp, FALSE))
 				break;
 			    target = MON_WEP(mtmp);
-			    if (target && bimanual(target,mtmp->data))
+			    if (target && bimanual_mon(target, mtmp))
 				erode_obj(target, FALSE, TRUE);
 glovecheck:		    target = which_armor(mtmp, W_ARMG);
 			    (void) rust_dmg(target, "gauntlets", 1, TRUE, mtmp, FALSE);
@@ -2405,7 +2408,7 @@ glovecheck:		    target = which_armor(mtmp, W_ARMG);
 		case WEB:
 			/* Monster in a web. */
 			if (webmaker(mptr) || (Is_lolth_level(&u.uz) && !mtmp->mpeaceful)) break;
-			if (amorphous(mptr) || is_whirly(mptr) || unsolid(mptr)){
+			if (amorphous_mon(mtmp) || is_whirly(mptr) || unsolid(mptr)){
 			    if(acidic(mptr) ||
 			       mptr->mtyp == PM_GELATINOUS_CUBE ||
 			       mptr->mtyp == PM_FIRE_ELEMENTAL) {
@@ -3502,7 +3505,7 @@ emergency_disrobe(boolean *lostsome)
 			  obj == uamul || obj->owornmask & W_RING ||
 			  obj == ublindf || obj == uarm || obj == uarmc ||
 			  obj == uarmg || obj == ubelt || obj == uarmf ||
-			  obj == uarmu ||
+			  obj == uarmu || obj == usaddle ||
 			  (obj->cursed && !Weldproof && (obj == uarmh || obj == uarms)) ||
 			  welded(obj)))
 			otmp = obj;
@@ -3827,14 +3830,14 @@ dountrap(void)	/* disarm a trap */
 	    pline("You're too strained to do that.");
 	    return MOVE_CANCELLED;
 	}
-	if (((nohands(youracedata) || !freehand()) && !(webmaker(youracedata) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK))) || !youracedata->mmove) {
+	if (((nohands(youracedata) || !freehand()) && !(webmaker(youracedata) || check_mutation(TT_WEBS) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK))) || !youracedata->mmove) {
 	    pline("And just how do you expect to do that?");
 	    return MOVE_CANCELLED;
 	} else if (u.ustuck && sticks(&youmonst)) {
 	    pline("You'll have to let go of %s first.", mon_nam(u.ustuck));
 	    return MOVE_CANCELLED;
 	}
-	if (u.ustuck || (welded(uwep) && bimanual(uwep,youracedata))) {
+	if (u.ustuck || (welded(uwep) && bimanual_mon(uwep,&youmonst))) {
 	    Your("%s seem to be too busy for that.",
 		 makeplural(body_part(HAND)));
 	    return MOVE_CANCELLED;
@@ -3849,7 +3852,7 @@ untrap_prob(struct trap *ttmp)
 	int chance = 3;
 
 	/* Only spiders know how to deal with webs reliably */
-	if (ttmp->ttyp == WEB && !(webmaker(youracedata) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK)))
+	if (ttmp->ttyp == WEB && !(webmaker(youracedata) || check_mutation(TT_WEBS) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK)))
 	 	chance = 30;
 	if (Confusion || Hallucination) chance++;
 	if (Blind) chance++;
@@ -4005,7 +4008,7 @@ try_disarm(struct trap *ttmp, boolean force_failure)
 			    if (mtmp->mtame) abuse_dog(mtmp);
 			    if ((mtmp->mhp -= rnd(4)) <= 0) killed(mtmp);
 			} else if (ttype == WEB) {
-			    if (!(webmaker(youracedata) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK))) {
+			    if (!(webmaker(youracedata) || check_mutation(TT_WEBS) || u.sealsActive&SEAL_CHUPOCLOPS || (uarm && uarm->oartifact==ART_SPIDERSILK))) {
 				struct trap *ttmp2 = maketrap(u.ux, u.uy, WEB);
 				if (ttmp2) {
 				    pline_The("webbing sticks to you. You're caught too!");
@@ -4042,7 +4045,7 @@ reward_untrap(struct trap *ttmp, struct monst *mtmp)
 			struct monst *newmon;
 			if(canspotmon(mtmp))
 				pline("%s is incredibly grateful!", Monnam(mtmp));
-			newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
+			newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED);
 			if(newmon){
 				mtmp = newmon;
 				newsym(mtmp->mx, mtmp->my);
@@ -4119,7 +4122,7 @@ unshackle_mon(struct monst *mtmp)
 	else if ((luck_tame || rnd(20) < ACURR(A_CHA)) && !(is_animal(mtmp->data) || mindless_mon(mtmp))){
 		struct monst *newmon;
 		pline("%s is very grateful!", Monnam(mtmp));
-		newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
+		newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED);
 		if (newmon) mtmp = newmon;
 		if (!mtmp->mtame)
 			pline("But, apparently not grateful enough to join you.");
@@ -4432,14 +4435,11 @@ you_remove_jrt_fang(struct monst *mtmp, struct obj *tool)
 		if(Role_if(PM_HEALER) || u.sealsActive&SEAL_BUER){
 			You("teleport the fang out of %s heart, treating the wound after you do.", s_suffix(mon_nam(mtmp)));
 			set_template(mtmp, 0);
-			struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
+			struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED|TD_LOYAL);
 			if(newmon){
 				mtmp = newmon;
 				newsym(mtmp->mx, mtmp->my);
 				pline("%s comes to %s senses, and is incredibly grateful for the aid!", Monnam(mtmp), mhis(mtmp));
-				if(get_mx(mtmp, MX_EDOG)){
-					EDOG(mtmp)->loyal = 1;
-				}
 			}
 		}
 		else if(mtmp->mhp > (dmg = d(10,4))){
@@ -4453,14 +4453,11 @@ you_remove_jrt_fang(struct monst *mtmp, struct obj *tool)
 				set_malign(mtmp);
 			}
 			else {
-				struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
+				struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED|TD_LOYAL);
 				if(newmon){
 					mtmp = newmon;
 					newsym(mtmp->mx, mtmp->my);
 					pline("%s comes to %s senses, and is incredibly grateful for the aid!", Monnam(mtmp), mhis(mtmp));
-					if(get_mx(mtmp, MX_EDOG)){
-						EDOG(mtmp)->loyal = 1;
-					}
 				}
 			}
 		}
@@ -4478,14 +4475,11 @@ you_remove_jrt_fang(struct monst *mtmp, struct obj *tool)
 		if(Role_if(PM_HEALER) || u.sealsActive&SEAL_BUER){
 			You("extract the fang from %s heart, treating the wound as you do.", s_suffix(mon_nam(mtmp)));
 			set_template(mtmp, 0);
-			struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
+			struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED|TD_LOYAL);
 			if(newmon){
 				mtmp = newmon;
 				newsym(mtmp->mx, mtmp->my);
 				pline("%s comes to %s senses, and is incredibly grateful for the aid!", Monnam(mtmp), mhis(mtmp));
-				if(get_mx(mtmp, MX_EDOG)){
-					EDOG(mtmp)->loyal = 1;
-				}
 			}
 		}
 		else if(mtmp->mhp > (dmg = d(20,4))){
@@ -4499,14 +4493,11 @@ you_remove_jrt_fang(struct monst *mtmp, struct obj *tool)
 				set_malign(mtmp);
 			}
 			else {
-				struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
+				struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED|TD_LOYAL);
 				if(newmon){
 					mtmp = newmon;
 					newsym(mtmp->mx, mtmp->my);
 					pline("%s comes to %s senses, and is incredibly grateful for the aid!", Monnam(mtmp), mhis(mtmp));
-					if(get_mx(mtmp, MX_EDOG)){
-						EDOG(mtmp)->loyal = 1;
-					}
 				}
 			}
 		}
@@ -5230,6 +5221,7 @@ lava_effects(boolean initialize)
 					else if(obj == ublindf) Blindf_off(obj);
 					else if(obj == uamul) Amulet_off();
 					else if(obj == ubelt) Belt_off();
+					else if(obj == usaddle) Saddle_off();
 					else if(obj == uwep) uwepgone();
 					else if (obj == uquiver) uqwepgone();
 					else if (obj == uswapwep) uswapwepgone();
@@ -5415,7 +5407,7 @@ uescape_entanglement(void)
 		return TRUE;
 	}
 	obj = outermost_armor(&youmonst);
-	if(obj && (obj->greased || obj->otyp == OILSKIN_CLOAK));//Slip free
+	if(obj && (obj->greased || obj->otyp == OILSKIN_CLOAK || check_mutation(TT_SLIPPERY_SKIN)));//Slip free
 	else if(u.uentangled_otyp == ROPE_OF_ENTANGLING){
 		if(escapecheck <= rn2(20*ATTRSCALE)+rn2(20*ATTRSCALE))
 			return FALSE;

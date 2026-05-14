@@ -602,6 +602,15 @@ you_action_cost(int actiontype, boolean affect_game_state)
 
 			/* these only apply if you didn't attack this action */
 			if (!u.uattked) {
+				if(u.dash){
+					current_cost = 0;
+					if(affect_game_state){
+						morehungry(3);
+						u.dash_cooldown = TRUE;
+						u.dash = FALSE;
+					}
+					break;
+				}
 				if(uwep && uwep->oartifact == ART_TENSA_ZANGETSU && !flags.beginner){
 					MOVECOST(NORMAL_SPEED/12);
 				} else if(uwep && uwep->oartifact == ART_SODE_NO_SHIRAYUKI && u.ulevel >= 14){
@@ -760,7 +769,7 @@ you_calc_movement(void)
 		else
 			moveamt = 10;
 	}
-	else moveamt = youmonst.data->mmove;
+	else moveamt = youracedata->mmove;
 	if(uarm && uarm->otyp == POWER_ARMOR && uarm->lamplit) moveamt += 4;
 	if(u.utats & TAT_HOURGLASS) moveamt++;
 	if(Race_if(PM_HALF_DRAGON) && flags.HDbreath == AD_ELEC && u.ulevel >= 15)
@@ -885,6 +894,29 @@ you_calc_movement(void)
 		}
 		stop_occupation();
 		nomul(0, NULL);
+	}
+
+	int wheelspeed = 0;
+	if(uwep && uwep->otyp == BREAKING_WHEEL)
+		wheelspeed += uwep->ovar1_wheelspeed;
+	if(uswapwep && u.twoweap && uswapwep->otyp == BREAKING_WHEEL)
+		wheelspeed += uswapwep->ovar1_wheelspeed;
+	if(uquiver && uquiver->otyp == BREAKING_WHEEL)
+		wheelspeed += uquiver->ovar1_wheelspeed;
+	if(wheelspeed > 0){
+		int halvings = 0;
+		if(Antimagic)
+			halvings++;
+		if(hates_holy(youracedata) && !hates_unholy(youracedata))
+			halvings++;
+		int drain = wheelspeed * max(0, 2 - halvings) / 2;
+		if(hates_unholy(youracedata) && !hates_holy(youracedata))
+			drain = drain * 3 / 2;
+		if(drain > 0){
+			losehp(drain, "the breaking wheel", KILLED_BY);
+			stop_occupation();
+			nomul(0, NULL);
+		}
 	}
 	
 	if (u.usleep && u.usleep < monstermoves && roll_madness(MAD_FORMICATION)) {
@@ -1096,6 +1128,10 @@ you_regen_hp(void)
 		blockRegen = TRUE;
 	}
 
+	if (check_mutation(TT_LIZARD_TAIL) && !blockRegen){
+		perX += HEALCYCLE;
+	}
+
 	// regeneration 'trinsic
 	if (Regeneration){
 		perX += HEALCYCLE;
@@ -1167,9 +1203,9 @@ you_regen_hp(void)
 			// To be comfortable, a bed must be "on top" of any pile of items in the square.
 			struct obj *bed = level.objects[u.ux][u.uy]; 
 			// on a bed
-			if(bed && bed->oclass == BED_CLASS){
+			if(bed && (bed->oclass == BED_CLASS || bed->otyp == TOWEL)){
 				// A bedroll must be the only object in the square, other beds can have stuff tucked under them
-				if((bed->otyp == BEDROLL && !bed->nexthere) || bed->otyp == GURNEY)
+				if(((bed->otyp == BEDROLL || bed->otyp == TOWEL) && !bed->nexthere) || bed->otyp == GURNEY)
 					reglevel *= 1.5;
 				else if(bed->otyp == BED)
 					reglevel *= 2;
@@ -1217,6 +1253,8 @@ you_regen_hp(void)
 		// Leprechaun bonus lucky seven
 		if (Race_if(PM_LEPRECHAUN) && !Upolyd)
 			reglevel += 7;
+		if ((Race_if(PM_DARK_FEY_RI) || Race_if(PM_DOKKIMAR)) && !Upolyd)
+			reglevel += 3; // Reduced elvish blessings
 		// Healer role bonus
 		if (Role_if(PM_HEALER) && !Upolyd)
 			reglevel += 10;
@@ -1348,9 +1386,9 @@ you_regen_pw(void)
 			// To be comfortable, a bed must be "on top" of any pile of items in the square.
 			struct obj *bed = level.objects[u.ux][u.uy]; 
 			// on a bed
-			if(bed && bed->oclass == BED_CLASS){
+			if(bed && (bed->oclass == BED_CLASS || bed->otyp == TOWEL)){
 				// A bedroll must be the only object in the square, other beds can have stuff tucked under them
-				if((bed->otyp == BEDROLL && !bed->nexthere) || bed->otyp == GURNEY)
+				if(((bed->otyp == BEDROLL || bed->otyp == TOWEL) && !bed->nexthere) || bed->otyp == GURNEY)
 					reglevel *= 3;
 				else if(bed->otyp == BED)
 					reglevel *= 4;
@@ -1393,12 +1431,15 @@ you_regen_pw(void)
 			reglevel += 7;
 		if (Race_if(PM_DROW) && !Upolyd)
 			reglevel += flags.female ? 8 : 4;//Note: blessing of Lolth
+		if ((Race_if(PM_DARK_FEY_RI) || Race_if(PM_DOKKIMAR)) && !Upolyd)
+			reglevel += 3;  // Reduced elvish blessings
 		if (Race_if(PM_GNOME) && !Upolyd)
 			reglevel += 12;
 		if ((Race_if(PM_LEPRECHAUN)) && !Upolyd)
 			reglevel += HEALCYCLE/2;
 		// penalty for being itchy
 		reglevel -= u_healing_penalty();
+		reglevel -= u_breath_penalty();
 		// penalty from spell protection interfering with natural pw regeneration
 		if (u.uspellprot > 0)
 			reglevel -= 10 + 2 * u.uspellprot;
@@ -1609,6 +1650,7 @@ san_threshhold(void)
 	
 	// penalty for being itchy
 	reglevel -= u_healing_penalty();
+	reglevel -= u_breath_penalty();
 	// penalty for rot upgrades
 	reglevel -= rot_count()*2;
 	
@@ -1740,6 +1782,7 @@ moveloop(void)
 	int tx,ty;
 	static boolean oldBlind = 0, oldLightBlind = 0;
 	int healing_penalty = 0;
+	int breath_penalty = 0;
     int hpDiff, movecost;
 	static int oldsanity = 100;
 
@@ -1785,23 +1828,23 @@ moveloop(void)
     prev_hp_notify = uhp();
 
 	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_LAWFUL && flags.initalign != 0){
-		flags.initalign = 0;
+		flags.initalign = INITALIGN_LAWFUL;
 		impossible("Bad alignment initializer detected and fixed. Save and reload.");
 	}
 	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_NEUTRAL && flags.initalign != 1){
-		flags.initalign = 1;
+		flags.initalign = INITALIGN_NEUTRAL;
 		impossible("Bad alignment initializer detected and fixed. Save and reload.");
 	}
 	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_CHAOTIC && flags.initalign != 2){
-		flags.initalign = 2;
+		flags.initalign = INITALIGN_CHAOTIC;
 		impossible("Bad alignment initializer detected and fixed. Save and reload.");
 	}
 	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_NONE && flags.initalign != 3){
-		flags.initalign = 3;
+		flags.initalign = INITALIGN_EVIL;
 		impossible("Bad alignment initializer detected and fixed. Save and reload.");
 	}
 	if(galign(u.ugodbase[UGOD_ORIGINAL]) == A_VOID && flags.initalign != 4){
-		flags.initalign = 4;
+		flags.initalign = INITALIGN_VOID;
 		impossible("Bad alignment initializer detected and fixed. Save and reload.");
 	}
 	// printMons();
@@ -2042,6 +2085,29 @@ moveloop(void)
 						You_feel("%s.", (u_healing_penalty()) ? "pretty" : "beautiful");
 					}
 					healing_penalty = u_healing_penalty();
+					break;
+			}
+			switch (((u_breath_penalty() - breath_penalty) > 0) - ((u_breath_penalty() - breath_penalty) < 0))
+			{
+			case 0:
+					break;
+			case 1:
+					if (!Hallucination) {
+						You("%s.", (breath_penalty) ? "are having more trouble breathing" : "are having trouble breathing");
+					}
+					else {
+						You_feel("%s.", (breath_penalty) ? "more wrapped up" : "wrapped up");
+					}
+					breath_penalty = u_breath_penalty();
+					break;
+			case -1:
+					if (!Hallucination) {
+						You("%s.", (u_breath_penalty()) ? "can breathe more easily" : "can breathe easily");
+					}
+					else {
+						You_feel("%s.", (u_breath_penalty()) ? "some wiggle room" : "free as the wind");
+					}
+					breath_penalty = u_breath_penalty();
 					break;
 			}
 			/*
@@ -3148,7 +3214,7 @@ karemade:
 					IMPURITY_UP(u.uimp_illness)
 					IMPURITY_UP(u.uimp_rot)
 					if(!rn2(20)){
-						pline_The("parasitic caterpillars have rotted to death!");
+						pline_The("parasitic caterpillars have %s!", rn2(20) ? "rotted to death" : !rn2(3) ? "metamorphosed into a rainbow of butterflies" : rn2(2) ? "metamorphosed into a flock of crimson lepidopterans" : "metamorphosed into a swarm of pale moths");
 						youmonst.mcaterpillars = FALSE;
 						IMPURITY_UP(u.uimp_bodies)
 					}
@@ -3169,6 +3235,11 @@ karemade:
 						IMPURITY_UP(u.uimp_bodies)
 						IMPURITY_UP(u.uimp_rot)
 					}
+				}
+				if(acidic(youracedata) || !is_organic_monst(youracedata)){
+					// I think checking it wastes just as much time as blindly setting it.
+					youmonst.mgmld_skin = 0;
+					youmonst.mgmld_throat = 0;
 				}
 				if(youmonst.mgmld_skin || youmonst.mgmld_throat){
 					const char *throatpart = body_part(WINDPIPE);
@@ -3395,7 +3466,8 @@ karemade:
 						make_blinded((long)rnd(4), FALSE);
 					if (!Poison_resistance) {
 						pline("%s is burning your %s!", Something, makeplural(body_part(LUNG)));
-						You("cough and spit blood!");
+						if(!separate_respiration(youracedata))
+							You("cough and spit %s!", body_part(BLOOD));
 						losehp(d(3,8) + ((Amphibious && !flaming(youracedata)) ? 0 : rnd(6)), "stinking cloud", KILLED_BY_AN);
 					} else if (!(Amphibious && !flaming(youracedata))){
 						You("are laden with moisture and %s",
@@ -3455,6 +3527,7 @@ karemade:
 		    nh_timeout();
 		    run_regions();
 		    run_maintained_spells();
+			u.dash_cooldown = FALSE;
 			
 			move_gliders();
 
@@ -3535,7 +3608,7 @@ karemade:
 			}
 
 			// Ymir's stat regeneration
-			if (u.sealsActive&SEAL_YMIR && (wtcap < MOD_ENCUMBER || !u.umoved || Regeneration)){
+			if ((u.sealsActive&SEAL_YMIR || active_glyph(ROTTED_RUNE)) && (wtcap < MOD_ENCUMBER || !u.umoved || Regeneration)){
 				if ((u.ulevel > 9 && !(moves % 3)) ||
 					(u.ulevel <= 9 && !(moves % ((MAXULEV + 12) / (u.ulevel + 2) + 1)))
 					){
@@ -3566,6 +3639,8 @@ karemade:
 			clothes_bite_you();
 			mercurial_repair();
 			clear_stale_fforms();
+			if(Mumbling_Mouths)
+				mumbling_mouths();
 
 			if(moves%1000){
 				extern struct hashmap_s *itemmap;
@@ -3579,6 +3654,7 @@ karemade:
 #endif
 				 (u.uhave.amulet || On_W_tower_level(&u.uz)
 				  || (u.usteed && mon_has_amulet(u.usteed))
+				  || (u.urider && mon_has_amulet(u.urider))
 				 )
 #ifdef WIZARD
 				 && (!wizard) )
@@ -3678,6 +3754,11 @@ karemade:
 		
 		if(u.ustdy > 0) u.ustdy -= 1;
 		if(u.ustdy < 0) u.ustdy += 1;
+		// Wizegaze attacks
+		if(check_mutation(TT_MANY_ODD_EYES) || (flags.aasimar_type == AASIMAR_TYPE_CLOUDFACE && !Upolyd))
+			perform_wizegaze_attacks();
+		if(!Upolyd && TIEFLING_AURAS)
+			mutation_auras();
 		// Decrease your pucture counter
 		if(youmonst.mpunctured > 0 && rn2(2)) youmonst.mpunctured--;
 		
@@ -3716,6 +3797,10 @@ karemade:
 					if(viz_array[j][i]&COULD_SEE)
 						echo_location(i, j);
 			see_monsters();
+		}
+		if(check_mutation(TT_DISCOVERY_1) || check_mutation(TT_DISCOVERY_2) || u.seraph_eyes >= SE_HIDDEN){
+			if(!Blind && !LightBlind)
+				findit();
 		}
 		if(u.utrap && u.utraptype == TT_LAVA) {
 			if(!is_lava(u.ux,u.uy))
@@ -3863,7 +3948,7 @@ karemade:
 			}
 		}
 		//Noise radius dependent on your lung capacity
-		else if (Babble && !Strangled_cant_speak && !FrozenAir && !is_deaf(mtmp) && distmin(u.ux, u.uy, mtmp->mx, mtmp->my) < (ACURR(A_CON)/3)){
+		else if ((Babble || Mumbling_Mouths) && !Strangled_cant_speak && !FrozenAir && !is_deaf(mtmp) && distmin(u.ux, u.uy, mtmp->mx, mtmp->my) < (ACURR(A_CON)/3)){
 			//quite noisy
 			mtmp->mux = u.ux;
 			mtmp->muy = u.uy;
@@ -3911,7 +3996,30 @@ karemade:
 			healing_penalty = u_healing_penalty();
 			break;
 		}
-		
+		switch (((u_breath_penalty() - breath_penalty) > 0) - ((u_breath_penalty() - breath_penalty) < 0))
+		{
+		case 0:
+			break;
+		case 1:
+			if (!Hallucination) {
+				You("%s.", (breath_penalty) ? "are having more trouble breathing" : "are having trouble breathing");
+			}
+			else {
+				You_feel("%s.", (breath_penalty) ? "more wrapped up" : "wrapped up");
+			}
+			breath_penalty = u_breath_penalty();
+			break;
+		case -1:
+			if (!Hallucination) {
+				You("%s.", (u_breath_penalty()) ? "can breathe more easily" : "can breathe easily");
+			}
+			else {
+				You_feel("%s.", (u_breath_penalty()) ? "some wiggle room" : "free as the wind");
+			}
+			breath_penalty = u_breath_penalty();
+			break;
+		}
+
 		if (!oldBlind ^ !Blind) {  /* one or the other but not both */
 			see_monsters();
 			flags.botl = 1;
@@ -4164,6 +4272,8 @@ newgame(void)
 	(void) makedog();
 	if(Race_if(PM_ANDROID))
 		scatter_weapons();
+	if(flags.aasimar_type == AASIMAR_TYPE_SERAPH)
+		scatter_eyes();
 	docrt();
 	if (Role_if(PM_CONVICT) || (Role_if(PM_MADMAN) && Race_if(PM_VAMPIRE))) {
 		setworn(mkobj(CHAIN_CLASS, TRUE), W_CHAIN);
@@ -4240,11 +4350,11 @@ newgame(void)
 			/* please do not have any artifacts where the otyp in artilist is not the same as the practical otyp after onaming */
 			discover_artifact(inher_arti);
 			if ((!(Role_if(PM_CONVICT) && !Race_if(PM_SALAMANDER))
-				|| (Role_if(PM_HEALER) && Race_if(PM_DROW))
+				|| (urole.neminum == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH)
 			)){
 				otmp = oname(otmp, artilist[inher_arti].name);
 				fully_identify_obj(otmp);
-				expert_weapon_skill(weapon_type(otmp));
+				expert_weapon_skill(is_shield(otmp) ? P_SHIELD : weapon_type(otmp));
 				if (Race_if(PM_LEPRECHAUN)) {
 					int gold = otmp->owt * 100;
 #ifndef GOLDOBJ
@@ -4259,11 +4369,30 @@ newgame(void)
 			} else {
 				//Create without creating
 				otmp->oartifact = inher_arti;
-				expert_weapon_skill(weapon_type(otmp));
+				expert_weapon_skill(is_shield(otmp) ? P_SHIELD : weapon_type(otmp));
 				otmp->oartifact = 0;
 				delobj(otmp);
 			}
 		}
+	}
+	if(Race_if(PM_SILVERKNIGHT)){
+		struct obj *otmp;
+#define MKSNSTITEM(otyp) otmp = mksobj_at(otyp, u.ux, u.uy, MKOBJ_NOINIT); otmp->mired = 1; otmp->blessed = 1; otmp->spe = 1; fully_identify_obj(otmp);
+		MKSNSTITEM(SILVERKNIGHT_ARMOR);
+		MKSNSTITEM(SILVERKNIGHT_BOOTS);
+		MKSNSTITEM(SILVERKNIGHT_GAUNTLETS);
+		MKSNSTITEM(SILVERKNIGHT_HELM);
+		if(!has_object_type(invent, SILVERKNIGHT_SWORD)){
+			MKSNSTITEM(SILVERKNIGHT_SWORD);
+		}
+		if(!has_object_type(invent, SILVERKNIGHT_SCYTHE)){
+			MKSNSTITEM(SILVERKNIGHT_SCYTHE);
+		}
+		if(!has_object_type(invent, SILVERKNIGHT_SPEAR)){
+			MKSNSTITEM(SILVERKNIGHT_SPEAR);
+		}
+		bury_objs(u.ux, u.uy);
+#undef MKSNSTITEM
 	}
 
 #ifdef INSURANCE
@@ -4431,7 +4560,7 @@ welcome(boolean new_game)	/* false => restoring an old game */
 			You("do not heal naturally. Use '.' to attempt repairs.");
 		}
 		if(Race_if(PM_INCANTIFIER)){
-			pline("Incantifiers eat magic, not food, and do not heal naturally.");
+			pline("Incantifiers eat magic, not food.");
 		}
 		if(Role_if(PM_ANACHRONOUNBINDER)){
 			pline("Use #monster to use your psychic powers.");
@@ -4639,6 +4768,7 @@ printEtraits(void)
 			{ETRAIT_BLADESONG, "Bladesong"},
 			{ETRAIT_BLADEDANCE, "Bladedance"},
 			{ETRAIT_PUNCTURE, "Puncture"},
+			{ETRAIT_STRIKING, "Striking"},
 			{0,0}
 		};
 		for(i=0;i<NUM_OBJECTS;i++){
@@ -7009,8 +7139,8 @@ dojellysting(struct monst *magr)
 	return;
 }
 
-static void
-dorotattack(struct monst *magr, struct attack * attk, int max, int mult)
+void
+dogenericattack(struct monst *magr, struct attack * attk, int max, int mult)
 {
 	struct monst *mdef;
 	extern const int clockwisex[8];
@@ -7084,7 +7214,7 @@ dorotbite(struct monst *magr)
 {
 	struct attack * attk;
 	struct attack symbiote = { AT_OBIT, AD_DISE, 1, 3 };
-	dorotattack(magr, &symbiote, 1, 1);
+	dogenericattack(magr, &symbiote, 1, 1);
 }
 
 void
@@ -7092,7 +7222,16 @@ dorotsting(struct monst *magr)
 {
 	struct attack * attk;
 	struct attack symbiote = { AT_STNG, AD_PFBT, 1, 4 };
-	dorotattack(magr, &symbiote, 1, 1);
+	dogenericattack(magr, &symbiote, 1, 1);
+}
+
+void
+dotiefling(struct monst *magr)
+{
+	if(magr == &youmonst)
+		mutation_autoattacks();
+	else
+		impossible("dotiefling called for monster");
 }
 
 void
@@ -7263,8 +7402,16 @@ dovines(struct monst *magr)
 	
 	// get attack from statblock
 	attk = mon_get_attacktype(magr, AT_VINE, &attkbuff);
-	if(!attk)
-		return;
+	if(!attk){
+		if(flags.aasimar_subtype == AASIMAR_SUBTYPE_GAE){
+			attkbuff.aatyp = AT_VINE;
+			attkbuff.adtyp = AD_SESN;
+			attkbuff.damn = 4;
+			attkbuff.damd = 4;
+			attk = &attkbuff;
+		}
+		else return;
+	}
 	
 	//Attack one foe
 	for(j=8;j>=1;j--){
@@ -7342,6 +7489,13 @@ dostarblades(struct monst *magr)
 		attkbuff.damd = 4;
 		attk = &attkbuff;
 	}
+	if(!attk && youagr && flags.aasimar_subtype == AASIMAR_SUBTYPE_COURE){
+		attkbuff.aatyp = AT_ESPR;
+		attkbuff.adtyp = AD_STAR;
+		attkbuff.damn = 4;
+		attkbuff.damd = 4;
+		attk = &attkbuff;
+	}
 	if(!attk)
 		return;
 	// count attacks in statblock (assumes that all of these attacks are equals! If this is not true, this will need to be adjusted)
@@ -7406,6 +7560,7 @@ dostorm(struct monst *magr)
 	int spellnum = 0;
 	int range = magr->mtyp == PM_DAO_LAO_GUI_MONK ? 2 : BOLT_LIM;
 	boolean frequency_decrease = TRUE;
+	boolean dropoff = FALSE;
 	
 	pa = youagr ? youracedata : magr->data;
 
@@ -7431,6 +7586,42 @@ dostorm(struct monst *magr)
 	else if(pa->mtyp == PM_DAO_LAO_GUI_MONK){
 		spellnum = rn2(3) ? RAIN : rn2(3) ? LIGHTNING : HAIL_FLURY;
 		frequency_decrease = FALSE;
+	}
+	else if(youagr && flags.aasimar_subtype){
+		dropoff = TRUE;
+		switch(flags.aasimar_subtype){
+			//Coure starblades
+			case AASIMAR_SUBTYPE_NOVIERE:
+				spellnum = rn2(3) ? GEYSER : HAIL_FLURY;
+			break;
+			case AASIMAR_SUBTYPE_BRALANI:
+				spellnum = rn2(3) ? SANDSTORM : HAIL_FLURY;
+			break;
+			case AASIMAR_SUBTYPE_FIRRE:
+				spellnum = rn2(3) ? FIRE_PILLAR : LIGHTNING;
+			break;
+			case AASIMAR_SUBTYPE_SHIERE:
+				spellnum = rn2(3) ? MOON_BEAM : HAIL_FLURY;
+			break;
+			case AASIMAR_SUBTYPE_GHAELE:
+				spellnum = rn2(3) ? LIGHTNING : HAIL_FLURY;
+			break;
+			case AASIMAR_SUBTYPE_TULANI:
+				spellnum = !rn2(3) ? LIGHTNING : rn2(2) ? ICE_STORM : FIRE_PILLAR;
+			break;
+			// case AASIMAR_SUBTYPE_GAE:
+			// Vines instead
+			// break;
+			case AASIMAR_SUBTYPE_BRIGHID:
+				spellnum = rn2(3) ? PYRO_STORM : GOD_RAY;
+			break;
+			case AASIMAR_SUBTYPE_UISCERRE:
+				spellnum = GEYSER;
+			break;
+			case AASIMAR_SUBTYPE_CAILLEA:
+				spellnum = rn2(3) ? ICE_STORM : STARFALL;
+			break;
+		}
 	}
 	else {
 		spellnum = ACID_RAIN;
@@ -7460,6 +7651,9 @@ dostorm(struct monst *magr)
 		if(onscary(mdef->mx, mdef->my, magr))
 			continue;
 
+		if(dropoff && dist2(x(magr), y(magr), x(mdef), y(mdef)) > rn1(BOLT_LIM*BOLT_LIM,2))
+			continue;
+
 		if(!rn2(4) || (frequency_decrease && mlev(magr) < 30 && rn2(31-mlev(magr)))) //Storm attacks grow more likely as the moster grows more powerful.
 			continue;
 
@@ -7474,6 +7668,32 @@ dostorm(struct monst *magr)
 		cast_spell(magr, &youmonst, &attkbuff, spellnum, u.ux, u.uy);
 	}
 
+}
+
+void
+doikshna_gaze(struct monst *magr)
+{
+	struct monst *mdef = 0, *mtmp;
+	boolean youagr = (magr == &youmonst);
+	struct attack attkbuff = {AT_MAGC, AD_CLRC, 0, 6};
+	int range = BOLT_LIM;
+	int best_dist = range + 1;
+
+	for(mtmp = fmon; mtmp; mtmp = mtmp->nmon){
+		if(DEADMONSTER(mtmp)) continue;
+		if(!mtmp->mcanmove) continue;
+		if(youagr && mtmp->mpeaceful) continue;
+		if(!youagr && ((mtmp->mpeaceful == magr->mpeaceful) || (!!mtmp->mtame == !!magr->mtame))) continue;
+		if(youagr && !canspotmon(mtmp)) continue;
+		if(!youagr && !mon_can_see_mon(magr, mtmp)) continue;
+		int d = distmin(x(magr), y(magr), x(mtmp), y(mtmp));
+		if(d <= range && d < best_dist){
+			best_dist = d;
+			mdef = mtmp;
+		}
+	}
+	if(!mdef) return;
+	cast_spell(magr, mdef, &attkbuff, MOTHER_S_GAZE, x(mdef), y(mdef));
 }
 
 void
@@ -7656,6 +7876,12 @@ make_generic_polts(int polts)
 				}
 			}
 		}}
+		/* If we scanned the entire map and found no eligible weapons,
+		   break out to prevent infinite loop */
+		if (!created) {
+			/* No eligible weapons left on the map */
+			break;
+		}
 	}
 }
 

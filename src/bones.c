@@ -352,6 +352,9 @@ drop_upon_death(struct monst *mtmp, struct obj *cont, int x, int y)
 		} else if(u.thoughts & BEASTS_EMBRACE){
 			u.thoughts &= ~BEASTS_EMBRACE;
 			otmp = mksobj(BEAST_S_EMBRACE_GLYPH, MKOBJ_NOINIT);
+		} else if(u.thoughts & ROTTED_RUNE){
+			u.thoughts &= ~ROTTED_RUNE;
+			otmp = mksobj(ROT_GLYPH, MKOBJ_NOINIT);
 		} else if(u.thoughts & SIGHT){
 			u.thoughts &= ~SIGHT;
 			otmp = mksobj(ORRERY_GLYPH, MKOBJ_NOINIT);
@@ -482,6 +485,7 @@ savebones(struct obj *corpse)
 		if(mptr->mtyp == PM_WEEPING_ANGEL) angelnum++;
 	}
 	if (u.usteed) dismount_steed(DISMOUNT_BONES);
+	if (u.urider) rider_dismounts_you(DISMOUNT_BONES);
 	dmonsfree();		/* discard dead or gone monsters */
 
 	/* mark all fruits as nonexistent; when we come to them we'll mark

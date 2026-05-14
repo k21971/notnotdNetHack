@@ -59,6 +59,22 @@ add_location_to_explode_region(int x, int y, void * _reg)
 	reg->nlocations++;
 }
 
+static void
+remove_location_from_explode_region(xchar x, xchar y, ExplodeRegion *reg)
+{
+    int i;
+    for(i = 0; i < reg->nlocations; i++) {
+        if(reg->locations[i].x == x && reg->locations[i].y == y) {
+            reg->nlocations--;
+            if(i < reg->nlocations)
+                (void) memmove((void *)&reg->locations[i],
+                    (void *)&reg->locations[i+1],
+                    (reg->nlocations - i) * sizeof(ExplodeLocation));
+            return;
+        }
+    }
+}
+
 static int
 compare_explode_location(const void *_loc1, const void *_loc2)
 {
@@ -197,6 +213,31 @@ explode_full(int x, int y, int adtyp, int olet, int dam, int color, int radius, 
 }
 
 void
+explode_full_nocenter(int x, int y, int adtyp, int olet, int dam, int color, int radius, int dest, boolean yours, struct permonst *pa, long special_flags)
+{
+	ExplodeRegion *area;
+	if (radius == 0)
+		return;
+	area = create_explode_region();
+	if (radius == 1)
+	{	// can use simple method of creating explosions
+		int i, j;
+		for (i = -1; i <= 1; i++)
+		for (j = -1; j <= 1; j++)
+			if (isok(x + i, y + j))
+				add_location_to_explode_region(x + i, y + j, area);
+	}
+	else
+	{	// use circles
+		do_clear_area(x, y, radius, add_location_to_explode_region, (void *)(area));
+	}
+
+	remove_location_from_explode_region(x, y, area);
+	do_explode(x, y, area, adtyp, olet, dam, color, dest, yours, pa, special_flags);
+	free_explode_region(area);
+}
+
+void
 splash(int x, int y, int dx, int dy, int adtyp, int olet, int dam, int color, long special_flags)
 {
 	/*
@@ -327,6 +368,10 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 		case AD_SLIM: str = "spout of acidic slime";
 			break;
 		case AD_PHYS: str = (olet != TOOL_CLASS ? olet != WEAPON_CLASS ? "blast" : "flying shards of obsidian" : "flying shards of mirror");
+			if(olet == TOOL_CLASS)
+				silver = TRUE;
+			break;
+		case AD_STAR: str = "blast of stardust";
 			break;
 		case AD_DISE: str = "cloud of spores";
 			break;
@@ -351,7 +396,8 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 		yi = area->locations[i].y;
 		if (xi == u.ux && yi == u.uy) {
 		    switch(adtyp) {
-			case AD_PHYS:                        
+			case AD_PHYS:
+			case AD_STAR:
 				break;
 			case AD_MAGM:
 				explmask = !!Antimagic;
@@ -417,6 +463,8 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 		mtmp = m_at(xi, yi);
 		if (!mtmp && xi == u.ux && yi == u.uy)
 			mtmp = u.usteed;
+		if (!mtmp && xi == u.ux && yi == u.uy)
+			mtmp = u.urider;
 		if (mtmp) {
 		    if (mtmp->mhp < 1) explmask = 2;
 		    else {
@@ -427,6 +475,8 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 					   mtmp->mtyp == PM_BURNING_FERN ||
 					   mtmp->mtyp == PM_CHAOS
 					) explmask |= TRUE;
+					break;
+				case AD_STAR:
 					break;
 				case AD_MAGM:
 					explmask |= resists_magm(mtmp);
@@ -590,6 +640,8 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 		mtmp = m_at(xi, yi);
 		if (!mtmp && xi == u.ux && yi == u.uy)
 			mtmp = u.usteed;
+		if (!mtmp && xi == u.ux && yi == u.uy)
+			mtmp = u.urider;
 		if (!mtmp) continue;
 		if (DEADMONSTER(mtmp)) continue;
 		if (u.uswallow && mtmp == u.ustuck) {
@@ -766,6 +818,8 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 				mdam *= 2;
 			else if (has_blood_mon(mtmp) && adtyp == AD_BLUD)
 				mdam += mlev(mtmp);
+			else if (hates_silver(mtmp->data) && mdam/3 > 0 && adtyp == AD_STAR)
+				mdam += d(mdam/3, 20);
 			if(yours && adtyp == AD_BLUD)
 				mdam += u.uimpurity/2;
 			if(adtyp == AD_WET){
@@ -817,6 +871,10 @@ do_explode(int x, int y, ExplodeRegion *area, int adtyp, int olet, int dam, int 
 		){
 			damu /= 2;
 			uhurt = 3;
+		}
+		if(hates_silver(youracedata) && damu/3 > 0 && adtyp == AD_STAR){
+			You("are seared by the %s!", str);
+			damu += d(damu/3, 20);
 		}
 
 		if(hates_silver(youracedata) && silver){
@@ -1265,6 +1323,8 @@ grenade_effects(
     mon = m_at(x, y);
     if (!mon && x == u.ux && y == u.uy)
 	mon = u.usteed;
+    if (!mon && x == u.ux && y == u.uy)
+	mon = u.urider;
     if (mon && !DEADMONSTER(mon)) {
 		if (resists_fire(mon)) {
 		    shielded = TRUE;
@@ -1404,6 +1464,8 @@ adtyp_expl_color(int adtyp)
 	switch(adtyp){
 		case AD_PHYS:
 			return EXPL_MUDDY;
+		case AD_STAR:
+			return EXPL_FROSTY;
 		case AD_EFIR:
 		case AD_FIRE:
 			return EXPL_FIERY;

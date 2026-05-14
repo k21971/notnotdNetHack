@@ -29,6 +29,7 @@ static boolean zap_reflect(struct monst *, struct zapdata *);
 static int zapdamage(struct monst *, struct monst *, struct zapdata *);
 static int zhit(struct monst *, struct monst *, struct zapdata *);
 static boolean zap_steed(struct obj *);
+static boolean zap_rider(struct obj *);
 
 static void backfire(struct obj *);
 static int spell_hit_bonus(int);
@@ -217,6 +218,8 @@ zap_glyph_color(int adtyp)
 	case AD_ELEC:
 	case AD_STAR:
 	case AD_HOLY:
+	case AD_SMOK:
+	case AD_SLWC:
 		return CLR_WHITE;
 	case AD_DRLI:
 		return CLR_MAGENTA;
@@ -244,6 +247,134 @@ wand_adtype(int wand)
 }
 
 /* Routines for IMMEDIATE wands and spells. */
+
+/* healing_zap: handle the SPE_HEALING/EXTRA_HEALING/FULL_HEALING/MASS_HEALING
+ * case of bhitm.  Returns the (potentially updated) mtmp.
+ * Sets *wake and *reveal_invis as appropriate.
+ */
+struct monst *
+healing_zap(struct monst *mtmp, int type, char class, boolean *wake, boolean *reveal_invis, boolean disguised_mimic)
+{
+	if(mtmp == &youmonst){
+		if(type == SPE_FULL_HEALING){
+			if (Sick) You("are no longer ill.");
+			if (Slimed) {
+				pline_The("slime disappears!");
+				Slimed = 0;
+			 /* flags.botl = 1; -- healup() handles this */
+			}
+			if (youmonst.mgmld_skin) {
+				pline("The gray mold on your skin vanishes!");
+				youmonst.mgmld_skin = 0;
+			}
+			if (youmonst.mgmld_throat) {
+				pline("You feel better!");
+				youmonst.mgmld_throat = 0;
+			}
+			healup(50*P_SKILL(P_HEALING_SPELL), 0, TRUE, TRUE);
+		}
+		else {
+			int dice = (type == SPE_EXTRA_HEALING) ? (6+P_SKILL(P_HEALING_SPELL)) : 6;
+			if(uarmg && uarmg->oartifact == ART_GAUNTLETS_OF_THE_HEALING_H)
+				dice *= 2;
+			healup((d(dice, type != SPE_HEALING ? 8 : 4) + 6*(P_SKILL(P_HEALING_SPELL)-1)),
+				0, FALSE, (type != SPE_HEALING));
+			You_feel("%sbetter.",
+				type != SPE_HEALING ? "much " : "");
+		}
+		return mtmp;
+	}
+	// else
+	int delta = mtmp->mhp;
+	const char *starting_word_ptr = injury_desc_word(mtmp);
+	int health = type == SPE_FULL_HEALING ? (50*min(2, P_SKILL(P_HEALING_SPELL))) : (d(type == SPE_EXTRA_HEALING ? (6 + P_SKILL(P_HEALING_SPELL)) : 6, type != SPE_HEALING ? 8 : 4) + 6*(P_SKILL(P_HEALING_SPELL)-1));
+	if(reveal_invis) *reveal_invis = TRUE;
+	if(has_template(mtmp, PLAGUE_TEMPLATE) && type == SPE_FULL_HEALING){
+		if(canseemon(mtmp))
+			pline("%s is no longer sick!", Monnam(mtmp));
+		set_template(mtmp, 0);
+		if(!mtmp->mtame && rnd(!always_hostile(mtmp->data) ? 12 : 20) < ACURR(A_CHA)){
+			pline("%s is very grateful!", Monnam(mtmp));
+			mtmp->mpeaceful = TRUE;
+			char qbuf[BUFSZ];
+			Sprintf(qbuf, "Turn %s away from your party?", mhim(mtmp));
+			if(yn(qbuf) != 'y'){
+				struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TD_ENHANCED);
+				if(newmon){
+					mtmp = newmon;
+					newsym(mtmp->mx, mtmp->my);
+				}
+			}
+		}
+	}
+	if(type == SPE_FULL_HEALING){
+		mtmp->mgmld_skin = 0;
+		mtmp->mgmld_throat = 0;
+	}
+    if (mtmp->mtyp != PM_PESTILENCE) {
+		char hurtmonbuf[BUFSZ];
+		Strcpy(hurtmonbuf, Monnam(mtmp));
+		if(wake) *wake = FALSE;		/* wakeup() makes the target angry */
+		/* skill adjustment ranges from -6 to + 18 (-6 means 0 hp healed minimum)*/
+		mtmp->mhp += health;
+		if (mtmp->mhp > mtmp->mhpmax)
+			mtmp->mhp = mtmp->mhpmax;
+		if (mtmp->mblinded) {
+			mtmp->mblinded = 0;
+			mtmp->mcansee = 1;
+		}
+		delta = mtmp->mhp - delta; //Note: final minus initial
+		if (canseemon(mtmp)) {
+			if (disguised_mimic) {
+			if (mtmp->m_ap_type == M_AP_OBJECT &&
+				mtmp->mappearance == STRANGE_OBJECT) {
+				/* it can do better now */
+				set_mimic_sym(mtmp);
+				newsym(mtmp->mx, mtmp->my);
+			} else
+				mimic_hit_msg(mtmp, type);
+			} else {
+				if (!can_see_hurtnss_of_mon(mtmp)) {
+					pline("%s looks%s better.", Monnam(mtmp),
+						type != SPE_HEALING ? " much" : "" );
+				}
+				else {
+					const char * ending_word_ptr = injury_desc_word(mtmp);
+					// Note: this compares the string pointers recieved from injury_desc_word. They should be the same if the level is unchanged, and different otherwise.
+					if(starting_word_ptr != ending_word_ptr){
+						pline("%s %s %s.",
+							hurtmonbuf,
+							(mtmp->mhp < mtmp->mhpmax) ? "now looks only" : "looks",
+							ending_word_ptr);
+					}
+					else if(delta != 0){
+						pline("%s looks better, but still %s.", hurtmonbuf, ending_word_ptr);
+					}
+					// else {
+						// pline("%s is still %s.", hurtmonbuf, ending_word_ptr);
+					// }
+				}
+			}
+		}
+
+		if(mtmp->mtame && Role_if(PM_HEALER)){
+			int xp = (experience(mtmp, 0)) * delta / mtmp->mhpmax;
+			if(wizard) pline("%d out of %d XP", xp, experience(mtmp, 0));
+			if(xp){
+				more_experienced(xp, 0);
+				newexplevel();
+			}
+		}
+		if (mtmp->mtame || mtmp->mpeaceful) {
+			adjalign(Role_if(PM_HEALER) ? 1 : sgn(u.ualign.type));
+		}
+    } else {	/* Pestilence */
+		/* Pestilence will always resist; damage is half of 3d{4,8} */
+		(void) resist(mtmp, class, health/2, TELL);
+    }
+	return mtmp;
+}
+
 /* bhitm: monster mtmp was hit by the effect of wand or spell otmp */
 int
 bhitm(struct monst *mtmp, struct obj *otmp)
@@ -285,7 +416,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
 			if (!flags.mon_moving && otyp == SPE_FORCE_BOLT){
 				if(uwep && uwep->oartifact == ART_ANNULUS && uwep->otyp == CHAKRAM)
 					dmg += d((u.ulevel+1)/2, 12);
-				if(u.ulevel == 30 && (artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_PATIENCE))
+				if(u.ulevel >= 30 && (artinstance[ART_SKY_REFLECTED].ZerthUpgrades&ZPROP_PATIENCE))
 					dmg += d(10, 12);
 			}
 			if(dbldam) dmg *= 2;
@@ -297,7 +428,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
 			
 			hit(zap_type_text, mtmp, exclam(dmg));
 			(void) resist(mtmp, otmp->otyp == ROD_OF_FORCE ? WAND_CLASS : otmp->oclass, dmg, TELL);
-			if(otyp == ROD_OF_FORCE && !DEADMONSTER(mtmp) && u.usteed != mtmp){
+			if(otyp == ROD_OF_FORCE && !DEADMONSTER(mtmp) && u.usteed != mtmp && u.urider != mtmp){
 				mhurtle(mtmp, sgn(mtmp->mx - u.ux), sgn(mtmp->my - u.uy), BOLT_LIM, FALSE);
 			}
 		} else if(!flags.mon_moving || cansee(mtmp->mx, mtmp->my)) miss(zap_type_text, mtmp);
@@ -427,95 +558,9 @@ bhitm(struct monst *mtmp, struct obj *otmp)
 	case SPE_HEALING:
 	case SPE_EXTRA_HEALING:
 	case SPE_FULL_HEALING:
-	case SPE_MASS_HEALING:{
-		int delta = mtmp->mhp;
-		const char *starting_word_ptr = injury_desc_word(mtmp);
-		int health = otyp == SPE_FULL_HEALING ? (50*min(2, P_SKILL(P_HEALING_SPELL))) : (d(otyp == SPE_EXTRA_HEALING ? (6 + P_SKILL(P_HEALING_SPELL)) : 6, otyp != SPE_HEALING ? 8 : 4) + 6*(P_SKILL(P_HEALING_SPELL)-1));
-		reveal_invis = TRUE;
-		if(has_template(mtmp, PLAGUE_TEMPLATE) && otyp == SPE_FULL_HEALING){
-			if(canseemon(mtmp))
-				pline("%s is no longer sick!", Monnam(mtmp));
-			set_template(mtmp, 0);
-			if(!mtmp->mtame && rnd(!always_hostile(mtmp->data) ? 12 : 20) < ACURR(A_CHA)){
-				pline("%s is very grateful!", Monnam(mtmp));
-				mtmp->mpeaceful = TRUE;
-				char qbuf[BUFSZ];
-				Sprintf(qbuf, "Turn %s away from your party?", mhim(mtmp));
-				if(yn(qbuf) != 'y'){
-					struct monst *newmon = tamedog_core(mtmp, (struct obj *)0, TRUE);
-					if(newmon){
-						mtmp = newmon;
-						newsym(mtmp->mx, mtmp->my);
-					}
-				}
-			}
-		}
-		if(otyp == SPE_FULL_HEALING){
-			mtmp->mgmld_skin = 0;
-			mtmp->mgmld_throat = 0;
-		}
-	    if (mtmp->mtyp != PM_PESTILENCE) {
-			char hurtmonbuf[BUFSZ];
-			Strcpy(hurtmonbuf, Monnam(mtmp));
-			wake = FALSE;		/* wakeup() makes the target angry */
-			/* skill adjustment ranges from -6 to + 18 (-6 means 0 hp healed minimum)*/
-			mtmp->mhp += health;
-			if (mtmp->mhp > mtmp->mhpmax)
-				mtmp->mhp = mtmp->mhpmax;
-			if (mtmp->mblinded) {
-				mtmp->mblinded = 0;
-				mtmp->mcansee = 1;
-			}
-			delta = mtmp->mhp - delta; //Note: final minus initial
-			if (canseemon(mtmp)) {
-				if (disguised_mimic) {
-				if (mtmp->m_ap_type == M_AP_OBJECT &&
-					mtmp->mappearance == STRANGE_OBJECT) {
-					/* it can do better now */
-					set_mimic_sym(mtmp);
-					newsym(mtmp->mx, mtmp->my);
-				} else
-					mimic_hit_msg(mtmp, otyp);
-				} else {
-					if (!can_see_hurtnss_of_mon(mtmp)) {
-						pline("%s looks%s better.", Monnam(mtmp),
-							otyp != SPE_HEALING ? " much" : "" );
-					}
-					else {
-						const char * ending_word_ptr = injury_desc_word(mtmp);
-						// Note: this compares the string pointers recieved from injury_desc_word. They should be the same if the level is unchanged, and different otherwise.
-						if(starting_word_ptr != ending_word_ptr){
-							pline("%s %s %s.",
-								hurtmonbuf, 
-								(mtmp->mhp < mtmp->mhpmax) ? "now looks only" : "looks",
-								ending_word_ptr);
-						}
-						else if(delta != 0){
-							pline("%s looks better, but still %s.", hurtmonbuf, ending_word_ptr);
-						}
-						// else {
-							// pline("%s is still %s.", hurtmonbuf, ending_word_ptr);
-						// }
-					}
-				}
-			}
-
-			if(mtmp->mtame && Role_if(PM_HEALER)){
-				int xp = (experience(mtmp, 0)) * delta / mtmp->mhpmax;
-				if(wizard) pline("%d out of %d XP", xp, experience(mtmp, 0));
-				if(xp){
-					more_experienced(xp, 0);
-					newexplevel();
-				}
-			}
-			if (mtmp->mtame || mtmp->mpeaceful) {
-				adjalign(Role_if(PM_HEALER) ? 1 : sgn(u.ualign.type));
-			}
-	    } else {	/* Pestilence */
-			/* Pestilence will always resist; damage is half of 3d{4,8} */
-			(void) resist(mtmp, otmp->oclass, health/2, TELL);
-	    }
-	}break;
+	case SPE_MASS_HEALING:
+		mtmp = healing_zap(mtmp, otmp->otyp, otmp->oclass, &wake, &reveal_invis, disguised_mimic);
+		break;
 	case WAN_LIGHT:	/* (broken wand) */
 	case WAN_DARKNESS:	/* (broken wand) */
 		if (flash_hits_mon(mtmp, otmp)) {
@@ -1153,7 +1198,6 @@ cancel_item(register struct obj *obj)
 
 	if (obj->otyp >= GRAY_DRAGON_SCALE_MAIL
 	    && obj->otyp <= YELLOW_DRAGON_SCALE_MAIL
-		&& obj->oartifact != ART_DRAGON_PLATE
 	) {
 		/* dragon scale mail reverts to dragon scales */
 
@@ -2509,7 +2553,7 @@ zapnodir(register struct obj *obj)
 			if (!Blind) known = TRUE;
 		break;
 		case SPE_LIGHT:
-			if(!Race_if(PM_DROW)){
+			if(!RACE_IF_DROW){
 				litroom(!(obj->cursed),obj);
 				if(!(obj->cursed) && u.sealsActive&SEAL_TENEBROUS) unbind(SEAL_TENEBROUS,TRUE);
 			} else {
@@ -2924,33 +2968,11 @@ zapyourself(struct obj *obj, boolean ordinary)
 			You("shudder in dread.");
 		    break;
 		case SPE_FULL_HEALING:
-			if (Sick) You("are no longer ill.");
-			if (Slimed) {
-				pline_The("slime disappears!");
-				Slimed = 0;
-			 /* flags.botl = 1; -- healup() handles this */
-			}
-			if (youmonst.mgmld_skin) {
-				pline("The gray mold on your skin vanishes!");
-				youmonst.mgmld_skin = 0;
-			}
-			if (youmonst.mgmld_throat) {
-				pline("You feel better!");
-				youmonst.mgmld_throat = 0;
-			}
-			healup(50*P_SKILL(P_HEALING_SPELL), 0, TRUE, TRUE);
-			break;
 		case SPE_HEALING:
 		case SPE_EXTRA_HEALING:
 		case SPE_MASS_HEALING:
 		{
-			int dice = (obj->otyp == SPE_EXTRA_HEALING) ? (6+P_SKILL(P_HEALING_SPELL)) : 6;
-			if(uarmg && uarmg->oartifact == ART_GAUNTLETS_OF_THE_HEALING_H)
-				dice *= 2;
-		    healup((d(dice, obj->otyp != SPE_HEALING ? 8 : 4) + 6*(P_SKILL(P_HEALING_SPELL)-1)),
-			   0, FALSE, (obj->otyp != SPE_HEALING));
-		    You_feel("%sbetter.",
-				obj->otyp != SPE_HEALING ? "much " : "");
+			healing_zap(&youmonst, obj->otyp, obj->oclass, (boolean *)0, (boolean *)0, FALSE);
 		    break;
 		}
 		case WAN_DARKNESS:	/* (broken wand) */
@@ -3083,6 +3105,67 @@ zap_steed(struct obj *obj)	/* wand or spell */
 		    break;
 	}
 	return steedhit;
+}
+
+/* you've zapped a wand upwards while being riden
+ * Return TRUE if the rider was hit by the wand.
+ * Return FALSE if the rider was not hit by the wand.
+ */
+static boolean
+zap_rider(struct obj *obj)	/* wand or spell */
+{
+	int riderhit = FALSE;
+	
+	switch (obj->otyp) {
+
+	   /*
+	    * Wands that are allowed to hit the rider
+	    * Carefully test the results of any that are
+	    * moved here from the bottom section.
+	    */
+		case WAN_PROBING:
+		    probe_monster(u.urider);
+		    makeknown(WAN_PROBING);
+		    riderhit = TRUE;
+		    break;
+		case WAN_TELEPORTATION:
+		case SPE_TELEPORT_AWAY:
+		    /* you go together */
+		    tele();
+		    if(Teleport_control || !couldsee(u.ux0, u.uy0) ||
+			(distu(u.ux0, u.uy0) >= 16))
+				makeknown(obj->otyp);
+		    riderhit = TRUE;
+		    break;
+
+		/* Default processing via bhitm() for these */
+		case WAN_MAKE_INVISIBLE:
+		case WAN_CANCELLATION:
+		case SPE_CANCELLATION:
+		case WAN_POLYMORPH:
+		case SPE_POLYMORPH:
+		case WAN_STRIKING:
+		case SPE_FORCE_BOLT:
+		case ROD_OF_FORCE:
+		case WAN_SLOW_MONSTER:
+		case SPE_SLOW_MONSTER:
+		case WAN_SPEED_MONSTER:
+		case SPE_HEALING:
+		case SPE_EXTRA_HEALING:
+		case SPE_FULL_HEALING:
+		case WAN_DRAINING:
+		case SPE_DRAIN_LIFE:
+		case WAN_OPENING:
+		case SPE_KNOCK:
+		    (void) bhitm(u.urider, obj);
+		    riderhit = TRUE;
+		    break;
+
+		default:
+		    riderhit = FALSE;
+		    break;
+	}
+	return riderhit;
 }
 
 
@@ -3379,6 +3462,9 @@ weffects(register struct obj *obj)
 	exercise(A_WIS, TRUE);
 	if (u.usteed && (objects[otyp].oc_dir != NODIR) &&
 	    !u.dx && !u.dy && (u.dz > 0) && zap_steed(obj)) {
+		disclose = TRUE;
+	} else if (u.urider && (objects[otyp].oc_dir != NODIR) &&
+	    !u.dx && !u.dy && (u.dz < 0) && zap_rider(obj)) {
 		disclose = TRUE;
 	} else
 	if (objects[otyp].oc_dir == IMMEDIATE) {
@@ -4047,6 +4133,8 @@ zap(
 
 			if (mdef) {
 				if (u.usteed && !rn2(3) && mdef == &youmonst) mdef = u.usteed;
+				if (u.urider && !rn2(3) && mdef == &youmonst) mdef = u.urider;
+
 				youdef = (mdef == &youmonst);
 
 				/* does it hit? */
@@ -4843,7 +4931,7 @@ zhit(
 
 	case AD_VORP:{
 		struct permonst * pd = (youdef ? youracedata : mdef->data);
-		if ((rn2(20) && pd->mtyp != PM_JABBERWOCK) || (noncorporeal(pd) || amorphous(pd))){
+		if ((rn2(20) && pd->mtyp != PM_JABBERWOCK) || (noncorporeal(pd) || amorphous_mon(mdef))){
 			domsg();
 		} else {
 			if (bigmonst(pd)){
@@ -4955,7 +5043,7 @@ zhit(
 				addmsg("%s body reintegrates before your %s!",
 					s_suffix(Monnam(mdef)),
 					(eyecount(youracedata) == 1) ?
-					body_part(EYE) : makeplural(body_part(EYE)));
+					body_part(EYE_BP) : makeplural(body_part(EYE_BP)));
 				addmsg("%s resurrects!", Monnam(mdef));
 			}
 			mdef->mhp = mdef->mhpmax;
@@ -5050,7 +5138,7 @@ zhit(
 			((otmp = youdef ? uarmc : which_armor(mdef, W_ARMC)) && otmp->obj_material != GOLD) ||
 			((otmp = youdef ? uarm  : which_armor(mdef, W_ARM )) && otmp->obj_material != GOLD) ||
 			((otmp = youdef ? uarmu : which_armor(mdef, W_ARMU)) && otmp->obj_material != GOLD && objects[otmp->otyp].a_can > 0)
-			) {
+		) {
 			set_material(otmp, GOLD);
 		}
 		else {
@@ -5376,13 +5464,12 @@ delouse_tame(struct monst *mon)
 	if(mon->mtyp == PM_LIVING_DOLL){
 		mon->mpeaceful = 1;
 	} else {
-		mtmp = tamedog(mon,(struct obj *) 0);
+		mtmp = tamedog_core(mon,(struct obj *) 0, TD_ENHANCED|TD_LOYAL);
 		if(mtmp){
 			mon = mtmp;
 			mon->mtame = 10;
 			mon->mpeaceful = 1;
 			mon->mcrazed = 1;
-			EDOG(mon)->loyal = TRUE;
 			EDOG(mon)->waspeaceful = TRUE;
 			mon->mpeacetime = 0;
 			newsym(mon->mx, mon->my);
