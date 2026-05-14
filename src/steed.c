@@ -342,6 +342,11 @@ mount_steed(
 	    return (FALSE);
 	}
 
+	if (!mtmp) {
+	    pline("I see nobody there.");
+	    return (FALSE);
+	}
+
 	if (Upolyd && (!humanoid(youracedata) || verysmall(youracedata) ||
 			youracedata->msize > mtmp->data->msize || slithy(youracedata))) {
 	    You("won't fit on a saddle.");
@@ -353,10 +358,10 @@ mount_steed(
 	}
 
 	/* Can the player reach and see the monster? */
-	if (!mtmp || (!force && ((Blind && !Blind_telepat) ||
+	if (!force && ((Blind && !Blind_telepat) ||
 		mtmp->mundetected ||
 		mtmp->m_ap_type == M_AP_FURNITURE ||
-		mtmp->m_ap_type == M_AP_OBJECT))) {
+		mtmp->m_ap_type == M_AP_OBJECT)) {
 	    pline("I see nobody there.");
 	    return (FALSE);
 	}

@@ -9149,6 +9149,9 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 // SEDUCTION / ITEM-STEALING
 //////////////////////////////////////////////////////////////
 	case AD_SSEX:{
+		if(magr == mdef){
+			return MM_MISS;
+		}
 		if(attk->damn > 0 || attk->damd > 0){
 			/* make physical attack */
 			alt_attk.adtyp = AD_PHYS;
@@ -9221,6 +9224,9 @@ xmeleehurty_core(struct monst *magr, struct monst *mdef, struct attack *attk, st
 	{
 		boolean goatspawn = (pa->mtyp == PM_SMALL_GOAT_SPAWN || pa->mtyp == PM_GOAT_SPAWN || pa->mtyp == PM_GIANT_GOAT_SPAWN || pa->mtyp == PM_BLESSED || pa->mtyp == PM_XUENU_MONK);
 		boolean noflee = (magr->isshk && magr->mpeaceful);
+		if(magr == mdef){
+			return MM_MISS;
+		}
 		if(attk->damn > 0 || attk->damd > 0){
 			/* make physical attack */
 			alt_attk.adtyp = AD_PHYS;
@@ -15060,6 +15066,9 @@ xgazey(struct monst *magr, struct monst *mdef, struct attack *attk, int vis)
 		break;
 
 	case AD_SEDU:
+		if(magr == mdef){
+			return MM_MISS;
+		}
 		if (!youdef)
 			return MM_MISS;
 		/* STRAIGHT COPY-PASTE FROM ORIGINAL */

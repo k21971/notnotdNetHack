@@ -179,6 +179,10 @@ doseduce(struct monst *mon)
 		for (int i = 0; i < quantity; i++) {
 			sedu_minion(mon);
 		}
+		if(mon->mtyp == PM_SUCCUBUS || mon->mtyp == PM_INCUBUS)
+			mon->mspec_used = rnd(100);
+		else
+			mon->mspec_used = rnd(10);
 	}
 
 	/* possibly exit early, skipping teleport and continuing to make attacks! */
@@ -861,9 +865,7 @@ void
 sedu_undress(struct monst *mon)
 {
 	/* check no-clothes case */
-	if (!uarm && !uarmc && !uarmf && !uarmg && !uarms && !uarmh
-		&& !uarmu
-		) {
+	if (!uarm && !uarmc && !uarmf && !uarmg && !uarms && !uarmh && !uwep && !uswapwep && !uarmu) {
 		/* message */
 		switch (mon->mtyp)
 		{
@@ -1101,6 +1103,13 @@ msteal_m(struct monst *magr, struct monst *mdef, struct attack *attk, int *resul
 	boolean goatspawn = (magr->data->mtyp == PM_SMALL_GOAT_SPAWN || magr->data->mtyp == PM_GOAT_SPAWN || magr->data->mtyp == PM_GIANT_GOAT_SPAWN || magr->data->mtyp == PM_BLESSED);
 	boolean noflee = (magr->isshk && magr->mpeaceful);
 	boolean mi_only = is_chuul(magr->data);
+
+	if(magr == mdef){
+		/* can't steal from yourself*/
+		*result |= MM_MISS;
+		return TRUE;
+	}
+
 	if(attk->adtyp == AD_SITM){
 		/* select item from defender's inventory */
 		for (otmp = mdef->minvent; otmp; otmp = otmp->nobj)
@@ -1143,9 +1152,10 @@ msteal_m(struct monst *magr, struct monst *mdef, struct attack *attk, int *resul
 			possibly_unwield(mdef, FALSE);
 			mdef->mstrategy &= ~STRAT_WAITFORU;
 			mselftouch(mdef, (const char *)0, FALSE);
-			if (mdef->mhp <= 0)
+			if (mdef->mhp <= 0){
 				*result |= (MM_HIT | MM_DEF_DIED | ((grow_up(magr, mdef)) ? 0 : MM_AGR_DIED));
 				return TRUE;
+			}
 			if(goatspawn)
 				*result |= MM_AGR_STOP;
 			else if (magr->data->mlet == S_NYMPH && !noflee &&
@@ -1285,9 +1295,10 @@ msteal_m(struct monst *magr, struct monst *mdef, struct attack *attk, int *resul
 				mdef->mequipping = max(mdef->mequipping, delay);
 			}
 			m_dowear(magr, FALSE);
-			if (mdef->mhp <= 0)
+			if (mdef->mhp <= 0){
 				*result |= (MM_HIT | MM_DEF_DIED | ((grow_up(magr, mdef)) ? 0 : MM_AGR_DIED));
 				return TRUE;
+			}
 			if(goatspawn)
 				*result |= MM_AGR_STOP;
 			else if (magr->data->mlet == S_NYMPH && !noflee &&
