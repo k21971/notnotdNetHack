@@ -55,7 +55,7 @@
  * 3.25.0: Kensei role, Convict quest revision, minor  Archeologist quest revision, Fafnir reworked into Maegera, seducer rework, DroHea tweak (priestess/wizard bonuses), signature artifact prototype (oona can use rosp), various fixes and tweaks.
  * 3.26.0: Tiefling, Aasimar, Centaur, Formian, Drider, Silverman, and Silverknight. Pets can rid players. Special Aasimar variants for Madmen and (Drow) Healer. Special Tiefling variant for Drow Healer. Implement Prismatic Dragon Scales. Implement Breaking Wheels. Split MB flags into body and body composition. Object modifications. Stormbringer fighting styles. Finish Green Dragon Crescent Blade. Dash Command. Offer effigy on an altar to convert. Various bug fixes and tweaks.
  */
-#define PATCHLEVEL	15
+#define PATCHLEVEL	16
 /*
  * Incrementing EDITLEVEL can be used to force invalidation of old bones
  * and save files.
