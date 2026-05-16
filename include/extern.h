@@ -2832,6 +2832,11 @@ extern void dismount_steed(int);
 extern void rider_dismounts_you(int);
 extern void place_monster(struct monst *,int,int);
 
+/* ### string.c ### */
+
+extern char *stpecpy(char *, char *, const char *);
+extern ssize_t strtcpy(char *, const char *, size_t);
+
 /* ### teleport.c ### */
 
 extern boolean teleok(int,int,boolean);
