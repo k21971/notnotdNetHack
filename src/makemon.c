@@ -381,7 +381,7 @@ golem_initweap(register struct monst *mtmp, int mkobjflags, int faction, int goo
 }
 
 static void
-yochlol_initinv(struct monst *mtmp, int mkobjflags, int faction, int goodequip)
+yochlol_initinv(struct monst *mtmp, int mkobjflags, int faction, boolean goodequip)
 {
 	struct obj *otmp;
 	/*weapon*/
@@ -877,7 +877,7 @@ imp_initweap(register struct monst *mtmp, int mkobjflags, int faction, int goode
 	break;
 	case PM_IMP:
 		if(Inhell || goodequip){
-			chance = rn2(4);
+			chance = rnd(4);
 			if(chance == 4){
 				(void)mongets(mtmp, KNIFE, mkobjflags);
 				(void)mongets(mtmp, FEDORA, mkobjflags);
@@ -10013,7 +10013,7 @@ m_initweap(register struct monst *mtmp, int mkobjflags, int faction, boolean goo
 								add_oprop(otmp, OPROP_UNHYW);
 						}
 
-						otmp = mongets(mtmp, mtmp->female ? GENTLEMAN_S_SUIT : GENTLEWOMAN_S_DRESS, mkobjflags);
+						otmp = mongets(mtmp, mtmp->female ? GENTLEWOMAN_S_DRESS : GENTLEMAN_S_SUIT, mkobjflags);
 						if(otmp) otmp->spe = rnd(7);
 						otmp = mongets(mtmp, mtmp->female ? STILETTOS : HIGH_BOOTS, mkobjflags);
 						if(otmp) otmp->spe = rnd(7);

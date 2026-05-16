@@ -2321,12 +2321,15 @@ extern int god_at_altar(int, int);
 extern boolean gods_are_friendly(int, int);
 extern boolean god_accepts_you(int);
 extern void god_benefit_boost_ability(void);
-extern void god_benefit_enchant_item(void);
+extern boolean god_benefit_enchant_item(struct monst *);
 extern void god_benefit_identify_item(void);
 extern void god_benefit_give_intrinsic(void);
 extern boolean prayer_benefit_intrinsic(int, boolean);
+extern void random_monster_resistance(struct monst *);
 extern void god_benefit_repair_item(void);
+extern void mrepair_item(struct monst *);
 extern void god_benefit_fix_buc(void);
+extern void mfix_buc(struct monst *);
 
 /* ### priest.c ### */
 
