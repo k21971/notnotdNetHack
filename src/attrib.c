@@ -269,7 +269,8 @@ const struct innate {
 		     {  1, &(HStealth), "", "" },
 		     {  1, &(HSwimming), "", "" },
 		     {  1, &(HMagical_breathing), "", "" },
-		     {  1, &(HWaterproof), "", "" } },
+		     {  1, &(HWaterproof), "", "" },
+		     {  0, 0, 0, 0 } },
 	
 	aasi_abil[] = { 
 			 {	 1, &(HShock_resistance), "", "" },
