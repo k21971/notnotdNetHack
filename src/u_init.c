@@ -3590,7 +3590,7 @@ u_init(void)
 				if(rn2(7))
 					flags.aasimar_subtype = rnd(6);
 				else {
-					
+					flags.aasimar_subtype = rnd(LAST_UNCOMMON_ELADRIN_SUBTYPE - LAST_COMMON_ELADRIN_SUBTYPE) + LAST_COMMON_ELADRIN_SUBTYPE;
 				}
 			}
 		}
