@@ -434,7 +434,7 @@ choke(register struct obj *food)
 
 	exercise(A_CON, FALSE);
 
-	if ((Breathless || separate_respiration(youracedata) || (!Strangled && !rn2(20))) && !Race_if(PM_INCANTIFIER) && !magivorous(youracedata)) {
+	if ((Breathless || Separate_Respiration || (!Strangled && !rn2(20))) && !Race_if(PM_INCANTIFIER) && !magivorous(youracedata)) {
 		/* choking by eating AoS doesn't involve stuffing yourself */
 		if (food && food->otyp == AMULET_OF_STRANGULATION) {
 			You("choke, but recover your composure.");
@@ -758,7 +758,7 @@ cprefx(int pm, boolean bld, boolean nobadeffects)
 				int spores = 1;
 				if(mattk) spores = mattk->damn * mattk->damd;
 				You("feel a tickling in your %s.", body_part(THROAT));
-				if(!separate_respiration(&mons[pm])){
+				if(Separate_Respiration){
 					youmonst.mgmld_skin += spores;
 				}
 				else {
@@ -2754,7 +2754,7 @@ doeat(void)		/* generic "eat" command funtion (see cmd.c) */
 		else etype = clockwork_eat_menu(TRUE,TRUE);
 	}
 	
-	if(!separate_respiration(youracedata)){
+	if(!Separate_Respiration){
 		if (Strangled) {
 			pline("If you can't breathe air, how can you consume solids?");
 			return MOVE_CANCELLED;

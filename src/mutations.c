@@ -807,6 +807,11 @@ uemit_light(void)
 			|| flags.aasimar_type == AASIMAR_TYPE_PRIMINAL){
 			radius = 1;
 		}
+		else if(flags.aasimar_type == AASIMAR_TYPE_CLOUDFACE){
+			if(u.ulevel >= 21){
+				radius = 1 + (u.ulevel - 21)/4;
+			}
+		}
 	}
 	return radius;
 }
