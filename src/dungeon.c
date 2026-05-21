@@ -1299,6 +1299,10 @@ u_on_newpos(int x, int y)
 	cliparound(u.ux, u.uy);
 	/* ridden steed always shares hero's location */
 	if (u.usteed) u.usteed->mx = u.ux, u.usteed->my = u.uy;
+	if (u.urider) {
+	    u.urider->mx = u.ux;
+	    u.urider->my = u.uy;
+	}
 }
 
 void
@@ -1871,8 +1875,8 @@ level_difficulty(void)
 			dpth = ((int) depth(&u.uz));
 	
 	if(flags.descendant && !(
-		(Role_if(PM_CONVICT && !Race_if(PM_SALAMANDER))
-		|| (Role_if(PM_HEALER) && Race_if(PM_DROW))
+		((Role_if(PM_CONVICT) && !Race_if(PM_SALAMANDER))
+		|| (urole.neminum == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH)
 		|| Role_if(PM_MADMAN))
 		&& u.ulevel < 14)
 	)

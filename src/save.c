@@ -40,7 +40,7 @@ extern const struct percent_color_option *pw_colors;
 extern const struct text_color_option *text_colors;
 
 /* need to preserve these during save to avoid accessing freed memory */
-static unsigned ustuck_id = 0, usteed_id = 0;
+static unsigned ustuck_id = 0, usteed_id = 0, urider_id = 0;
 
 int
 dosave(void)
@@ -170,6 +170,7 @@ dosave0(void)
 #endif
 	ustuck_id = (u.ustuck ? u.ustuck->m_id : 0);
 	usteed_id = (u.usteed ? u.usteed->m_id : 0);
+	urider_id = (u.urider ? u.urider->m_id : 0);
 	savelev(fd, ledger_no(&u.uz), WRITE_SAVE | FREE_SAVE);
 	savegamestate(fd, WRITE_SAVE | FREE_SAVE);
 
@@ -185,6 +186,7 @@ dosave0(void)
 	 */
 	u.ustuck = (struct monst *)0;
 	u.usteed = (struct monst *)0;
+	u.urider = (struct monst *)0;
 
 	for(ltmp = (int)1; ltmp <= maxledgerno(); ltmp++) {
 		if (ltmp == ledger_no(&uz_save)) continue;
@@ -284,6 +286,8 @@ savegamestate(register int fd, register int mode)
 	    bwrite(fd, (void *) &ustuck_id, sizeof ustuck_id);
 	if(usteed_id)
 	    bwrite(fd, (void *) &usteed_id, sizeof usteed_id);
+	if(urider_id)
+	    bwrite(fd, (void *) &urider_id, sizeof urider_id);
 	bwrite(fd, (void *) pl_character, sizeof pl_character);
 	bwrite(fd, (void *) pl_fruit, sizeof pl_fruit);
 	bwrite(fd, (void *) &current_fruit, sizeof current_fruit);
@@ -361,6 +365,7 @@ savestateinlock(void)
 #endif
 		    ustuck_id = (u.ustuck ? u.ustuck->m_id : 0);
 		    usteed_id = (u.usteed ? u.usteed->m_id : 0);
+		    urider_id = (u.urider ? u.urider->m_id : 0);
 		    savegamestate(fd, WRITE_SAVE);
 		}
 		bclose(fd);

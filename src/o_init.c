@@ -968,6 +968,20 @@ find_emerald_ring(void)
 	return 0;
 }
 
+int
+find_wooden_ring(void)
+{
+	static int i = -1;
+	register const char *s;
+	if (i != -1) return i;
+
+	if ((i = find_otyp_of_desc("wooden", 0, RIN_ADORNMENT, RIN_PROTECTION_FROM_SHAPE_CHAN, 0)) != -1)
+		return i;
+	else
+		impossible("could not find wooden ring");
+	return 0;
+}
+
 /* test if a ring is an engravable ring */
 boolean
 isEngrRing(int otyp)
@@ -1571,6 +1585,9 @@ void
 fix_etraits(struct obj *otmp)
 {
 	otmp->expert_traits = objects[otmp->otyp].expert_traits;
+	if(otmp->otyp == PEST_GLAIVE){
+		otmp->expert_traits |= otmp->ovar2_pg_etraits;
+	}
 	//Extra artifact traits
 	if(otmp->oartifact == ART_BLADE_SINGER_S_SABER)
 		otmp->expert_traits |= ETRAIT_BLADESONG;
@@ -1604,6 +1621,16 @@ fix_etraits(struct obj *otmp)
 	}
 	else if(otmp->oartifact == ART_STORM_CURSE){
 		otmp->expert_traits |= ETRAIT_FOCUS_FIRE;
+	}
+	else if(otmp->oartifact == ART_FRIEDE_S_SCYTHE){
+		otmp->expert_traits |= ETRAIT_SECOND;
+		otmp->expert_traits &= ~ETRAIT_FELL;
+	}
+	else if(otmp->oartifact == ART_YORSHKA_S_SPEAR){
+		otmp->expert_traits = ETRAIT_FOCUS_FIRE|ETRAIT_HEW|ETRAIT_STUNNING_STRIKE;
+	}
+	else if(otmp->oartifact == ART_RUINOUS_DESCENT_OF_STARS){
+		otmp->expert_traits = ETRAIT_KNOCK_BACK|ETRAIT_KNOCK_BACK_CHARGE;
 	}
 
 	if(otmp->oartifact == ART_RUYI_JINGU_BANG){
@@ -1695,6 +1722,10 @@ fix_object(struct obj *otmp)
 
 	if (obj_eternal_light(otmp) && !otmp->lamplit) {
 		begin_burn(otmp);
+	}
+	if(!is_damageable(otmp)) {
+		otmp->oeroded = 0;
+		otmp->oeroded2 = 0;
 	}
 }
 

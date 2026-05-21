@@ -985,6 +985,24 @@ clear_level_structures(void)
 }
 
 static void
+special_mklev_actions(void)
+{
+	if(Is_qhome(&u.uz)){
+		if(Race_if(PM_SILVERKNIGHT)){
+			struct monst *mount = makedog();
+			if(mount){
+				for(int i = 0; i < 2; i++){
+					grow_up(mount, (struct monst *)0);
+					//Might grow into a genocided form.
+					if(DEADMONSTER(mount))
+						return;
+				}
+			}
+		}
+	}
+}
+
+static void
 makelevel(void)
 {
 	register struct mkroom *croom, *troom;
@@ -1078,12 +1096,12 @@ makelevel(void)
 				// pline("%s",fillname);
 				makemaz(fillname);
 			}
-			else if(Role_if(PM_HEALER) && Race_if(PM_DROW) && qstart_level.dnum == u.uz.dnum && qstart_level.dlevel == (u.uz.dlevel-1)){
+			else if(urole.neminum == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH && qstart_level.dnum == u.uz.dnum && qstart_level.dlevel == (u.uz.dlevel-1)){
 				Sprintf(fillname, "%s-secn", urole.filecode);
 				// pline("%s",fillname);
 				makemaz(fillname);
 			}
-			else if(Role_if(PM_HEALER) && Race_if(PM_DROW) && qstart_level.dnum == u.uz.dnum && qlocate_level.dlevel == (u.uz.dlevel-1)){
+			else if(urole.neminum == PM_BLIBDOOLPOOLP__GRAVEN_INTO_FLESH && qstart_level.dnum == u.uz.dnum && qlocate_level.dlevel == (u.uz.dlevel-1)){
 				Sprintf(fillname, "%s-flor", urole.filecode);
 				// pline("%s",fillname);
 				makemaz(fillname);
@@ -1598,6 +1616,7 @@ mklev(void)
 	makelevel();
 	bound_digging();
 	mineralize();
+	special_mklev_actions();
 	in_mklev = FALSE;
 	/* has_morgue gets cleared once morgue is entered; graveyard stays
 	   set (graveyard might already be set even when has_morgue is clear

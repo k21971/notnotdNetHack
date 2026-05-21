@@ -31,3 +31,18 @@ Copyright:
 
 notnotdNetHack is free software released under the NetHack General Public License, see `dat/license` for details.
 util/MacroMagicMarker.py is released under the MIT/Expat license, see the comment at the beginning of that file for details.
+
+Contributing:
+
+Contributions are welcome, however:
+
+* If your contribution would be applicable upstream (to notdNetHack or
+  dNetHack), please consider sending it there instead.  notnotdNetHack
+  is a fork of notdNetHack, which is itself a fork of dNetHack, and
+  upstream changes are regularly merged.  If it gets merged in either
+  of those it will make it into notnotdNetHack eventually.
+
+  notdNetHack: https://github.com/demogorgon22/notdnethack
+  dNetHack: https://github.com/Chris-plus-alphanumericgibberish/dNAO
+
+* AI-generated contributions will not be accepted, so please do not submit them.

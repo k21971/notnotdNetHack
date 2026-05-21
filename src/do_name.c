@@ -395,6 +395,8 @@ do_mname(void)
 	if (cx == u.ux && cy == u.uy) {
 	    if (u.usteed && canspotmon(u.usteed))
 		mtmp = u.usteed;
+	    else if (u.urider && canspotmon(u.urider))
+		mtmp = u.urider;
 	    else {
 		pline("This %s creature is called %s and cannot be renamed.",
 		ACURR(A_CHA) > 14 ?
@@ -752,7 +754,7 @@ oname(struct obj *obj, const char *name)
 			}
 			if(Role_if(PM_KENSEI) && u.role_variant == ART_SKY_REFLECTED){
 				expert_weapon_skill(objects[obj->otyp].oc_skill);
-				if(obj->otyp == LONG_SWORD){
+				if(is_knight_sword(obj)){
 					expert_weapon_skill(P_GENERIC_KNIGHT_FORM);
 				}
 				else if(is_pole(obj)){
@@ -804,6 +806,17 @@ oname(struct obj *obj, const char *name)
 		/* viperwhip heads */
 		if (obj->oartifact == ART_SCOURGE_OF_LOLTH)
 			obj->ovar1_heads = 8;
+
+		/* GDCB starts pre-loaded with iron ballast */
+		if (obj->oartifact == ART_GREEN_DRAGON_CRESCENT_BLAD) {
+			struct obj *ingots = mksobj(INGOT, MKOBJ_NOINIT);
+			ingots->quan = 75L;
+			set_material_gm(ingots, IRON);
+			fix_object(ingots);
+			add_to_container(obj, ingots);
+			artinstance[ART_GREEN_DRAGON_CRESCENT_BLAD].GDCBMaterials   |= AMAT_IRON;
+			artinstance[ART_GREEN_DRAGON_CRESCENT_BLAD].GDCBBlessedness |= GDCB_UNBLESSED;
+		}
 
 		fix_object(obj);
 
@@ -994,6 +1007,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s the finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
 		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "%s the swollen", buf);
+		else if (full && template == ROT_ZOMBIE)		Sprintf(buf2, "%s the rotten", buf);
 		else if (full && template == BLOOD_MON)	Sprintf(buf2, "%s the bloody", buf);
 		else if (full && template == FLAYED){
 			if (!strcmp(buf, "Robert the Lifer"))		Sprintf(buf2, "Robert the Flayed");
@@ -1035,6 +1049,7 @@ mod_template_desc(struct monst *mtmp, struct permonst *base, char *buf, boolean 
 		else if (full && template == PSURLON)			Sprintf(buf2, "%s finger", buf);
 		else if (full && template == CONSTELLATION)		Sprintf(buf2, "%s constellation", buf);
 		else if (full && template == SWOLLEN_TEMPLATE)	Sprintf(buf2, "swollen %s", buf);
+		else if (full && template == ROT_ZOMBIE)		Sprintf(buf2, "rotting %s zombie", buf);
 		else if (full && template == BLOOD_MON)			Sprintf(buf2, "blood %s", buf);
 		else if (full && template == FLAYED)			Sprintf(buf2, "flayed %s", buf);
 		else if (full && template == MANITOU)			Sprintf(buf2, "vine-strangled %s", buf);
@@ -1141,6 +1156,7 @@ x_monnam(
 	    article != ARTICLE_YOUR &&
 	    !program_state.gameover &&
 	    mtmp != u.usteed &&
+	    mtmp != u.urider &&
 	    !(u.uswallow && mtmp == u.ustuck) &&
 	    !(suppress & SUPPRESS_IT);
 	do_saddle = !(suppress & SUPPRESS_SADDLE);
@@ -1552,6 +1568,7 @@ y_monnam(struct monst *mtmp)
 	suppression_flag = (M_HAS_NAME(mtmp)
 			    /* "saddled" is redundant when mounted */
 			    || mtmp == u.usteed
+			    || mtmp == u.urider
 			    ) ? SUPPRESS_SADDLE : 0;
 
 	return x_monnam(mtmp, prefix, (char *)0, suppression_flag, FALSE);

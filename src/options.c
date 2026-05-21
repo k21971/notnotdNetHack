@@ -571,6 +571,7 @@ initoptions(void)
 	flags.warntypem = 0L;
 	flags.warntypet = 0L;
 	flags.warntypeb = 0L;
+	flags.warntypec = 0L;
 	flags.warntypeg = 0L;
 	flags.warntypea = 0L;
 	flags.warntypev = 0L;
@@ -1405,7 +1406,7 @@ parse_monster_color(char *str)
 
     if (!str) return FALSE;
 
-    strncpy(buf, str, BUFSZ);
+    strtcpy(buf, str, BUFSZ);
     cs = strchr(buf, ':');
     if (!cs) return FALSE;
 
@@ -1458,7 +1459,7 @@ parse_monster_template(char *str)
 
     if (!str) return FALSE;
 
-    strncpy(buf, str, BUFSZ);
+    strtcpy(buf, str, BUFSZ);
 	s_temp = buf;
     s_type = strchr(s_temp, ':');
     if (!s_type) return FALSE;
@@ -1587,7 +1588,7 @@ parse_extended_option(
 
 	if (!str) return FALSE;
 
-	strncpy(buf, str, BUFSZ);
+	strtcpy(buf, str, BUFSZ);
 
 	/* remove comment*/
 	cs = strrchr(buf, '#');
@@ -1608,7 +1609,7 @@ parse_extended_option(
 	/* skip whitespace at start of string */
 	while (*tmps && isspace(*tmps)) tmps++;
 
-	strncpy(option_value, tmps, BUFSZ);
+	strtcpy(option_value, tmps, BUFSZ);
 
 	/* extract option name */
 	*cs = '\0';
@@ -1622,7 +1623,7 @@ parse_extended_option(
 		}
 	}
 
-	strncpy(option_name, tmps, BUFSZ);
+	strtcpy(option_name, tmps, BUFSZ);
 
 	return TRUE;
 }

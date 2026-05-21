@@ -599,6 +599,7 @@ mstatusline(struct monst *mtmp)
 				", engulfed you") :
 				", holding you");
 	if (mtmp == u.usteed)	  Strcat(info, ", carrying you");
+	if (mtmp == u.urider)	  Strcat(info, ", riding you");
 
 	/* avoid "Status of the invisible newt ..., invisible" */
 	/* and unlike a normal mon_nam, use "saddled" even if it has a name */

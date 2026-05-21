@@ -12,9 +12,7 @@
 
 extern boolean known;	/* from read.c */
 
-static void do_dknown_of(struct obj *);
 static boolean check_map_spot(int,int,char,unsigned);
-static boolean clear_stale_map(char,unsigned);
 static void sense_trap(struct trap *,xchar,xchar,int);
 static void show_map_spot(int,int);
 static void findone(int,int,void *);
@@ -80,7 +78,7 @@ o_artifact(struct obj *obj)
 	return (struct obj *) 0;
 }
 
-static void
+void
 do_dknown_of(struct obj *obj)
 {
 	struct obj *otmp;
@@ -156,8 +154,8 @@ check_map_spot(int x, int y, register char oclass, unsigned material)
    reappear after the detection has completed.  Return true if noticeable
    change occurs.
  */
-static boolean
-clear_stale_map(register char oclass, unsigned material)
+boolean
+clear_stale_map(char oclass, unsigned material, boolean redraw)
 {
 	register int zx, zy;
 	register boolean change_made = FALSE;
@@ -166,6 +164,7 @@ clear_stale_map(register char oclass, unsigned material)
 		for (zy = 0; zy < ROWNO; zy++)
 		if (check_map_spot(zx, zy, oclass,material)) {
 			unmap_object(zx, zy);
+			if(redraw) newsym(zx, zy);
 			change_made = TRUE;
 		}
 
@@ -184,7 +183,7 @@ gold_detect(register struct obj *sobj)
 	boolean stale;
 
 	known = stale = clear_stale_map(COIN_CLASS,
-				(unsigned)(sobj->blessed ? GOLD : 0));
+				(unsigned)(sobj->blessed ? GOLD : 0), FALSE);
 
 	/* look for gold carried by monsters (might be in a container) */
 	for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
@@ -317,7 +316,7 @@ food_detect(struct obj *sobj)
 	const char *what = confused ? something : "food";
 	int uw = u.uinwater, usw = u.usubwater;
 
-	stale = clear_stale_map(oclass, 0);
+	stale = clear_stale_map(oclass, 0, FALSE);
 
 	for (obj = fobj; obj; obj = obj->nobj)
 	if (o_in(obj, oclass)) {
@@ -490,7 +489,7 @@ object_detect(
 	}
 	}
 
-	if (!clear_stale_map(!class ? ALL_CLASSES : class, 0) && !ct) {
+	if (!clear_stale_map(!class ? ALL_CLASSES : class, 0, FALSE) && !ct) {
 	if (!ctu) {
 		if (detector){
 			if(detector->otyp == SENSOR_PACK)
@@ -661,7 +660,7 @@ artifact_detect(struct obj *detector) /* object doing the detecting */
 		}
 	}
 
-	if (!clear_stale_map(ALL_CLASSES, 0) && !ct) {
+	if (!clear_stale_map(ALL_CLASSES, 0, FALSE) && !ct) {
 		Role_if(PM_PIRATE) ? strange_feeling(detector, "Ye feel a lack o' something.") : strange_feeling(detector, "You feel a lack of something.");
 		return 1;
 	}
@@ -778,7 +777,7 @@ book_detect(boolean blessed)	/* do blessed detecting */
 		}
 	}
 
-	if (!clear_stale_map(ALL_CLASSES, 0) && !ct) {
+	if (!clear_stale_map(ALL_CLASSES, 0, FALSE) && !ct) {
 		strange_feeling((struct obj *) 0, "You feel a lack of something.");
 		return 1;
 	}
