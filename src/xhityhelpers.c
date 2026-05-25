@@ -1421,7 +1421,7 @@ hatesobjdmg(struct monst *mdef, struct obj *otmp, struct monst *magr)
 		ndice = 1;
 		diesize = 4;
 		if(youagr && !Upolyd && TIEFLING_FALLEN)
-			holydmg += vd(3, 7);
+			holydmg += vd(min(3, 1+mlev(magr)/10), 7);
 		/* special cases that don't affect dice */
 		if (otmp->oartifact == ART_EXCALIBUR ||
 			otmp->oartifact == ART_LANCE_OF_LONGINUS)
@@ -1517,7 +1517,7 @@ hatesobjdmg(struct monst *mdef, struct obj *otmp, struct monst *magr)
 		diesize = 9;
 		/* special cases */
 		if(youagr && !Upolyd && TIEFLING_FALLEN)
-			dmg += vd(4, 9);
+			dmg += vd(min(4, 1+mlev(magr)/10), 9);
 		if (otmp->oartifact == ART_STORMBRINGER){
 			ndice = 4; //Extra unholy (4d9 vs excal's 3d7)
 			if(activeRune(FRUNE_CHAOS))

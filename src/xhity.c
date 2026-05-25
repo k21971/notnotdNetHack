@@ -16521,6 +16521,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 			if(is_iron_mon(magr) || (youagr && uclockwork && u.clk_material == IRON)) {
 				ironobj |= W_SKIN;
 				seardmg += rnd(mlev(mdef));
+				mdef->mironmarked = TRUE;
 			}
 			else if (youagr && unarmed_punch && u.sealsActive&SEAL_SIMURGH) {
 				/* Simurgh's iron claws, for the player attacking with bared hands */
@@ -16537,7 +16538,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 			}
 			else if(is_holy_mon(magr) || (youagr && !Upolyd && TIEFLING_FALLEN)) {
 				holyobj |= W_SKIN;
-				seardmg += d(3, 7);
+				seardmg += d(min(3, 1+mlev(magr)/10), 7);
 			}
 			else if (youagr && uclockwork && u.clk_material == GOLD && u.ualign.record > 3) {
 				holyobj |= W_SKIN;
@@ -16551,7 +16552,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 			} 
 			else if(is_unholy_mon(magr) || (youagr && !Upolyd && TIEFLING_FALLEN)) {
 				unholyobj |= W_SKIN;
-				seardmg += d(4, 9);
+				seardmg += d(min(4, 1+mlev(magr)/10), 9);
 			}
 			else if(magr->mtyp == PM_GREEN_STEEL_GOLEM || (youagr && uclockwork && u.clk_material == GREEN_STEEL)) {
 				grnstlobj |= W_SKIN;
@@ -16569,7 +16570,7 @@ hmoncore(struct monst *magr, struct monst *mdef, struct attack *attk, struct att
 			}
 			else if(is_unblessed_mon(magr)) {
 				unblessedobj |= W_SKIN;
-				seardmg += d(3, 8);
+				seardmg += d(min(3, 1+mlev(magr)/10), 8);
 			}
 		}
 
@@ -22727,7 +22728,7 @@ elemental_aura_bolt(int elem)
 }
 
 void
-elemental_aura_bolts()
+elemental_aura_bolts(void)
 {
 	int i = 0;
 	int elements[] = { AD_FIRE, AD_COLD, AD_ELEC, AD_ACID };
@@ -22741,7 +22742,7 @@ elemental_aura_bolts()
 }
 
 void
-chain_bolt()
+chain_bolt(void)
 {
 	int x = u.ux+u.dx, y = u.uy+u.dy;
 	int i = 0;
@@ -22877,7 +22878,7 @@ boreal_blast_effect(struct monst *mdef)
 }
 
 int
-mystic_boreal_blast()
+mystic_boreal_blast(void)
 {
 	int dx = u.dx, dy = u.dy;
 	int x = u.ux+dx, y = u.uy+dy;
@@ -22972,7 +22973,7 @@ talon_strike_effect(struct monst *mdef)
 }
 
 boolean
-talon_strike()
+talon_strike(void)
 {
 	int dx = u.dx, dy = u.dy;
 	int x = u.ux+dx, y = u.uy+dy;
@@ -23021,7 +23022,7 @@ talon_strike()
 }
 
 void
-incant_ansermee_flash()
+incant_ansermee_flash(void)
 {
 	int x = u.ux+u.dx, y = u.uy+u.dy;
 	int i = 0;
@@ -23043,7 +23044,7 @@ incant_ansermee_flash()
 }
 
 void
-psi_slash()
+psi_slash(void)
 {
 	int x = u.ux+u.dx, y = u.uy+u.dy;
 	int i = 0;
@@ -23091,7 +23092,7 @@ psi_slash()
 }
 
 void
-incant_kishin_sparks()
+incant_kishin_sparks(void)
 {
 	struct zapdata zapdat = { 0 };
 	basiczap(&zapdat, u.ualign.record < -3 ? AD_UNHY : AD_HOLY, ZAP_SPELL, (u.ulevel+2) / 3 );
@@ -23111,7 +23112,7 @@ incant_kishin_sparks()
 }
 
 void
-incant_vajra_sparks()
+incant_vajra_sparks(void)
 {
 	struct zapdata zapdat = { 0 };
 	basiczap(&zapdat, AD_ELEC, ZAP_SPELL, (u.ulevel+2) / 3 );
@@ -23127,7 +23128,7 @@ incant_vajra_sparks()
 }
 
 void
-incant_vacuum_bolt()
+incant_vacuum_bolt(void)
 {
 	int x = u.ux+u.dx, y = u.uy+u.dy;
 	int i = 0;
@@ -23161,7 +23162,7 @@ incant_vacuum_bolt()
 }
 
 void
-knockback_bolt()
+knockback_bolt(void)
 {
 	int x = u.ux+u.dx, y = u.uy+u.dy;
 	int i = 0;
@@ -23195,7 +23196,7 @@ knockback_bolt()
 }
 
 void
-overload_bolt()
+overload_bolt(void)
 {
 	int x = u.ux+u.dx, y = u.uy+u.dy;
 	int i = 0;
@@ -23271,7 +23272,7 @@ amalgam_star(int mat)
 }
 
 void
-amalgam_stars()
+amalgam_stars(void)
 {
 	if(!uwep)
 		return; //should be unreachable
@@ -23437,7 +23438,7 @@ yuki_onna_snow_blood(void)
 }
 
 void
-triple_thrust_monsters()
+triple_thrust_monsters(void)
 {
 	struct monst *mon = 0;
 	static struct attack weaponhit =	{ AT_WEAP, AD_PHYS, 0, 0 };
@@ -23529,7 +23530,7 @@ triple_thrust_monsters()
 }
 
 void
-bleed_slash_monsters()
+bleed_slash_monsters(void)
 {
 	struct monst *mon = 0;
 	static struct attack weaponhit =	{ AT_WEAP, AD_PHYS, 0, 0 };
@@ -23570,7 +23571,7 @@ bleed_slash_monsters()
 }
 
 void
-sakura_slash_monsters()
+sakura_slash_monsters(void)
 {
 	struct monst *mon = 0;
 	static struct attack weaponhit =	{ AT_WEAP, AD_PHYS, 0, 0 };
@@ -23611,7 +23612,7 @@ sakura_slash_monsters()
 }
 
 void
-sweep_slash_monsters()
+sweep_slash_monsters(void)
 {
 	struct monst *mon = 0;
 	static struct attack weaponhit =	{ AT_WEAP, AD_PHYS, 0, 0 };
@@ -23653,7 +23654,7 @@ sweep_slash_monsters()
 }
 
 void
-sonic_boom_monsters()
+sonic_boom_monsters(void)
 {
 	struct monst *mon;
 	int sdx = u.dx;
@@ -23964,7 +23965,7 @@ perform_expert_move(void)
 }
 
 void
-perform_gaze_attacks()
+perform_gaze_attacks(void)
 {
 	struct monst *mdef;
 	if(!u.dx && !u.dy)
@@ -23979,9 +23980,10 @@ perform_gaze_attacks()
 		if(!mdef)
 			continue;
 		if(!nonthreat_ful(mdef) && canseemon(mdef)
-		 && (mdef->mtyp != PM_FLOATING_EYE || !mdef->mcansee || Free_action
-			|| (distmin(u.ux, u.uy, mdef->mx, mdef->my) <= 1 && u.uattked)
-		  )
+			&& ((mdef->mtyp != PM_FLOATING_EYE || !mdef->mcansee || Free_action)
+				|| (distmin(u.ux, u.uy, mdef->mx, mdef->my) <= 1 && u.uattked)
+			)
+			&& (mdef->mtyp != PM_MEDUSA || Stone_resistance)
 		){
 			dogaze(mdef);
 			break;
@@ -23990,23 +23992,52 @@ perform_gaze_attacks()
 }
 
 void
-perform_wizegaze_attacks()
+perform_widegaze_attacks(void)
 {
 	struct monst *mdef;
-	int nx = u.ux, ny = u.uy;
 	for(mdef = fmon; mdef; mdef = mdef->nmon){
 		if(DEADMONSTER(mdef))
 			continue;
 		if(!nonthreat_ful(mdef) && canseemon(mdef) && distmin(u.ux, u.uy, mdef->mx, mdef->my) <= BOLT_LIM
 		 && (mdef->mtyp != PM_FLOATING_EYE || !mdef->mcansee || Free_action)
+		 && (mdef->mtyp != PM_MEDUSA || Stone_resistance)
 		){
 			dogaze(mdef);
 		}
 	}
 }
 
+void
+perform_cloudface_widegaze(void)
+{
+	struct monst *mdef;
+	if(uarmh && FacelessHelm(uarmh)){
+		if(uarmh->otyp != CRYSTAL_HELM || is_opaque(uarmh))
+			return;
+	}
+	if(uarmc && FacelessCloak(uarmc))
+		return;
+		
+	for(mdef = fmon; mdef; mdef = mdef->nmon){
+		if(DEADMONSTER(mdef))
+			continue;
+		if(!nonthreat_ful(mdef) && couldsee(mdef->mx, mdef->my) && distmin(u.ux, u.uy, mdef->mx, mdef->my) <= BOLT_LIM
+			&& !((nonliving(mdef->data) && !is_android(mdef->data)) 
+				|| has_template(mdef, TOMB_HERD) /*not a statue-piloting thingy */
+				|| is_primordial(mdef->data)
+				|| is_alienist(mdef->data)
+				|| is_great_old_one(mdef->data)
+				|| mdef->encouraged < -1*Insight/7
+			)
+			&& mon_can_see_you(mdef)
+		){
+			mdef->encouraged--;
+		}
+	}
+}
+
 boolean
-pole_thrust()
+pole_thrust(void)
 {
 	struct monst *mon;
 	mon = pole_move_target(!!uwep);
@@ -24020,7 +24051,7 @@ pole_thrust()
 }
 
 boolean
-pole_cyclone()
+pole_cyclone(void)
 {
 	struct monst *mon;
 	if(!circle_pole_target(!!uwep))
@@ -24056,7 +24087,7 @@ pole_cyclone()
 }
 
 boolean
-pole_sweep()
+pole_sweep(void)
 {
 	if(!sweep_polearm_target(!!uwep))
 		return FALSE;
@@ -24101,7 +24132,7 @@ pole_sweep()
 }
 
 boolean
-pole_fall()
+pole_fall(void)
 {
 	struct monst *mon;
 	mon = pole_move_target(!!uwep);
@@ -24115,7 +24146,7 @@ pole_fall()
 }
 
 boolean
-pole_flurry()
+pole_flurry(void)
 {
 	struct monst *mon;
 	mon = pole_move_target(!!uwep);
@@ -24133,7 +24164,7 @@ pole_flurry()
 }
 
 boolean
-pole_backstab()
+pole_backstab(void)
 {
 	struct monst *mon;
 	mon = pole_move_target(!!uwep);
@@ -24155,7 +24186,7 @@ pole_backstab()
 }
 
 boolean
-pole_triple_thrust()
+pole_triple_thrust(void)
 {
 	//Find facing
 	int i;
@@ -25024,7 +25055,7 @@ perform_monk_move(int moveID, int *move_cost)
 }
 
 int
-forward_move()
+forward_move(void)
 {
 	if(Role_if(PM_KENSEI)){
 		if(uwep && is_kensei_weapon(uwep)){
@@ -25076,7 +25107,7 @@ forward_move()
 }
 
 int
-bent_move()
+bent_move(void)
 {
 	if(Role_if(PM_KENSEI)){
 		if(uwep && is_kensei_weapon(uwep)){
@@ -25112,7 +25143,7 @@ bent_move()
 }
 
 int
-hook_move()
+hook_move(void)
 {
 	if(Role_if(PM_KENSEI)){
 		if(!(uwep && is_kensei_weapon(uwep)))
@@ -25169,7 +25200,7 @@ hook_move()
 }
 
 int
-uturn_move()
+uturn_move(void)
 {
 	if(Role_if(PM_KENSEI)){
 		//Weapon-specific
@@ -25217,7 +25248,7 @@ uturn_move()
 }
 
 int
-alternated_move()
+alternated_move(void)
 {
 	if(Role_if(PM_KENSEI)){
 		if(!(uwep && is_kensei_weapon(uwep)))
