@@ -1110,7 +1110,7 @@ assign_rogue_graphics(int is_rlevel)
 #endif /* REINCARNATION */
 
 boolean
-utf8_terminal()
+utf8_terminal(void)
 {
 	static char supported = -1;
 
@@ -1129,31 +1129,31 @@ utf8_terminal()
 
 //Note: if we're running in a utf8_terminal, assume that the arrow characters are supported.
 const char *
-forward_arrow()
+forward_arrow(void)
 {
 	return utf8_terminal() ? "→" : ">";
 }
 
 const char *
-bent_arrow()
+bent_arrow(void)
 {
 	return utf8_terminal() ? "↗" : "/";
 }
 
 const char *
-up_arrow()
+up_arrow(void)
 {
 	return utf8_terminal() ? "↑" : "^";
 }
 
 const char *
-uturn_arrow()
+uturn_arrow(void)
 {
 	return utf8_terminal() ? "↖" : "\\";
 }
 
 const char *
-backward_arrow()
+backward_arrow(void)
 {
 	return utf8_terminal() ? "←" : "<";
 }

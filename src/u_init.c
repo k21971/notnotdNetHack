@@ -4442,7 +4442,7 @@ scatter_weapons(void){
 }
 
 void
-scatter_eyes()
+scatter_eyes(void)
 {
 	struct obj *obj;
 	for(int i = 0; i < 4; i++){

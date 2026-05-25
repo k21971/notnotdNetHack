@@ -3132,7 +3132,7 @@ dopassive(void)
 /* Phase 1: ask what behavior type to adjust.
  * Returns PETORD_* on success, 0 on cancel. */
 static int
-pets_pick_order()
+pets_pick_order(void)
 {
 	winid win;
 	menu_item *sel = (menu_item *)0;

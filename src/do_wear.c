@@ -1512,7 +1512,7 @@ Belt_off(void)
 }
 
 void
-Saddle_on()
+Saddle_on(void)
 {
 	if (!usaddle) return;
 	if(check_oprop(usaddle, OPROP_CURS)){
@@ -1526,7 +1526,7 @@ Saddle_on()
 }
 
 void
-Saddle_off()
+Saddle_off(void)
 {
 	takeoff_mask &= ~W_SADDLE;
 	if(!usaddle){

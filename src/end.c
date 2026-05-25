@@ -779,7 +779,7 @@ find_equip_life_oprop(void)
 }
 
 struct obj *
-find_lifesaving_flute()
+find_lifesaving_flute(void)
 {
 	struct obj *otmp;
 	for(otmp = invent; otmp; otmp = otmp->nobj){
