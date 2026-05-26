@@ -995,9 +995,11 @@ extern int doattributes(void);
 extern int doconduct(void);
 extern int doenlightenment(void);
 extern void udr_enlightenment(void);
+extern void signs_appearance(boolean, boolean);
 extern void signs_mirror(void);
 extern void show_enlightenment(int, boolean);
 extern void show_conduct(int, boolean);
+extern void dump_appearance(void);
 
 /* ### exper.c ### */
 
@@ -1282,10 +1284,13 @@ extern void prinv(const char *,struct obj *,long);
 extern char *xprname(struct obj *,const char *,char,boolean,long,long);
 extern int ddoinv(void);
 extern void describe_item(struct obj *, int, int, winid *);
+extern const char *etrait_description(long, long, boolean);
 extern char display_inventory(const char *,boolean);
 #ifdef DUMP_LOG
 extern char dump_inventory(const char *,boolean,boolean);
 #endif
+extern void dump_pestglaive_props(struct obj *);
+extern void dump_iea_upgrades(struct obj *);
 extern int display_binventory(int,int,boolean);
 extern struct obj *display_cinventory(struct obj *);
 extern struct obj *display_minventory(struct monst *,int,char *);

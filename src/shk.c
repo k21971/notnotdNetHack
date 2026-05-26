@@ -5745,7 +5745,7 @@ countFarSigns(struct monst *mon)
 		if(u.sealsActive&SEAL_OSE && !Blind && !BClairvoyant && !(uarmh && is_metallic(uarmh) && uarmh->otyp != HELM_OF_TELEPATHY)) count++;
 		if(u.sealsActive&SEAL_OTIAX && !Invis && !(moves > u.otiaxAttack+5)) count++;
 		if(u.sealsActive&SEAL_PAIMON && !Invis && !uarmh) count++;
-		if(u.sealsActive&SEAL_SIMURGH && !Invis && !(uarmg && uarmh)) count++;
+		if(u.sealsActive&SEAL_SIMURGH && !Invis && !(uarmh && (uarmg || uarmc))) count++;
 		if(u.sealsActive&SEAL_TENEBROUS && !Invis && !(levl[u.ux][u.uy].lit == 0 && !(viz_array[u.uy][u.ux]&TEMP_LIT1 && !(viz_array[u.uy][u.ux]&TEMP_DRK3)))) count++;
 		if(u.sealsActive&SEAL_YMIR && !Invis && ((moves>5000 && !((uarm && arm_blocks_upper_body(uarm->otyp)) || uarmc)) || (moves>10000 && !(uarmc)) || 
 												 (moves>20000 && !(uarmc && uarmg && uarmf)) || (moves>50000 && !(uarmc && uarmg && uarmf && (uarm && arm_blocks_upper_body(uarm->otyp)) && uarmh)) || 
@@ -5775,7 +5775,7 @@ countCloseSigns(struct monst *mon)
 {
 	int count=countFarSigns(mon);
 	if(couldsee(mon->mx, mon->my) && !is_blind(mon)){
-		if(u.sealsActive&SEAL_AHAZU && !(ublindf && (ublindf->otyp==MASK || ublindf->otyp==R_LYEHIAN_FACEPLATE))) count++;
+		if(u.sealsActive&SEAL_AHAZU && !NoBInvis && !(ublindf && (ublindf->otyp==MASK || ublindf->otyp==R_LYEHIAN_FACEPLATE))) count++;
 		// if(u.sealsActive&SEAL_AMON && !Invis && !(uarmh && is_metallic(uarmh))) count ++;
 		if(u.sealsActive&SEAL_ANDREALPHUS && !Invis && (dimness(u.ux, u.uy) <= 0)) count++;
 		if(u.sealsActive&SEAL_ANDROMALIUS && !NoBInvis 
