@@ -4442,13 +4442,14 @@ scatter_weapons(void){
 }
 
 void
-scatter_eyes()
+scatter_eyes(void)
 {
 	struct obj *obj;
 	for(int i = 0; i < 4; i++){
 		obj = mksobj(EYE, NO_MKOBJ_FLAGS);
 		fully_identify_obj(obj);
 		obj->ovar1_your_eye = TRUE;
+		obj->quan = 1;
 		set_material_gm(obj, GEMSTONE);
 		set_submat(obj, DIAMOND);
 		add_to_migration(obj);

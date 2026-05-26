@@ -23,8 +23,7 @@
 #include <dlfcn.h>
 
 static int
-real_getresuid(ruid, euid, suid)
-uid_t *ruid, *euid, *suid;
+real_getresuid(uid_t *ruid, uid_t *euid, uid_t *suid)
 {
     int (*f)(uid_t *, uid_t *, uid_t *); /* getresuid signature */
 
@@ -35,8 +34,7 @@ uid_t *ruid, *euid, *suid;
 }
 
 static int
-real_getresgid(rgid, egid, sgid)
-gid_t *rgid, *egid, *sgid;
+real_getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid)
 {
     int (*f)(gid_t *, gid_t *, gid_t *); /* getresgid signature */
 
@@ -64,8 +62,7 @@ hide_privileges(boolean flag)
 }
 
 int
-nh_getresuid(ruid, euid, suid)
-uid_t *ruid, *euid, *suid;
+nh_getresuid(uid_t *ruid, uid_t *euid, uid_t *suid)
 {
     int retval = real_getresuid(ruid, euid, suid);
     if (!retval && hiding_privileges)
@@ -74,7 +71,7 @@ uid_t *ruid, *euid, *suid;
 }
 
 uid_t
-nh_getuid()
+nh_getuid(void)
 {
     uid_t ruid, euid, suid;
     (void) real_getresuid(&ruid, &euid, &suid);
@@ -82,7 +79,7 @@ nh_getuid()
 }
 
 uid_t
-nh_geteuid()
+nh_geteuid(void)
 {
     uid_t ruid, euid, suid;
     (void) real_getresuid(&ruid, &euid, &suid);
@@ -92,8 +89,7 @@ nh_geteuid()
 }
 
 int
-nh_getresgid(rgid, egid, sgid)
-gid_t *rgid, *egid, *sgid;
+nh_getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid)
 {
     int retval = real_getresgid(rgid, egid, sgid);
     if (!retval && hiding_privileges)
@@ -102,7 +98,7 @@ gid_t *rgid, *egid, *sgid;
 }
 
 gid_t
-nh_getgid()
+nh_getgid(void)
 {
     gid_t rgid, egid, sgid;
     (void) real_getresgid(&rgid, &egid, &sgid);
@@ -110,7 +106,7 @@ nh_getgid()
 }
 
 gid_t
-nh_getegid()
+nh_getegid(void)
 {
     gid_t rgid, egid, sgid;
     (void) real_getresgid(&rgid, &egid, &sgid);

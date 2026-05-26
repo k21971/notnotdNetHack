@@ -1766,7 +1766,7 @@ paniclog(
 
 /* ----------  BEGIN INTERNAL RECOVER ----------- */
 boolean
-recover_savefile()
+recover_savefile(void)
 {
 	int gfd, lfd, sfd;
 	int lev, savelev, hpid;

@@ -414,7 +414,7 @@ botl_score(void)
 void bot1str(char *newbot1)
 #else
 static void
-bot1()
+bot1(void)
 #endif
 {
 #ifndef DUMP_LOG

@@ -1512,7 +1512,7 @@ Belt_off(void)
 }
 
 void
-Saddle_on()
+Saddle_on(void)
 {
 	if (!usaddle) return;
 	if(check_oprop(usaddle, OPROP_CURS)){
@@ -1526,7 +1526,7 @@ Saddle_on()
 }
 
 void
-Saddle_off()
+Saddle_off(void)
 {
 	takeoff_mask &= ~W_SADDLE;
 	if(!usaddle){
@@ -2607,7 +2607,7 @@ arm_dr_bonus(struct obj * otmp, int slot)
 	if (otmp->otyp == find_cboots()) def += 1;
 	// bares the shoulders
 	if (slot && slot == UPPER_TORSO_DR && check_omod(otmp, OMOD_SHOULDER_BARING)){
-		def = (def+3)/4;
+		def = (def+1)*3/4;
 	}
 
 

@@ -1008,7 +1008,7 @@ const struct Race races[] = {
 	NORMALNIGHTVIS, 
 	SPE_FIREBALL, -10
 },
-{	"treant", "treantic", "treant-kind", "Ent", 'E',
+{	"treant", "treantic", "treant-kind", "Ent", 't',
 	{0, 0},
 	PM_ENT, NON_PM, PM_GIANT_MUMMY, PM_ENT,
 	ROLE_MALE|ROLE_FEMALE | ROLE_LAWFUL | ROLE_NEUTRAL,
