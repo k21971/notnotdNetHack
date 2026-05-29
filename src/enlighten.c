@@ -381,7 +381,7 @@ minimal_enlightenment(void)
 			'f', 0, ATR_NONE, buf,
 			MENU_UNSELECTED);
 	}
-	else if(flags.aasimar_type && (u.ulevel > 7 || flags.aasimar_type == AASIMAR_TYPE_CLOUDFACE)) {
+	else if(flags.aasimar_type && (u.ulevel >= 7 || flags.aasimar_type == AASIMAR_TYPE_CLOUDFACE)) {
 		Sprintf(buf, "Show your celestial traits.");
 		any.a_int = DOATTRIB_MUTATIONS;
 		add_menu(tmpwin, NO_GLYPH, &any,
@@ -2293,8 +2293,8 @@ signs_appearance(boolean dumping, boolean mirror)
 			p("Your rigid features can't be seen in the dark.");
 		else if(mirror && (
 			    (ublindf && ((ublindf->otyp==MASK || ublindf->otyp==R_LYEHIAN_FACEPLATE)))
-			 || (uarmh && (uarmh->otyp==PLASTEEL_HELM || uarmh->otyp==PONTIFF_S_CROWN || uarmh->otyp==FACELESS_HELM || uarmh->otyp==FACELESS_HOOD || uarmh->otyp==IMPERIAL_ELVEN_HELM))
-			 || (uarmc && (uarmc->otyp==WHITE_FACELESS_ROBE || uarmc->otyp==BLACK_FACELESS_ROBE || uarmc->otyp==SMOKY_VIOLET_FACELESS_ROBE))
+			 || (uarmh && FacelessHelm(uarmh) && is_opaque(uarmh))
+			 || (uarmc && FacelessCloak(uarmc) && is_opaque(uarmc))
 		))
 			pt("Your rigid features can't be seen through your disguise.",
 			   "Your rigid features couldn't be seen through your disguise.");

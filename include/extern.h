@@ -3357,6 +3357,7 @@ extern boolean safe_attack(struct monst *, struct monst *, struct attack *, stru
 extern int beastmastery(struct monst *);
 extern int narya(void);
 extern int mountedCombat(void);
+extern int def_mountedCombat(void);
 extern boolean obj_silver_searing(struct obj *);
 extern boolean obj_jade_searing(struct obj *);
 extern int hatesobjdmg(struct monst *, struct obj *, struct monst *);

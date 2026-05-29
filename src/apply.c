@@ -11647,7 +11647,7 @@ mergeSilverknightRunes(void)
 			pline("That would be an interesting metaphysical experiment.");
 			return MOVE_CANCELLED;
 		}
-		if(!objects[upitm->otyp].oc_oprop[0]){
+		if(!objects[upitm->otyp].oc_oprop[0] && upitm->otyp != HELM_OF_BRILLIANCE){
 			pline("That doesn't have any runes to be extracted.");
 			return MOVE_CANCELLED;
 		}

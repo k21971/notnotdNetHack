@@ -5781,8 +5781,8 @@ countCloseSigns(struct monst *mon)
 		if(u.sealsActive&SEAL_ANDROMALIUS && !NoBInvis 
 		  && !((levl[u.ux][u.uy].lit == 0 && (dimness(u.ux, u.uy) <= 0)) //dark square
 			 || (ublindf && (ublindf->otyp==MASK || ublindf->otyp==R_LYEHIAN_FACEPLATE)) //face-covering mask
-			 || (uarmh && (uarmh->otyp==PLASTEEL_HELM || uarmh->otyp==PONTIFF_S_CROWN || uarmh->otyp==FACELESS_HELM || uarmh->otyp==FACELESS_HOOD || uarmh->otyp==IMPERIAL_ELVEN_HELM)) //OPAQUE face-covering helm (visored should also work)
-			 || (uarmc && (uarmc->otyp==WHITE_FACELESS_ROBE || uarmc->otyp==BLACK_FACELESS_ROBE || uarmc->otyp==SMOKY_VIOLET_FACELESS_ROBE))//face-covering robe
+			 || (uarmh && FacelessHelm(uarmh) && is_opaque(uarmh)) //OPAQUE face-covering helm
+			 || (uarmc && FacelessCloak(uarmc) && is_opaque(uarmc)) //face-covering robe
 		  )
 		) count++; 
 		// if(u.sealsActive&SEAL_ASTAROTH && !Invis && !(ublindf && ublindf->otyp != LENSES && ublindf->otyp != SUNGLASSES && ublindf->otyp != LIVING_MASK)) count++;

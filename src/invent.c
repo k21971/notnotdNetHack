@@ -4974,7 +4974,6 @@ dump_pestglaive_props(struct obj *obj)
 {
 	static const struct { long flag; const char *name; } props[] = {
 		{ PG_HANDPROTECT,  "hand-protecting"   },
-		{ PG_BULLWHIP,     "bullwhip tendrils" },
 		{ PG_MATTOCK,      "mattock head"      },
 		{ PG_JOUST,        "jousting tip"      },
 		{ PG_AXE,          "axe blade"         },
@@ -4988,6 +4987,9 @@ dump_pestglaive_props(struct obj *obj)
 	long bit;
 	const char *desc;
 
+	Sprintf(buf, "could eat with its %s", pg_appendage_name(obj, PGD_FEEDING));
+	dump("        ", buf);
+
 	if (obj->ovar1_pestglaive_props) {
 		buf[0] = '\0';
 		first = TRUE;
@@ -4997,6 +4999,12 @@ dump_pestglaive_props(struct obj *obj)
 				Strcat(buf, props[i].name);
 				first = FALSE;
 			}
+		}
+		if (obj->ovar1_pestglaive_props & PG_BULLWHIP) {
+			char buf2[BUFSZ] = {'\0'};
+			Sprintf(buf2, "%swhipping %s", !first ? ", " : "", pg_appendage_name(obj, PGD_SNAGGING));
+			Strcat(buf, buf2);
+			first = FALSE;
 		}
 		if (!first) dump("        absorbed: ", buf);
 	}

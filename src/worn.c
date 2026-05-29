@@ -14,7 +14,6 @@ static int def_beastmastery(struct monst *);
 static int def_vilya(void);
 static int def_narya(void);
 static int def_lomya(void);
-static int def_mountedCombat(void);
 
 const struct worn {
 	long long w_mask;
@@ -973,6 +972,8 @@ base_mac(struct monst *mon)
 		
 		if(u.usteed && mon==u.usteed) base -= rnd(def_mountedCombat());
 		
+		if(u.urider && mon==u.urider) base -= rnd(def_mountedCombat());
+		
 		if(is_vampire(mon->data) && check_vampire(VAMPIRE_MASTERY)) base -= rnd(5);
 		
 		if(uring_art(ART_VILYA) && def_vilya())
@@ -1242,7 +1243,8 @@ full_mac(struct monst *mon)
 		base -= def_beastmastery(mon);
 		if(u.specialSealsActive&SEAL_COSMOS) base -= spiritDsize();
 		if(u.usteed && mon==u.usteed) base -= def_mountedCombat();
-		
+		if(u.urider && mon==u.urider) base -= def_mountedCombat();
+
 		if(is_vampire(mon->data) && check_vampire(VAMPIRE_MASTERY)) base -= 5;
 
 		if (uarm && uarm->oartifact == ART_BEASTMASTER_S_DUSTER && is_animal(mon->data))
@@ -2933,7 +2935,7 @@ heal_mlevel_bonus(void)
 	return bm;
 }
 
-static int
+int
 def_mountedCombat(void)
 {
 	int bm;
