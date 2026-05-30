@@ -49,6 +49,7 @@ void list_vanquished(char,boolean);
 extern char msgs[][BUFSZ];
 extern int lastmsg;
 extern void dump_spells(void);
+extern void dump_appearance(void);
 void do_vanquished(char, boolean, boolean);
 #endif /* DUMP_LOG */
 static boolean should_query_disclose_option(int,char *);
@@ -587,6 +588,7 @@ disclose(int how, boolean taken)
 	if (dump_fp) {
 	  show_enlightenment((int) (how >= PANICKED ? 1 : 2), TRUE);
 	  dump_spells();
+	  dump_appearance();
 	}
 #endif
 
@@ -1781,7 +1783,13 @@ do_containerconts(struct obj *list, boolean identified, boolean all_containers, 
 				if (obj->oartifact) discover_artifact(obj->oartifact);
 			}
 #ifdef DUMP_LOG
-			if (want_dump)  dump("  ", doname(obj));
+			if (want_dump) {
+			    dump("  ", doname(obj));
+			    if (obj->otyp == PEST_GLAIVE)
+			        dump_pestglaive_props(obj);
+			    else if (is_imperial_elven_armor(obj))
+			        dump_iea_upgrades(obj);
+			}
 			if (want_disp)
 #endif
 			putstr(tmpwin, 0, doname(obj));
